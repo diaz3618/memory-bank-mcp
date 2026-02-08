@@ -189,6 +189,125 @@ export const coreTools = [
       required: ['query'],
     },
   },
+  {
+    name: 'create_backup',
+    description: 'Create a backup of the current Memory Bank state. Backups are stored in the parent directory with timestamped names.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        backupDir: {
+          type: 'string',
+          description: 'Optional custom directory to store the backup. If not provided, uses the parent of the memory bank directory.',
+        },
+      },
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'list_backups',
+    description: 'List all available Memory Bank backups. Returns backup IDs sorted by timestamp (newest first).',
+    inputSchema: {
+      type: 'object',
+      properties: {},
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'restore_backup',
+    description: 'Restore the Memory Bank from a specified backup. By default, creates a backup of the current state before restoring.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        backupId: {
+          type: 'string',
+          description: 'The backup ID (folder name) to restore from. Use list_backups to see available backups.',
+        },
+        createPreRestoreBackup: {
+          type: 'boolean',
+          description: 'Whether to create a backup of the current state before restoring (default: true)',
+          default: true,
+        },
+      },
+      required: ['backupId'],
+    },
+  },
+  // P2 Structured tools
+  {
+    name: 'add_progress_entry',
+    description: 'Add a structured progress entry to the Memory Bank. Provides a type-safe API for logging progress with categories and metadata.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        type: {
+          type: 'string',
+          enum: ['feature', 'fix', 'refactor', 'docs', 'test', 'chore', 'other'],
+          description: 'Type/category of the progress entry',
+        },
+        summary: {
+          type: 'string',
+          description: 'Brief summary of the change (one line)',
+        },
+        details: {
+          type: 'string',
+          description: 'Detailed description of the progress',
+        },
+        files: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'List of files affected by this change',
+        },
+        tags: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Tags for categorizing this entry (e.g., ["api", "performance"])',
+        },
+      },
+      required: ['type', 'summary'],
+    },
+  },
+  {
+    name: 'add_session_note',
+    description: 'Add a timestamped session note to the active context. Useful for recording observations, blockers, or context that should persist.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        note: {
+          type: 'string',
+          description: 'The note text to add',
+        },
+        category: {
+          type: 'string',
+          enum: ['observation', 'blocker', 'question', 'decision', 'todo', 'other'],
+          description: 'Category of the note (optional)',
+        },
+      },
+      required: ['note'],
+    },
+  },
+  {
+    name: 'update_tasks',
+    description: 'Update the current tasks list in active context. Can add, remove, or replace tasks.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        add: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Tasks to add to the current list',
+        },
+        remove: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Tasks to remove (exact match or substring match)',
+        },
+        replace: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'If provided, replaces the entire tasks list',
+        },
+      },
+    },
+  },
 ];
 
 /**
@@ -1113,6 +1232,594 @@ export async function handleSearchMemoryBank(
         {
           type: 'text',
           text: `Error searching Memory Bank: ${error}`,
+        },
+      ],
+      isError: true,
+    };
+  }
+}
+
+/**
+ * Processes the create_backup tool
+ * 
+ * Creates a timestamped backup of the current Memory Bank state.
+ * 
+ * @param memoryBankManager Memory Bank Manager instance
+ * @param backupDir Optional custom backup directory
+ * @returns Operation result with backup path
+ */
+export async function handleCreateBackup(
+  memoryBankManager: MemoryBankManager,
+  backupDir?: string
+) {
+  try {
+    const memoryBankDirCheck = memoryBankManager.getMemoryBankDir();
+    if (!memoryBankDirCheck) {
+      return {
+        content: [
+          {
+            type: 'text',
+            text: 'Memory Bank not initialized. Use set_memory_bank_path or initialize_memory_bank first.',
+          },
+        ],
+        isError: true,
+      };
+    }
+
+    const backupPath = await memoryBankManager.createBackup(backupDir);
+    
+    return {
+      content: [
+        {
+          type: 'text',
+          text: JSON.stringify({
+            success: true,
+            message: 'Backup created successfully',
+            backupPath,
+            timestamp: new Date().toISOString(),
+          }, null, 2),
+        },
+      ],
+    };
+  } catch (error) {
+    console.error('Error in handleCreateBackup:', error);
+    return {
+      content: [
+        {
+          type: 'text',
+          text: `Error creating backup: ${error}`,
+        },
+      ],
+      isError: true,
+    };
+  }
+}
+
+/**
+ * Processes the list_backups tool
+ * 
+ * Lists all available Memory Bank backups.
+ * 
+ * @param memoryBankManager Memory Bank Manager instance
+ * @returns Operation result with list of backups
+ */
+export async function handleListBackups(
+  memoryBankManager: MemoryBankManager
+) {
+  try {
+    const memoryBankDirCheck = memoryBankManager.getMemoryBankDir();
+    if (!memoryBankDirCheck) {
+      return {
+        content: [
+          {
+            type: 'text',
+            text: 'Memory Bank not initialized. Use set_memory_bank_path or initialize_memory_bank first.',
+          },
+        ],
+        isError: true,
+      };
+    }
+
+    const backups = await memoryBankManager.listBackups();
+    
+    return {
+      content: [
+        {
+          type: 'text',
+          text: JSON.stringify({
+            backups,
+            metadata: {
+              count: backups.length,
+              timestamp: new Date().toISOString(),
+            },
+          }, null, 2),
+        },
+      ],
+    };
+  } catch (error) {
+    console.error('Error in handleListBackups:', error);
+    return {
+      content: [
+        {
+          type: 'text',
+          text: `Error listing backups: ${error}`,
+        },
+      ],
+      isError: true,
+    };
+  }
+}
+
+/**
+ * Processes the restore_backup tool
+ * 
+ * Restores the Memory Bank from a specified backup.
+ * 
+ * @param memoryBankManager Memory Bank Manager instance
+ * @param backupId The backup ID to restore from
+ * @param createPreRestoreBackup Whether to backup current state before restore
+ * @returns Operation result with restore status
+ */
+export async function handleRestoreBackup(
+  memoryBankManager: MemoryBankManager,
+  backupId: string,
+  createPreRestoreBackup: boolean = true
+) {
+  try {
+    const memoryBankDirCheck = memoryBankManager.getMemoryBankDir();
+    if (!memoryBankDirCheck) {
+      return {
+        content: [
+          {
+            type: 'text',
+            text: 'Memory Bank not initialized. Use set_memory_bank_path or initialize_memory_bank first.',
+          },
+        ],
+        isError: true,
+      };
+    }
+
+    if (!backupId || backupId.trim().length === 0) {
+      return {
+        content: [
+          {
+            type: 'text',
+            text: 'Backup ID is required. Use list_backups to see available backups.',
+          },
+        ],
+        isError: true,
+      };
+    }
+
+    const result = await memoryBankManager.restoreBackup(backupId, createPreRestoreBackup);
+    
+    return {
+      content: [
+        {
+          type: 'text',
+          text: JSON.stringify({
+            success: result.success,
+            message: `Successfully restored from backup: ${backupId}`,
+            restoredFiles: result.restoredFiles,
+            preRestoreBackupPath: result.preRestoreBackupPath,
+            timestamp: new Date().toISOString(),
+          }, null, 2),
+        },
+      ],
+    };
+  } catch (error) {
+    console.error('Error in handleRestoreBackup:', error);
+    return {
+      content: [
+        {
+          type: 'text',
+          text: `Error restoring backup: ${error}`,
+        },
+      ],
+      isError: true,
+    };
+  }
+}
+
+// P2 Structured Tools Handlers
+
+/**
+ * Progress entry type definition
+ */
+type ProgressEntryType = 'feature' | 'fix' | 'refactor' | 'docs' | 'test' | 'chore' | 'other';
+
+/**
+ * Type labels for formatting
+ */
+const PROGRESS_TYPE_LABELS: Record<ProgressEntryType, string> = {
+  feature: '✨ Feature',
+  fix: '🐛 Fix',
+  refactor: '♻️ Refactor',
+  docs: '📚 Docs',
+  test: '🧪 Test',
+  chore: '🔧 Chore',
+  other: '📝 Other',
+};
+
+/**
+ * Processes the add_progress_entry tool
+ * 
+ * Adds a structured progress entry to the Memory Bank.
+ * 
+ * @param memoryBankManager Memory Bank Manager instance
+ * @param type Type of progress entry
+ * @param summary Brief summary
+ * @param details Optional detailed description
+ * @param files Optional list of affected files
+ * @param tags Optional tags for categorization
+ * @returns Operation result
+ */
+export async function handleAddProgressEntry(
+  memoryBankManager: MemoryBankManager,
+  type: ProgressEntryType,
+  summary: string,
+  details?: string,
+  files?: string[],
+  tags?: string[]
+) {
+  try {
+    const memoryBankDir = memoryBankManager.getMemoryBankDir();
+    if (!memoryBankDir) {
+      return {
+        content: [
+          {
+            type: 'text',
+            text: 'Memory Bank not initialized. Use set_memory_bank_path or initialize_memory_bank first.',
+          },
+        ],
+        isError: true,
+      };
+    }
+
+    // Read current progress file
+    let progressContent: string;
+    try {
+      progressContent = await memoryBankManager.readFile('progress.md');
+    } catch {
+      progressContent = '# Progress\n\n## Update History\n\n';
+    }
+
+    // Generate entry ID
+    const now = new Date();
+    const dateStr = now.toISOString().split('T')[0];
+    const entryId = `p_${dateStr}_${now.getTime().toString(36)}`;
+
+    // Format the entry
+    const typeLabel = PROGRESS_TYPE_LABELS[type] || type;
+    const timestamp = now.toLocaleString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true,
+    });
+
+    let entry = `### [${timestamp}] ${typeLabel}: ${summary}\n`;
+    entry += `<!-- ID: ${entryId} -->\n\n`;
+    
+    if (details) {
+      entry += `${details}\n\n`;
+    }
+    
+    if (files && files.length > 0) {
+      entry += `**Affected files:**\n`;
+      for (const file of files) {
+        entry += `- \`${file}\`\n`;
+      }
+      entry += '\n';
+    }
+    
+    if (tags && tags.length > 0) {
+      entry += `**Tags:** ${tags.map(t => `\`${t}\``).join(', ')}\n\n`;
+    }
+
+    entry += '---\n\n';
+
+    // Insert after "## Update History" header
+    const historyIndex = progressContent.indexOf('## Update History');
+    if (historyIndex !== -1) {
+      const insertPoint = progressContent.indexOf('\n', historyIndex) + 1;
+      progressContent = 
+        progressContent.slice(0, insertPoint) + 
+        '\n' + entry + 
+        progressContent.slice(insertPoint);
+    } else {
+      // Append at the end if no Update History section
+      progressContent += '\n## Update History\n\n' + entry;
+    }
+
+    // Write updated content
+    await memoryBankManager.writeFile('progress.md', progressContent);
+
+    return {
+      content: [
+        {
+          type: 'text',
+          text: JSON.stringify({
+            success: true,
+            entryId,
+            type,
+            summary,
+            timestamp: now.toISOString(),
+          }, null, 2),
+        },
+      ],
+    };
+  } catch (error) {
+    console.error('Error in handleAddProgressEntry:', error);
+    return {
+      content: [
+        {
+          type: 'text',
+          text: `Error adding progress entry: ${error}`,
+        },
+      ],
+      isError: true,
+    };
+  }
+}
+
+/**
+ * Session note category type
+ */
+type SessionNoteCategory = 'observation' | 'blocker' | 'question' | 'decision' | 'todo' | 'other';
+
+/**
+ * Category labels for session notes
+ */
+const SESSION_NOTE_LABELS: Record<SessionNoteCategory, string> = {
+  observation: '👀',
+  blocker: '🚧',
+  question: '❓',
+  decision: '✅',
+  todo: '📋',
+  other: '📝',
+};
+
+/**
+ * Processes the add_session_note tool
+ * 
+ * Adds a timestamped session note to the active context.
+ * 
+ * @param memoryBankManager Memory Bank Manager instance
+ * @param note The note text
+ * @param category Optional category
+ * @returns Operation result
+ */
+export async function handleAddSessionNote(
+  memoryBankManager: MemoryBankManager,
+  note: string,
+  category?: SessionNoteCategory
+) {
+  try {
+    const memoryBankDir = memoryBankManager.getMemoryBankDir();
+    if (!memoryBankDir) {
+      return {
+        content: [
+          {
+            type: 'text',
+            text: 'Memory Bank not initialized. Use set_memory_bank_path or initialize_memory_bank first.',
+          },
+        ],
+        isError: true,
+      };
+    }
+
+    // Read current active context
+    let activeContext: string;
+    try {
+      activeContext = await memoryBankManager.readFile('active-context.md');
+    } catch {
+      activeContext = '# Active Context\n\n## Session Notes\n\n';
+    }
+
+    // Format the note
+    const now = new Date();
+    const timestamp = now.toLocaleTimeString('en-US', {
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true,
+    });
+    
+    const categoryPrefix = category ? `${SESSION_NOTE_LABELS[category]} ` : '';
+    const noteEntry = `- [${timestamp}] ${categoryPrefix}${note}\n`;
+
+    // Find or create Session Notes section
+    const sessionNotesIndex = activeContext.indexOf('## Session Notes');
+    if (sessionNotesIndex !== -1) {
+      // Find the end of the Session Notes section (next ## or end of file)
+      const afterHeader = activeContext.indexOf('\n', sessionNotesIndex) + 1;
+      let sectionEnd = activeContext.indexOf('\n##', afterHeader);
+      if (sectionEnd === -1) sectionEnd = activeContext.length;
+      
+      // Insert the note after the header
+      activeContext = 
+        activeContext.slice(0, afterHeader) + 
+        '\n' + noteEntry + 
+        activeContext.slice(afterHeader);
+    } else {
+      // Append a new Session Notes section
+      activeContext += '\n## Session Notes\n\n' + noteEntry;
+    }
+
+    // Write updated content
+    await memoryBankManager.writeFile('active-context.md', activeContext);
+
+    return {
+      content: [
+        {
+          type: 'text',
+          text: JSON.stringify({
+            success: true,
+            message: 'Session note added',
+            timestamp: now.toISOString(),
+            category: category || 'none',
+          }, null, 2),
+        },
+      ],
+    };
+  } catch (error) {
+    console.error('Error in handleAddSessionNote:', error);
+    return {
+      content: [
+        {
+          type: 'text',
+          text: `Error adding session note: ${error}`,
+        },
+      ],
+      isError: true,
+    };
+  }
+}
+
+/**
+ * Processes the update_tasks tool
+ * 
+ * Updates the tasks list in active context.
+ * 
+ * @param memoryBankManager Memory Bank Manager instance
+ * @param add Tasks to add
+ * @param remove Tasks to remove
+ * @param replace Tasks to replace entire list
+ * @returns Operation result
+ */
+export async function handleUpdateTasks(
+  memoryBankManager: MemoryBankManager,
+  add?: string[],
+  remove?: string[],
+  replace?: string[]
+) {
+  try {
+    const memoryBankDir = memoryBankManager.getMemoryBankDir();
+    if (!memoryBankDir) {
+      return {
+        content: [
+          {
+            type: 'text',
+            text: 'Memory Bank not initialized. Use set_memory_bank_path or initialize_memory_bank first.',
+          },
+        ],
+        isError: true,
+      };
+    }
+
+    // Read current active context
+    let activeContext: string;
+    try {
+      activeContext = await memoryBankManager.readFile('active-context.md');
+    } catch {
+      activeContext = '# Active Context\n\n';
+    }
+
+    // Parse current tasks
+    const tasksMatch = activeContext.match(/## (?:Current )?Tasks\s*\n((?:- .*\n)*)/);
+    let currentTasks: string[] = [];
+    
+    if (tasksMatch) {
+      currentTasks = tasksMatch[1]
+        .split('\n')
+        .filter(line => line.startsWith('- '))
+        .map(line => line.slice(2).trim());
+    }
+
+    // Apply operations
+    let updatedTasks: string[];
+    
+    if (replace !== undefined) {
+      // Replace entire list
+      updatedTasks = replace;
+    } else {
+      updatedTasks = [...currentTasks];
+      
+      // Remove tasks
+      if (remove && remove.length > 0) {
+        updatedTasks = updatedTasks.filter(task => 
+          !remove.some(r => task.toLowerCase().includes(r.toLowerCase()))
+        );
+      }
+      
+      // Add tasks
+      if (add && add.length > 0) {
+        for (const task of add) {
+          if (!updatedTasks.some(t => t.toLowerCase() === task.toLowerCase())) {
+            updatedTasks.push(task);
+          }
+        }
+      }
+    }
+
+    // Format updated tasks section
+    const tasksSection = updatedTasks.length > 0
+      ? updatedTasks.map(t => `- ${t}`).join('\n') + '\n'
+      : '';
+
+    // Update the active context
+    const tasksHeaderMatch = activeContext.match(/## (?:Current )?Tasks\s*\n/);
+    if (tasksHeaderMatch) {
+      // Find the end of the tasks section
+      const headerEnd = activeContext.indexOf(tasksHeaderMatch[0]) + tasksHeaderMatch[0].length;
+      let sectionEnd = headerEnd;
+      
+      // Find where section ends (next ## or end)
+      const lines = activeContext.slice(headerEnd).split('\n');
+      for (let i = 0; i < lines.length; i++) {
+        if (lines[i].startsWith('##')) {
+          break;
+        }
+        sectionEnd += lines[i].length + 1;
+      }
+      
+      activeContext = 
+        activeContext.slice(0, headerEnd) + 
+        tasksSection + 
+        activeContext.slice(sectionEnd);
+    } else {
+      // Add tasks section after # Active Context
+      const headerIndex = activeContext.indexOf('# Active Context');
+      if (headerIndex !== -1) {
+        const insertPoint = activeContext.indexOf('\n', headerIndex) + 1;
+        activeContext = 
+          activeContext.slice(0, insertPoint) + 
+          '\n## Tasks\n' + tasksSection + '\n' +
+          activeContext.slice(insertPoint);
+      } else {
+        activeContext = '# Active Context\n\n## Tasks\n' + tasksSection + '\n' + activeContext;
+      }
+    }
+
+    // Write updated content
+    await memoryBankManager.writeFile('active-context.md', activeContext);
+
+    return {
+      content: [
+        {
+          type: 'text',
+          text: JSON.stringify({
+            success: true,
+            message: 'Tasks updated',
+            tasks: updatedTasks,
+            changes: {
+              added: add?.length || 0,
+              removed: remove?.length || 0,
+              replaced: replace !== undefined,
+            },
+          }, null, 2),
+        },
+      ],
+    };
+  } catch (error) {
+    console.error('Error in handleUpdateTasks:', error);
+    return {
+      content: [
+        {
+          type: 'text',
+          text: `Error updating tasks: ${error}`,
         },
       ],
       isError: true,

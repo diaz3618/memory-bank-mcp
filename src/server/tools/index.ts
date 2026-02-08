@@ -4,7 +4,7 @@ import { MemoryBankManager } from '../../core/MemoryBankManager.js';
 import { ProgressTracker } from '../../core/ProgressTracker.js';
 
 // Import tools and handlers
-import { coreTools, handleSetMemoryBankPath, handleInitializeMemoryBank, handleReadMemoryBankFile, handleWriteMemoryBankFile, handleListMemoryBankFiles, handleGetMemoryBankStatus, handleMigrateFileNaming, handleDebugMcpConfig, handleGetContextBundle, handleGetContextDigest, handleSearchMemoryBank } from './CoreTools.js';
+import { coreTools, handleSetMemoryBankPath, handleInitializeMemoryBank, handleReadMemoryBankFile, handleWriteMemoryBankFile, handleListMemoryBankFiles, handleGetMemoryBankStatus, handleMigrateFileNaming, handleDebugMcpConfig, handleGetContextBundle, handleGetContextDigest, handleSearchMemoryBank, handleCreateBackup, handleListBackups, handleRestoreBackup, handleAddProgressEntry, handleAddSessionNote, handleUpdateTasks } from './CoreTools.js';
 import { progressTools, handleTrackProgress } from './ProgressTools.js';
 import { contextTools, handleUpdateActiveContext } from './ContextTools.js';
 import { decisionTools, handleLogDecision } from './DecisionTools.js';
@@ -57,6 +57,9 @@ export function setupToolHandlers(
         request.params.name !== 'get_context_bundle' &&
         request.params.name !== 'get_context_digest' &&
         request.params.name !== 'migrate_file_naming' &&
+        request.params.name !== 'create_backup' &&
+        request.params.name !== 'list_backups' &&
+        request.params.name !== 'update_tasks' &&
         (!request.params.arguments || typeof request.params.arguments !== 'object')
       ) {
         throw new McpError(ErrorCode.InvalidParams, 'Invalid arguments');
@@ -314,6 +317,73 @@ export function setupToolHandlers(
             maxResults ?? 20,
             caseSensitive ?? false
           );
+        }
+
+        // Backup and restore tools (P1 improvements)
+        case 'create_backup': {
+          const args = request.params.arguments as { backupDir?: string } | undefined;
+          return handleCreateBackup(memoryBankManager, args?.backupDir);
+        }
+
+        case 'list_backups': {
+          return handleListBackups(memoryBankManager);
+        }
+
+        case 'restore_backup': {
+          const { backupId, createPreRestoreBackup } = request.params.arguments as {
+            backupId: string;
+            createPreRestoreBackup?: boolean;
+          };
+          if (!backupId) {
+            throw new McpError(ErrorCode.InvalidParams, 'Backup ID not specified');
+          }
+          return handleRestoreBackup(
+            memoryBankManager,
+            backupId,
+            createPreRestoreBackup ?? true
+          );
+        }
+
+        // P2 Structured tools
+        case 'add_progress_entry': {
+          const { type, summary, details, files, tags } = request.params.arguments as {
+            type: 'feature' | 'fix' | 'refactor' | 'docs' | 'test' | 'chore' | 'other';
+            summary: string;
+            details?: string;
+            files?: string[];
+            tags?: string[];
+          };
+          if (!type || !summary) {
+            throw new McpError(ErrorCode.InvalidParams, 'Type and summary are required');
+          }
+          return handleAddProgressEntry(
+            memoryBankManager,
+            type,
+            summary,
+            details,
+            files,
+            tags
+          );
+        }
+
+        case 'add_session_note': {
+          const { note, category } = request.params.arguments as {
+            note: string;
+            category?: 'observation' | 'blocker' | 'question' | 'decision' | 'todo' | 'other';
+          };
+          if (!note) {
+            throw new McpError(ErrorCode.InvalidParams, 'Note text is required');
+          }
+          return handleAddSessionNote(memoryBankManager, note, category);
+        }
+
+        case 'update_tasks': {
+          const { add, remove, replace } = request.params.arguments as {
+            add?: string[];
+            remove?: string[];
+            replace?: string[];
+          };
+          return handleUpdateTasks(memoryBankManager, add, remove, replace);
         }
 
         // Unknown tool

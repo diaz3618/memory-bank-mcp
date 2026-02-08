@@ -829,6 +829,168 @@ export class MemoryBankManager {
       throw new Error(`Failed to create Memory Bank backup: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
+
+  /**
+   * Lists available backups of the Memory Bank
+   * 
+   * Scans the parent directory for backup folders matching the pattern
+   * `memory-bank-backup-TIMESTAMP`.
+   * 
+   * @returns Array of backup info objects sorted by timestamp (newest first)
+   */
+  async listBackups(): Promise<Array<{ id: string; timestamp: string; path: string }>> {
+    if (!this.memoryBankDir) {
+      throw new Error('Memory Bank directory not set');
+    }
+    
+    if (!this.fileSystem) {
+      throw new Error('File system not initialized');
+    }
+    
+    try {
+      const parentDir = this.isRemote 
+        ? path.posix.dirname(this.relativeMemoryBankPath || '')
+        : path.dirname(this.memoryBankDir);
+      
+      // List directories in parent
+      const entries = await this.fileSystem.listDirectory(parentDir);
+      
+      // Filter for backup directories
+      const backupPattern = /^memory-bank-backup-(\d{4}-\d{2}-\d{2}T[\d-]+)$/;
+      const backups: Array<{ id: string; timestamp: string; path: string }> = [];
+      
+      for (const entry of entries) {
+        const name = entry.endsWith('/') ? entry.slice(0, -1) : entry;
+        const match = name.match(backupPattern);
+        if (match) {
+          const backupPath = this.isRemote 
+            ? path.posix.join(parentDir, name)
+            : path.join(parentDir, name);
+          
+          // Verify it's a directory
+          try {
+            const isDir = await this.fileSystem.isDirectory(backupPath);
+            if (isDir) {
+              backups.push({
+                id: name,
+                timestamp: match[1].replace(/-/g, ':').replace('T', ' '),
+                path: backupPath,
+              });
+            }
+          } catch {
+            // Skip if we can't verify
+          }
+        }
+      }
+      
+      // Sort by timestamp (newest first)
+      backups.sort((a, b) => b.timestamp.localeCompare(a.timestamp));
+      
+      logger.debug('MemoryBankManager', `Found ${backups.length} backups`);
+      return backups;
+    } catch (error) {
+      logger.error('MemoryBankManager', `Error listing backups: ${error}`);
+      throw new Error(`Failed to list backups: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
+
+  /**
+   * Restores the Memory Bank from a backup
+   * 
+   * Creates a backup of the current state before restoring, then copies
+   * all files from the specified backup to the Memory Bank directory.
+   * 
+   * @param backupId - The backup ID (folder name) to restore from
+   * @param createPreRestoreBackup - Whether to backup current state before restore (default: true)
+   * @returns Object with restore status and pre-restore backup path (if created)
+   */
+  async restoreBackup(
+    backupId: string, 
+    createPreRestoreBackup: boolean = true
+  ): Promise<{ success: boolean; preRestoreBackupPath?: string; restoredFiles: string[] }> {
+    if (!this.memoryBankDir) {
+      throw new Error('Memory Bank directory not set');
+    }
+    
+    if (!this.fileSystem) {
+      throw new Error('File system not initialized');
+    }
+    
+    // Validate backup ID format to prevent path traversal
+    const backupPattern = /^memory-bank-backup-\d{4}-\d{2}-\d{2}T[\d-]+$/;
+    if (!backupPattern.test(backupId)) {
+      throw new Error(`Invalid backup ID format: ${backupId}`);
+    }
+    
+    try {
+      // Construct backup path
+      const parentDir = this.isRemote 
+        ? path.posix.dirname(this.relativeMemoryBankPath || '')
+        : path.dirname(this.memoryBankDir);
+      
+      const backupPath = this.isRemote 
+        ? path.posix.join(parentDir, backupId)
+        : path.join(parentDir, backupId);
+      
+      // Verify backup exists and is a directory
+      const backupExists = await this.fileSystem.fileExists(backupPath);
+      if (!backupExists) {
+        throw new Error(`Backup not found: ${backupId}`);
+      }
+      
+      const isDir = await this.fileSystem.isDirectory(backupPath);
+      if (!isDir) {
+        throw new Error(`Backup path is not a directory: ${backupId}`);
+      }
+      
+      // Create pre-restore backup if requested
+      let preRestoreBackupPath: string | undefined;
+      if (createPreRestoreBackup) {
+        try {
+          preRestoreBackupPath = await this.createBackup();
+          logger.info('MemoryBankManager', `Created pre-restore backup at ${preRestoreBackupPath}`);
+        } catch (backupError) {
+          logger.warn('MemoryBankManager', `Failed to create pre-restore backup: ${backupError}`);
+          // Continue with restore anyway
+        }
+      }
+      
+      // List files in backup
+      const backupEntries = await this.fileSystem.listDirectory(backupPath);
+      const restoredFiles: string[] = [];
+      
+      // Copy each file from backup to memory bank
+      for (const entry of backupEntries) {
+        // Skip directories (only restore files)
+        const entryName = entry.endsWith('/') ? entry.slice(0, -1) : entry;
+        const sourcePath = this.isRemote 
+          ? path.posix.join(backupPath, entryName)
+          : path.join(backupPath, entryName);
+        
+        try {
+          const isFile = !(await this.fileSystem.isDirectory(sourcePath));
+          if (isFile) {
+            const content = await this.fileSystem.readFile(sourcePath);
+            await this.writeFile(entryName, content);
+            restoredFiles.push(entryName);
+          }
+        } catch (fileError) {
+          logger.warn('MemoryBankManager', `Failed to restore file ${entryName}: ${fileError}`);
+        }
+      }
+      
+      logger.info('MemoryBankManager', `Restored ${restoredFiles.length} files from backup ${backupId}`);
+      
+      return {
+        success: true,
+        preRestoreBackupPath,
+        restoredFiles,
+      };
+    } catch (error) {
+      logger.error('MemoryBankManager', `Error restoring backup: ${error}`);
+      throw new Error(`Failed to restore backup: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
   
   /**
    * Initializes the mode manager

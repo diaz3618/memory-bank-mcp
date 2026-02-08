@@ -48,7 +48,5 @@ test-*.js
 
 # Runtime scripts (unless specifically needed for distribution)
 run-*.sh
-prepare-*.sh 
-
-docs/internal
+prepare-*.sh
 home

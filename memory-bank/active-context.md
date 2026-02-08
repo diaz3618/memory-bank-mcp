@@ -15,6 +15,9 @@ Memory Bank MCP is an MCP (Model Context Protocol) server that provides tools an
 
 ## Current Session Notes
 
+- [3:27:59 PM] [Unknown User] Completed P1 backup/rollback and P2 structured tools: Implemented: (1) P1 backup/rollback tools - create_backup, list_backups, restore_backup for disaster recovery; (2) P2 structured tools - add_progress_entry with type categories, add_session_note with categories, update_tasks for managing task lists. All 66 tests passing. P0, P1, and P2 are now COMPLETE. Only P3 (performance/scale) remains.
+- [2:04:21 PM] [Unknown User] Decision Made: Implementation order: P1 rollback then P2 structured tools
+- [2:04:07 PM] [Unknown User] Session continuation - P0/P1/P2 improvements: Current status: All 66 tests passing. P0/P1 mostly complete (ETag concurrency, atomic writes, path protection implemented). P2 partially complete (get_context_bundle, get_context_digest, search_memory_bank tools done). Next steps: implement P1 rollback tool (restore_backup) and P2 structured tools for progress/decision/context manipulation.
 - [2026-02-08 1:26 PM] Completed P0/P1 improvements: Fixed all major blockers identified in areas-of-improvement.md. All 66 tests passing. Fixed nested folder creation issue caused by LocalFileSystem.getFullPath() not handling absolute paths. Fixed MemoryBankManager.initialize() race condition. Updated docs/internal/areas-of-improvement.md with implementation status.
 - [7:16:03 PM] [@movibe] Translated: Translated all remaining Portuguese content in Memory Bank files and documentation to English. Updated memory-bank-mcp-startup.md, active-context.md, decision-log.md, progress.md, and test-coverage.md to ensure all content is in English, maintaining consistency across the project.
 - [7:11:50 PM] [@movibe] Updated: Documentation updated to reflect the change from --user to --githubProfileUrl

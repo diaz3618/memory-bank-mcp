@@ -325,3 +325,13 @@ This document tracks important decisions made during the development of the Memo
   - Clearer visual identification of who made changes
   - Direct links to user profiles
   - Compatibility with markdown format
+
+## Implementation order: P1 rollback then P2 structured tools
+- **Date:** 2026-02-08 2:04:21 PM
+- **Author:** Unknown User
+- **Context:** Implementing improvements from areas-of-improvement.md. P1 rollback pending, P2 structured tools needed.
+- **Decision:** Implement restore_backup tool first, then add structured tools (progress.addEntry, decision.add, activeContext methods) second.
+- **Alternatives Considered:** 
+  - None
+- **Consequences:** 
+  - None
