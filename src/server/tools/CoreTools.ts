@@ -120,6 +120,75 @@ export const coreTools = [
       additionalProperties: false,
     },
   },
+  {
+    name: 'get_context_bundle',
+    description: 'Get all Memory Bank files in a single response for quick context loading. Returns all core files (product-context, active-context, progress, decision-log, system-patterns) as a combined JSON object.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        includeEtags: {
+          type: 'boolean',
+          description: 'Whether to include ETags for each file (default: true)',
+          default: true,
+        },
+      },
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'get_context_digest',
+    description: 'Get a compact summary of the Memory Bank for context-limited situations. Returns recent progress entries, current tasks, known issues, and recent decisions.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        maxProgressEntries: {
+          type: 'number',
+          description: 'Maximum number of recent progress entries to include (default: 10)',
+          default: 10,
+        },
+        maxDecisions: {
+          type: 'number',
+          description: 'Maximum number of recent decisions to include (default: 5)',
+          default: 5,
+        },
+        includeSystemPatterns: {
+          type: 'boolean',
+          description: 'Whether to include system patterns summary (default: false)',
+          default: false,
+        },
+      },
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'search_memory_bank',
+    description: 'Search across all Memory Bank files with full-text search',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        query: {
+          type: 'string',
+          description: 'Search query string',
+        },
+        files: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Optional list of specific files to search (e.g., ["progress.md", "decision-log.md"]). If not provided, searches all core files.',
+        },
+        maxResults: {
+          type: 'number',
+          description: 'Maximum number of results to return (default: 20)',
+          default: 20,
+        },
+        caseSensitive: {
+          type: 'boolean',
+          description: 'Whether search is case-sensitive (default: false)',
+          default: false,
+        },
+      },
+      required: ['query'],
+    },
+  },
 ];
 
 /**
@@ -603,6 +672,450 @@ export async function handleDebugMcpConfig(
         },
       ],
       isError: true
+    };
+  }
+}
+
+/**
+ * Core Memory Bank file names
+ */
+const CORE_FILES = [
+  'product-context.md',
+  'active-context.md',
+  'progress.md',
+  'decision-log.md',
+  'system-patterns.md',
+];
+
+/**
+ * Processes the get_context_bundle tool
+ * 
+ * Returns all core Memory Bank files in a single response for quick context loading.
+ * This is the #1 operational use-case for memory banks - quickly loading context
+ * when starting a new session or when context window limits are a concern.
+ * 
+ * @param memoryBankManager Memory Bank Manager instance
+ * @param includeEtags Whether to include ETags for each file
+ * @returns Bundle of all core files with optional ETags
+ */
+export async function handleGetContextBundle(
+  memoryBankManager: MemoryBankManager,
+  includeEtags: boolean = true
+) {
+  try {
+    const memoryBankDir = memoryBankManager.getMemoryBankDir();
+    if (!memoryBankDir) {
+      return {
+        content: [
+          {
+            type: 'text',
+            text: 'Memory Bank not initialized. Use set_memory_bank_path or initialize_memory_bank first.',
+          },
+        ],
+        isError: true,
+      };
+    }
+
+    const bundle: Record<string, { content: string; etag?: string }> = {};
+    const errors: string[] = [];
+
+    for (const filename of CORE_FILES) {
+      try {
+        const content = await memoryBankManager.readFile(filename);
+        bundle[filename] = {
+          content,
+          ...(includeEtags && { etag: ETagUtils.calculateETag(content) }),
+        };
+      } catch (error) {
+        // File might not exist yet, which is OK
+        errors.push(`${filename}: ${error}`);
+      }
+    }
+
+    // Count successfully loaded files
+    const loadedCount = Object.keys(bundle).length;
+    
+    if (loadedCount === 0) {
+      return {
+        content: [
+          {
+            type: 'text',
+            text: `No Memory Bank files found. Errors: ${errors.join('; ')}`,
+          },
+        ],
+        isError: true,
+      };
+    }
+
+    return {
+      content: [
+        {
+          type: 'text',
+          text: JSON.stringify({
+            bundle,
+            metadata: {
+              timestamp: new Date().toISOString(),
+              filesLoaded: loadedCount,
+              totalFiles: CORE_FILES.length,
+              memoryBankDir,
+              ...(errors.length > 0 && { warnings: errors }),
+            },
+          }, null, 2),
+        },
+      ],
+    };
+  } catch (error) {
+    console.error('Error in handleGetContextBundle:', error);
+    return {
+      content: [
+        {
+          type: 'text',
+          text: `Error getting context bundle: ${error}`,
+        },
+      ],
+      isError: true,
+    };
+  }
+}
+
+/**
+ * Extracts recent progress entries from the progress.md content
+ * 
+ * @param content Progress file content
+ * @param maxEntries Maximum number of entries to return
+ * @returns Array of recent progress entries
+ */
+function extractProgressEntries(content: string, maxEntries: number): string[] {
+  const entries: string[] = [];
+  const lines = content.split('\n');
+  
+  for (const line of lines) {
+    // Progress entries start with "- [" followed by a date/time
+    if (line.trim().startsWith('- [') && /\d{4}-\d{2}-\d{2}/.test(line)) {
+      entries.push(line.trim());
+      if (entries.length >= maxEntries) {
+        break;
+      }
+    }
+  }
+  
+  return entries;
+}
+
+/**
+ * Extracts decisions from the decision-log.md content
+ * 
+ * @param content Decision log content
+ * @param maxDecisions Maximum number of decisions to return
+ * @returns Array of decision summaries
+ */
+function extractDecisions(content: string, maxDecisions: number): Array<{ title: string; date?: string; summary: string }> {
+  const decisions: Array<{ title: string; date?: string; summary: string }> = [];
+  const sections = content.split(/^## /m).filter(s => s.trim());
+  
+  for (let i = 0; i < Math.min(sections.length, maxDecisions); i++) {
+    const section = sections[i];
+    const lines = section.split('\n');
+    const title = lines[0]?.trim() || 'Untitled Decision';
+    
+    // Extract date if present
+    let date: string | undefined;
+    let summary = '';
+    
+    for (const line of lines.slice(1)) {
+      if (line.includes('**Date:**')) {
+        date = line.replace(/.*\*\*Date:\*\*\s*/, '').trim();
+      } else if (line.includes('**Decision:**')) {
+        summary = line.replace(/.*\*\*Decision:\*\*\s*/, '').trim();
+      }
+    }
+    
+    if (title && title !== 'Decision Log') {
+      decisions.push({ title, date, summary: summary || 'See full decision log for details.' });
+    }
+  }
+  
+  return decisions;
+}
+
+/**
+ * Extracts current tasks, issues, and next steps from active-context.md
+ * 
+ * @param content Active context content
+ * @returns Object with tasks, issues, and nextSteps arrays
+ */
+function extractActiveContextItems(content: string): { tasks: string[]; issues: string[]; nextSteps: string[] } {
+  const result = { tasks: [] as string[], issues: [] as string[], nextSteps: [] as string[] };
+  
+  // Extract tasks
+  const tasksMatch = content.match(/## Ongoing Tasks\s+([\s\S]*?)(?=##|$)/);
+  if (tasksMatch) {
+    result.tasks = tasksMatch[1]
+      .split('\n')
+      .filter(line => line.trim().startsWith('-'))
+      .map(line => line.replace(/^-\s*/, '').trim())
+      .filter(Boolean);
+  }
+  
+  // Extract issues
+  const issuesMatch = content.match(/## Known Issues\s+([\s\S]*?)(?=##|$)/);
+  if (issuesMatch) {
+    result.issues = issuesMatch[1]
+      .split('\n')
+      .filter(line => line.trim().startsWith('-'))
+      .map(line => line.replace(/^-\s*/, '').trim())
+      .filter(Boolean);
+  }
+  
+  // Extract next steps
+  const nextStepsMatch = content.match(/## Next Steps\s+([\s\S]*?)(?=##|$)/);
+  if (nextStepsMatch) {
+    result.nextSteps = nextStepsMatch[1]
+      .split('\n')
+      .filter(line => line.trim().startsWith('-'))
+      .map(line => line.replace(/^-\s*/, '').trim())
+      .filter(Boolean);
+  }
+  
+  return result;
+}
+
+/**
+ * Processes the get_context_digest tool
+ * 
+ * Returns a compact summary of the Memory Bank for context-limited situations.
+ * Useful when agents need quick access to the most relevant information.
+ * 
+ * @param memoryBankManager Memory Bank Manager instance
+ * @param maxProgressEntries Maximum progress entries to return
+ * @param maxDecisions Maximum decisions to return
+ * @param includeSystemPatterns Whether to include system patterns
+ * @returns Compact digest of Memory Bank state
+ */
+export async function handleGetContextDigest(
+  memoryBankManager: MemoryBankManager,
+  maxProgressEntries: number = 10,
+  maxDecisions: number = 5,
+  includeSystemPatterns: boolean = false
+) {
+  try {
+    const memoryBankDir = memoryBankManager.getMemoryBankDir();
+    if (!memoryBankDir) {
+      return {
+        content: [
+          {
+            type: 'text',
+            text: 'Memory Bank not initialized. Use set_memory_bank_path or initialize_memory_bank first.',
+          },
+        ],
+        isError: true,
+      };
+    }
+
+    const digest: {
+      projectState?: string;
+      currentContext: { tasks: string[]; issues: string[]; nextSteps: string[] };
+      recentProgress: string[];
+      recentDecisions: Array<{ title: string; date?: string; summary: string }>;
+      systemPatterns?: string;
+    } = {
+      currentContext: { tasks: [], issues: [], nextSteps: [] },
+      recentProgress: [],
+      recentDecisions: [],
+    };
+
+    // Load active context
+    try {
+      const activeContext = await memoryBankManager.readFile('active-context.md');
+      
+      // Extract project state (first paragraph after # Active Context)
+      const projectStateMatch = activeContext.match(/## Current Project State\s+([\s\S]*?)(?=##|$)/);
+      if (projectStateMatch) {
+        digest.projectState = projectStateMatch[1].trim().split('\n')[0];
+      }
+      
+      // Extract tasks, issues, and next steps
+      digest.currentContext = extractActiveContextItems(activeContext);
+    } catch (error) {
+      console.error('Error loading active-context.md:', error);
+    }
+
+    // Load recent progress
+    try {
+      const progress = await memoryBankManager.readFile('progress.md');
+      digest.recentProgress = extractProgressEntries(progress, maxProgressEntries);
+    } catch (error) {
+      console.error('Error loading progress.md:', error);
+    }
+
+    // Load recent decisions
+    try {
+      const decisionLog = await memoryBankManager.readFile('decision-log.md');
+      digest.recentDecisions = extractDecisions(decisionLog, maxDecisions);
+    } catch (error) {
+      console.error('Error loading decision-log.md:', error);
+    }
+
+    // Optionally load system patterns summary
+    if (includeSystemPatterns) {
+      try {
+        const systemPatterns = await memoryBankManager.readFile('system-patterns.md');
+        // Just include first few lines as a summary
+        const lines = systemPatterns.split('\n').slice(0, 20);
+        digest.systemPatterns = lines.join('\n');
+      } catch (error) {
+        console.error('Error loading system-patterns.md:', error);
+      }
+    }
+
+    return {
+      content: [
+        {
+          type: 'text',
+          text: JSON.stringify({
+            digest,
+            metadata: {
+              timestamp: new Date().toISOString(),
+              memoryBankDir,
+            },
+          }, null, 2),
+        },
+      ],
+    };
+  } catch (error) {
+    console.error('Error in handleGetContextDigest:', error);
+    return {
+      content: [
+        {
+          type: 'text',
+          text: `Error getting context digest: ${error}`,
+        },
+      ],
+      isError: true,
+    };
+  }
+}
+
+/**
+ * Search result interface
+ */
+interface SearchResult {
+  file: string;
+  line: number;
+  content: string;
+  context: string;
+}
+
+/**
+ * Processes the search_memory_bank tool
+ * 
+ * Performs full-text search across Memory Bank files.
+ * 
+ * @param memoryBankManager Memory Bank Manager instance
+ * @param query Search query
+ * @param files Optional list of files to search
+ * @param maxResults Maximum results to return
+ * @param caseSensitive Whether search is case-sensitive
+ * @returns Search results
+ */
+export async function handleSearchMemoryBank(
+  memoryBankManager: MemoryBankManager,
+  query: string,
+  files?: string[],
+  maxResults: number = 20,
+  caseSensitive: boolean = false
+) {
+  try {
+    const memoryBankDir = memoryBankManager.getMemoryBankDir();
+    if (!memoryBankDir) {
+      return {
+        content: [
+          {
+            type: 'text',
+            text: 'Memory Bank not initialized. Use set_memory_bank_path or initialize_memory_bank first.',
+          },
+        ],
+        isError: true,
+      };
+    }
+
+    if (!query || query.trim().length === 0) {
+      return {
+        content: [
+          {
+            type: 'text',
+            text: 'Search query cannot be empty.',
+          },
+        ],
+        isError: true,
+      };
+    }
+
+    const filesToSearch = files && files.length > 0 ? files : CORE_FILES;
+    const results: SearchResult[] = [];
+    const searchQuery = caseSensitive ? query : query.toLowerCase();
+
+    for (const filename of filesToSearch) {
+      if (results.length >= maxResults) break;
+
+      try {
+        const content = await memoryBankManager.readFile(filename);
+        const lines = content.split('\n');
+
+        for (let i = 0; i < lines.length; i++) {
+          if (results.length >= maxResults) break;
+
+          const line = lines[i];
+          const searchLine = caseSensitive ? line : line.toLowerCase();
+
+          if (searchLine.includes(searchQuery)) {
+            // Get context (1 line before and after)
+            const contextLines: string[] = [];
+            if (i > 0) contextLines.push(lines[i - 1]);
+            contextLines.push(line);
+            if (i < lines.length - 1) contextLines.push(lines[i + 1]);
+
+            results.push({
+              file: filename,
+              line: i + 1,
+              content: line.trim(),
+              context: contextLines.join('\n'),
+            });
+          }
+        }
+      } catch (error) {
+        // File might not exist, skip it
+        console.error(`Error searching ${filename}:`, error);
+      }
+    }
+
+    return {
+      content: [
+        {
+          type: 'text',
+          text: JSON.stringify({
+            query,
+            results,
+            metadata: {
+              timestamp: new Date().toISOString(),
+              totalResults: results.length,
+              filesSearched: filesToSearch,
+              truncated: results.length >= maxResults,
+            },
+          }, null, 2),
+        },
+      ],
+    };
+  } catch (error) {
+    console.error('Error in handleSearchMemoryBank:', error);
+    return {
+      content: [
+        {
+          type: 'text',
+          text: `Error searching Memory Bank: ${error}`,
+        },
+      ],
+      isError: true,
     };
   }
 }

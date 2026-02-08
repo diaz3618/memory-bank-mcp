@@ -4,7 +4,7 @@ import { MemoryBankManager } from '../../core/MemoryBankManager.js';
 import { ProgressTracker } from '../../core/ProgressTracker.js';
 
 // Import tools and handlers
-import { coreTools, handleSetMemoryBankPath, handleInitializeMemoryBank, handleReadMemoryBankFile, handleWriteMemoryBankFile, handleListMemoryBankFiles, handleGetMemoryBankStatus, handleMigrateFileNaming, handleDebugMcpConfig } from './CoreTools.js';
+import { coreTools, handleSetMemoryBankPath, handleInitializeMemoryBank, handleReadMemoryBankFile, handleWriteMemoryBankFile, handleListMemoryBankFiles, handleGetMemoryBankStatus, handleMigrateFileNaming, handleDebugMcpConfig, handleGetContextBundle, handleGetContextDigest, handleSearchMemoryBank } from './CoreTools.js';
 import { progressTools, handleTrackProgress } from './ProgressTools.js';
 import { contextTools, handleUpdateActiveContext } from './ContextTools.js';
 import { decisionTools, handleLogDecision } from './DecisionTools.js';
@@ -54,6 +54,9 @@ export function setupToolHandlers(
         request.params.name !== 'get_memory_bank_status' &&
         request.params.name !== 'list_memory_bank_files' &&
         request.params.name !== 'get_current_mode' &&
+        request.params.name !== 'get_context_bundle' &&
+        request.params.name !== 'get_context_digest' &&
+        request.params.name !== 'migrate_file_naming' &&
         (!request.params.arguments || typeof request.params.arguments !== 'object')
       ) {
         throw new McpError(ErrorCode.InvalidParams, 'Invalid arguments');
@@ -272,6 +275,45 @@ export function setupToolHandlers(
 
         case 'complete_umb': {
           return handleCompleteUmb(memoryBankManager);
+        }
+
+        // Context bundle and digest tools (P2 improvements)
+        case 'get_context_bundle': {
+          const args = request.params.arguments as { includeEtags?: boolean } | undefined;
+          return handleGetContextBundle(memoryBankManager, args?.includeEtags ?? true);
+        }
+
+        case 'get_context_digest': {
+          const args = request.params.arguments as {
+            maxProgressEntries?: number;
+            maxDecisions?: number;
+            includeSystemPatterns?: boolean;
+          } | undefined;
+          return handleGetContextDigest(
+            memoryBankManager,
+            args?.maxProgressEntries ?? 10,
+            args?.maxDecisions ?? 5,
+            args?.includeSystemPatterns ?? false
+          );
+        }
+
+        case 'search_memory_bank': {
+          const { query, files, maxResults, caseSensitive } = request.params.arguments as {
+            query: string;
+            files?: string[];
+            maxResults?: number;
+            caseSensitive?: boolean;
+          };
+          if (!query) {
+            throw new McpError(ErrorCode.InvalidParams, 'Search query not specified');
+          }
+          return handleSearchMemoryBank(
+            memoryBankManager,
+            query,
+            files,
+            maxResults ?? 20,
+            caseSensitive ?? false
+          );
         }
 
         // Unknown tool
