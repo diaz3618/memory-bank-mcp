@@ -19,20 +19,29 @@ export class RemoteFileSystem implements FileSystemInterface {
    * @param sshKeyPath - Path to the SSH private key file
    * @param remoteUser - Username for the remote server
    * @param remoteHost - Hostname or IP address of the remote server
+   * @param options - Optional SSH configuration (debugMode, strictHostKeyChecking)
    */
-  constructor(baseDir: string, sshKeyPath: string, remoteUser: string, remoteHost: string) {
+  constructor(
+    baseDir: string, 
+    sshKeyPath: string, 
+    remoteUser: string, 
+    remoteHost: string,
+    options?: { debugMode?: boolean; strictHostKeyChecking?: boolean }
+  ) {
     this.baseDir = baseDir;
-    this.sshUtils = new SshUtils(sshKeyPath, remoteUser, remoteHost, baseDir);
+    this.sshUtils = new SshUtils(sshKeyPath, remoteUser, remoteHost, baseDir, options);
   }
 
   /**
-   * Gets the full path for a relative path
+   * Gets the full POSIX path for a relative path
+   * Uses POSIX path joining regardless of host OS to ensure remote paths are correct
    * 
    * @param relativePath - Relative path
-   * @returns Full path
+   * @returns Full POSIX path
    */
   private getFullPath(relativePath: string): string {
-    return path.join(this.baseDir, relativePath);
+    // Always use POSIX path joining for remote paths (Unix-style forward slashes)
+    return path.posix.join(this.baseDir, relativePath);
   }
 
   /**
@@ -42,7 +51,7 @@ export class RemoteFileSystem implements FileSystemInterface {
    * @returns True if the path exists, false otherwise
    */
   async fileExists(relativePath: string): Promise<boolean> {
-    return this.sshUtils.directoryExists(relativePath);
+    return this.sshUtils.exists(relativePath);
   }
 
   /**
@@ -52,7 +61,17 @@ export class RemoteFileSystem implements FileSystemInterface {
    * @returns True if the path is a directory, false otherwise
    */
   async isDirectory(relativePath: string): Promise<boolean> {
-    return this.sshUtils.directoryExists(relativePath);
+    return this.sshUtils.isDirectory(relativePath);
+  }
+
+  /**
+   * Checks if a path is a file
+   * 
+   * @param relativePath - Relative path to check
+   * @returns True if the path is a file, false otherwise
+   */
+  async isFile(relativePath: string): Promise<boolean> {
+    return this.sshUtils.isFile(relativePath);
   }
 
   /**

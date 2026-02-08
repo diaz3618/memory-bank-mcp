@@ -2,6 +2,31 @@
 
 This document tracks important decisions made during the development of the Memory Bank MCP.
 
+## P0/P1 Improvement Implementation Strategy
+
+- **Date:** 2026-02-08
+- **Context:** The areas-of-improvement.md document identified critical blockers preventing the Memory Bank MCP from being production-ready: broken remote mode, disabled mode system, security gaps, and data integrity issues.
+- **Decision:** Implement all P0 (must-fix) and P1 (reliability) improvements before adding new features. Key implementations include:
+  1. Fixed remote file/directory checks with proper stdout trimming in SshUtils
+  2. Made ProgressTracker injectable with FileSystemInterface for remote compatibility
+  3. Made backup creation use FileSystemInterface end-to-end
+  4. Wired ModeManager properly (removed stubs, instantiated ExternalRulesLoader)
+  5. Added path traversal protection with validation and canonicalization
+  6. Removed dummy tool parameters (random_string)
+  7. Implemented atomic writes using temp file + rename pattern
+  8. Added ETag-based optimistic concurrency (SHA-256 hash of content)
+- **Alternatives Considered:**
+  - Partial implementation (only fix critical bugs)
+  - Rewrite from scratch
+  - Skip remote mode improvements and focus on local only
+- **Consequences:**
+  - Remote mode now works correctly end-to-end
+  - Mode system is fully functional
+  - Multi-agent scenarios supported with ETag concurrency
+  - File operations are atomic and safe
+  - All 66 tests passing
+  - Foundation ready for P2/P3 improvements
+
 ## Approach for Type Safety Improvements
 
 - **Date:** 2025-03-08

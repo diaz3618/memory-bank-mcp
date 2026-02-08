@@ -18,8 +18,12 @@ describe('MemoryBankManager Tests', () => {
     // Create temporary directory
     await fs.ensureDir(tempDir);
     
-    // Create a new MemoryBankManager for each test
-    memoryBankManager = new MemoryBankManager(undefined, testUserId);
+    // Create a new MemoryBankManager for each test with tempDir as project path
+    // This prevents the manager from auto-discovering the project root's memory-bank
+    memoryBankManager = new MemoryBankManager(tempDir, testUserId);
+    
+    // Wait a tick for any async constructor operations to complete
+    await new Promise(resolve => setTimeout(resolve, 10));
   });
   
   afterEach(async () => {
@@ -208,6 +212,14 @@ describe('MemoryBankManager Tests', () => {
   });
   
   test('Should list files in Memory Bank', async () => {
+    // Create Memory Bank directory with core files first
+    await fs.ensureDir(memoryBankDir);
+    await fs.writeFile(path.join(memoryBankDir, 'product-context.md'), '# Product Context');
+    await fs.writeFile(path.join(memoryBankDir, 'active-context.md'), '# Active Context');
+    
+    // Set Memory Bank directory
+    memoryBankManager.setMemoryBankDir(memoryBankDir);
+    
     // Create test files
     await memoryBankManager.writeFile('file1.md', 'Test content 1');
     await memoryBankManager.writeFile('file2.md', 'Test content 2');

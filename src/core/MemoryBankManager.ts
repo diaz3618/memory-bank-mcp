@@ -29,6 +29,68 @@ import { ExternalRulesLoader } from '../utils/ExternalRulesLoader.js';
 import { MigrationUtils } from '../utils/MigrationUtils.js';
 
 /**
+ * Core Memory Bank files (allowlist)
+ */
+const ALLOWED_CORE_FILES = [
+  'product-context.md',
+  'active-context.md',
+  'progress.md',
+  'decision-log.md',
+  'system-patterns.md',
+  // JSON sidecars for structured data (future support)
+  'product-context.json',
+  'active-context.json',
+  'progress.json',
+  'decision-log.json',
+  'system-patterns.json',
+];
+
+/**
+ * Validates a filename to prevent path traversal attacks
+ * 
+ * @param filename - Filename to validate
+ * @returns Object with validation result and sanitized filename
+ */
+function validateFilename(filename: string): { valid: boolean; sanitized: string; error?: string } {
+  // Check for null bytes
+  if (filename.includes('\0')) {
+    return { valid: false, sanitized: '', error: 'Filename contains null bytes' };
+  }
+  
+  // Check for absolute paths
+  if (path.isAbsolute(filename) || filename.startsWith('/') || filename.startsWith('\\')) {
+    return { valid: false, sanitized: '', error: 'Absolute paths are not allowed' };
+  }
+  
+  // Check for path traversal attempts
+  if (filename.includes('..') || filename.includes('./') || filename.includes('.\\')) {
+    return { valid: false, sanitized: '', error: 'Path traversal is not allowed' };
+  }
+  
+  // Check for backslashes (Windows path separators) - convert to forward slashes
+  const sanitized = filename.replace(/\\/g, '/');
+  
+  // Only allow files in the root or docs/ subdirectory
+  const parts = sanitized.split('/');
+  if (parts.length > 2) {
+    return { valid: false, sanitized: '', error: 'Only root and docs/ subdirectory are allowed' };
+  }
+  
+  if (parts.length === 2 && parts[0] !== 'docs') {
+    return { valid: false, sanitized: '', error: 'Only docs/ subdirectory is allowed' };
+  }
+  
+  // Check for allowed file extensions
+  const allowedExtensions = ['.md', '.json'];
+  const ext = path.extname(sanitized).toLowerCase();
+  if (!allowedExtensions.includes(ext)) {
+    return { valid: false, sanitized: '', error: 'Only .md and .json files are allowed' };
+  }
+  
+  return { valid: true, sanitized };
+}
+
+/**
  * Class responsible for managing Memory Bank operations
  * 
  * This class handles all operations related to Memory Bank directories,
@@ -55,6 +117,11 @@ export class MemoryBankManager {
   
   // Language is always set to English
   private language: string = 'en';
+  
+  /**
+   * List of allowed core files for the Memory Bank
+   */
+  static readonly ALLOWED_CORE_FILES = ALLOWED_CORE_FILES;
 
   /**
    * Creates a new MemoryBankManager instance
@@ -352,21 +419,26 @@ export class MemoryBankManager {
       
       // Create the Memory Bank directory if it doesn't exist
       if (createIfNotExists) {
+        // Determine the correct base directory for the file system
+        // When customPath is set, we need to use it as the base dir
+        const baseDir = this.customPath || this.projectPath;
+        
+        // For local file system, (re)create if the base directory changed
+        // This ensures we use the correct path when customPath is set
+        if (!this.isRemote && baseDir) {
+          this.fileSystem = FileSystemFactory.createLocalFileSystem(baseDir);
+        } else if (this.isRemote && this.remoteConfig && !this.fileSystem) {
+          // Create remote file system if not already created
+          this.fileSystem = FileSystemFactory.createRemoteFileSystem(
+            this.remoteConfig.remotePath,
+            this.remoteConfig.sshKeyPath,
+            this.remoteConfig.remoteUser,
+            this.remoteConfig.remoteHost
+          );
+        }
+        
         if (!this.fileSystem) {
-          if (this.isRemote && this.remoteConfig) {
-            // Create remote file system
-            this.fileSystem = FileSystemFactory.createRemoteFileSystem(
-              this.remoteConfig.remotePath,
-              this.remoteConfig.sshKeyPath,
-              this.remoteConfig.remoteUser,
-              this.remoteConfig.remoteHost
-            );
-          } else if (this.projectPath) {
-            // Create local file system
-            this.fileSystem = FileSystemFactory.createLocalFileSystem(this.projectPath);
-          } else {
-            throw new Error('File system cannot be initialized');
-          }
+          throw new Error('File system cannot be initialized: no base directory available');
         }
         
         // Create the Memory Bank directory if it doesn't exist
@@ -408,9 +480,14 @@ export class MemoryBankManager {
       this.setMemoryBankDir(absoluteMemoryBankPath);
       this.relativeMemoryBankPath = relativeMemoryBankPath;
       
-      // Initialize the progress tracker - ensure memoryBankPath is not null
+      // Initialize the progress tracker with FileSystemInterface for remote support
       if (absoluteMemoryBankPath) {
-        this.progressTracker = new ProgressTracker(absoluteMemoryBankPath, this.userId || undefined);
+        this.progressTracker = new ProgressTracker(
+          absoluteMemoryBankPath, 
+          this.userId || undefined,
+          this.fileSystem || undefined,
+          relativeMemoryBankPath
+        );
       }
       
       // Welcome message
@@ -428,7 +505,7 @@ export class MemoryBankManager {
    * 
    * @param filename - Name of the file to read
    * @returns File contents as a string
-   * @throws Error if file reading fails
+   * @throws Error if file reading fails or filename is invalid
    */
   async readFile(filename: string): Promise<string> {
     try {
@@ -440,7 +517,16 @@ export class MemoryBankManager {
         throw new Error('File system is not initialized');
       }
       
-      const filePath = this.isRemote ? `${this.getFileSystemPath()}/${filename}` : path.join(this.getFileSystemPath()!, filename);
+      // Validate filename to prevent path traversal
+      const validation = validateFilename(filename);
+      if (!validation.valid) {
+        throw new Error(`Invalid filename: ${validation.error}`);
+      }
+      const safeFilename = validation.sanitized;
+      
+      const filePath = this.isRemote 
+        ? path.posix.join(this.getFileSystemPath()!, safeFilename) 
+        : path.join(this.getFileSystemPath()!, safeFilename);
       return await this.fileSystem.readFile(filePath);
     } catch (error) {
       logger.error('MemoryBankManager', `Failed to read file ${filename}: ${error}`);
@@ -453,7 +539,7 @@ export class MemoryBankManager {
    * 
    * @param filename - Name of the file to write
    * @param content - Content to write
-   * @throws Error if file writing fails
+   * @throws Error if file writing fails or filename is invalid
    */
   async writeFile(filename: string, content: string): Promise<void> {
     try {
@@ -466,13 +552,21 @@ export class MemoryBankManager {
       }
       
       // Migrate camelCase to kebab-case if needed
-      const migratedFilename = filename.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase();
+      let migratedFilename = filename.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase();
       if (migratedFilename !== filename) {
         logger.info('MemoryBankManager', `Migrating file name from ${filename} to ${migratedFilename}`);
-        filename = migratedFilename;
       }
       
-      const filePath = this.isRemote ? `${this.getFileSystemPath()}/${filename}` : path.join(this.getFileSystemPath()!, filename);
+      // Validate filename to prevent path traversal
+      const validation = validateFilename(migratedFilename);
+      if (!validation.valid) {
+        throw new Error(`Invalid filename: ${validation.error}`);
+      }
+      const safeFilename = validation.sanitized;
+      
+      const filePath = this.isRemote 
+        ? path.posix.join(this.getFileSystemPath()!, safeFilename) 
+        : path.join(this.getFileSystemPath()!, safeFilename);
       await this.fileSystem.writeFile(filePath, content);
     } catch (error) {
       logger.error('MemoryBankManager', `Failed to write to file ${filename}: ${error}`);
@@ -637,15 +731,25 @@ export class MemoryBankManager {
   setMemoryBankDir(dir: string): void {
     this.memoryBankDir = dir;
     
-    // Initialize the progress tracker
+    // Initialize the progress tracker with FileSystemInterface for remote support
     if (dir) {
-      this.progressTracker = new ProgressTracker(dir, this.userId || undefined);
+      this.progressTracker = new ProgressTracker(
+        dir, 
+        this.userId || undefined,
+        this.fileSystem || undefined,
+        this.relativeMemoryBankPath || undefined
+      );
     }
     
     // Initialize the mode manager - we'll catch any errors to prevent initialization failures
     this.initializeModeManager().catch((error: any) => {
       console.error(`Error initializing mode manager: ${error}`);
     });
+    
+    // Set memory bank status to active if mode manager is already initialized
+    if (this.modeManager && dir) {
+      this.modeManager.setMemoryBankStatus('ACTIVE');
+    }
   }
 
   /**
@@ -673,7 +777,11 @@ export class MemoryBankManager {
   /**
    * Creates a backup of the Memory Bank
    * 
-   * @param backupDir - Directory where the backup will be stored
+   * Supports both local and remote file systems through FileSystemInterface.
+   * For remote: creates backup on the remote server.
+   * For local: creates backup locally.
+   * 
+   * @param backupDir - Directory where the backup will be stored (relative for remote, absolute for local)
    * @returns Path to the backup directory
    * @throws Error if the Memory Bank directory is not set or backup fails
    */
@@ -682,18 +790,36 @@ export class MemoryBankManager {
       throw new Error('Memory Bank directory not set');
     }
     
+    if (!this.fileSystem) {
+      throw new Error('File system not initialized');
+    }
+    
     try {
       const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-      const backupPath = backupDir 
-        ? path.join(backupDir, `memory-bank-backup-${timestamp}`)
-        : path.join(path.dirname(this.memoryBankDir), `memory-bank-backup-${timestamp}`);
+      let backupPath: string;
       
-      await FileUtils.ensureDirectory(backupPath);
+      if (this.isRemote) {
+        // For remote: create backup relative to the memory bank path
+        const parentDir = backupDir || '..';
+        backupPath = path.posix.join(this.relativeMemoryBankPath || '', parentDir, `memory-bank-backup-${timestamp}`);
+      } else {
+        // For local: use absolute paths
+        backupPath = backupDir 
+          ? path.join(backupDir, `memory-bank-backup-${timestamp}`)
+          : path.join(path.dirname(this.memoryBankDir), `memory-bank-backup-${timestamp}`);
+      }
       
+      // Create backup directory using FileSystemInterface
+      await this.fileSystem.ensureDirectory(backupPath);
+      
+      // Copy files using FileSystemInterface
       const files = await this.listFiles();
       for (const file of files) {
         const content = await this.readFile(file);
-        await FileUtils.writeFile(path.join(backupPath, file), content);
+        const backupFilePath = this.isRemote 
+          ? path.posix.join(backupPath, file)
+          : path.join(backupPath, file);
+        await this.fileSystem.writeFile(backupFilePath, content);
       }
       
       logger.debug('MemoryBankManager', `Memory Bank backup created at ${backupPath}`);
@@ -711,9 +837,31 @@ export class MemoryBankManager {
    * @returns Promise that resolves when initialization is complete
    */
   async initializeModeManager(initialMode?: string): Promise<void> {
-    // Implementation can be empty for now
-    // This is just to fix the reference error
-    logger.debug('MemoryBankManager', 'Mode manager initialization skipped');
+    try {
+      if (!this.projectPath) {
+        logger.warn('MemoryBankManager', 'Project path not set, cannot initialize ModeManager');
+        return;
+      }
+      
+      // Create the ExternalRulesLoader for the project
+      this.rulesLoader = new ExternalRulesLoader(this.projectPath);
+      
+      // Create the ModeManager with the rules loader
+      this.modeManager = new ModeManager(this.rulesLoader);
+      
+      // Initialize with the specified mode or default
+      await this.modeManager.initialize(initialMode || 'code');
+      
+      // Set memory bank status if memory bank is initialized
+      if (this.memoryBankDir) {
+        this.modeManager.setMemoryBankStatus('ACTIVE');
+      }
+      
+      logger.info('MemoryBankManager', `Mode manager initialized with mode: ${this.modeManager.getCurrentModeState().name}`);
+    } catch (error) {
+      logger.error('MemoryBankManager', `Error initializing mode manager: ${error}`);
+      // Don't throw - mode manager initialization failure should not break memory bank
+    }
   }
   
   /**
@@ -721,10 +869,8 @@ export class MemoryBankManager {
    * 
    * @returns Mode manager or null if not initialized
    */
-  getModeManager(): any {
-    // Just return null since we're not fully implementing the mode manager
-    logger.debug('MemoryBankManager', 'Mode manager requested, returning null');
-    return null;
+  getModeManager(): ModeManager | null {
+    return this.modeManager;
   }
   
   /**
@@ -734,9 +880,18 @@ export class MemoryBankManager {
    * @returns True if the mode was successfully switched, false otherwise
    */
   switchMode(mode: string): boolean {
-    logger.debug('MemoryBankManager', `Switching to mode: ${mode}`);
-    // Minimal implementation
-    return true;
+    if (!this.modeManager) {
+      logger.warn('MemoryBankManager', 'Mode manager not initialized, cannot switch mode');
+      return false;
+    }
+    
+    const success = this.modeManager.switchMode(mode);
+    if (success) {
+      logger.info('MemoryBankManager', `Switched to mode: ${mode}`);
+    } else {
+      logger.warn('MemoryBankManager', `Failed to switch to mode: ${mode}`);
+    }
+    return success;
   }
   
   /**
@@ -746,7 +901,10 @@ export class MemoryBankManager {
    * @returns True if the text matches the UMB trigger, false otherwise
    */
   checkUmbTrigger(text: string): boolean {
-    // Simple implementation to check for UMB triggers
+    if (this.modeManager) {
+      return this.modeManager.checkUmbTrigger(text);
+    }
+    // Fallback: simple implementation to check for UMB triggers
     return text.toLowerCase().includes('update memory bank') || 
            text.toLowerCase().includes('umb');
   }
@@ -757,8 +915,16 @@ export class MemoryBankManager {
    * @returns True if UMB mode was activated, false otherwise
    */
   activateUmbMode(): boolean {
-    logger.debug('MemoryBankManager', 'Activating UMB mode');
-    return true;
+    if (!this.modeManager) {
+      logger.warn('MemoryBankManager', 'Mode manager not initialized, cannot activate UMB mode');
+      return false;
+    }
+    
+    const success = this.modeManager.activateUmb();
+    if (success) {
+      logger.info('MemoryBankManager', 'UMB mode activated');
+    }
+    return success;
   }
   
   /**
@@ -767,6 +933,9 @@ export class MemoryBankManager {
    * @returns True if UMB mode is active, false otherwise
    */
   isUmbModeActive(): boolean {
+    if (this.modeManager) {
+      return this.modeManager.isUmbModeActive();
+    }
     return false;
   }
   
@@ -776,7 +945,13 @@ export class MemoryBankManager {
    * @returns True if UMB mode was deactivated, false otherwise
    */
   async completeUmbMode(): Promise<boolean> {
-    logger.debug('MemoryBankManager', 'Completing UMB mode');
+    if (!this.modeManager) {
+      logger.warn('MemoryBankManager', 'Mode manager not initialized, cannot complete UMB mode');
+      return false;
+    }
+    
+    this.modeManager.deactivateUmb();
+    logger.info('MemoryBankManager', 'UMB mode completed');
     return true;
   }
   
@@ -786,6 +961,39 @@ export class MemoryBankManager {
    * @returns Status prefix string
    */
   getStatusPrefix(): string {
+    if (this.modeManager) {
+      return this.modeManager.getStatusPrefix();
+    }
     return `[MEMORY BANK: ${this.memoryBankDir ? 'ACTIVE' : 'INACTIVE'}]`;
+  }
+  
+  /**
+   * Gets the current mode state
+   * 
+   * @returns Current mode state or null if mode manager not initialized
+   */
+  getCurrentModeState(): { name: string; isUmbActive: boolean; memoryBankStatus: 'ACTIVE' | 'INACTIVE' } | null {
+    if (this.modeManager) {
+      const state = this.modeManager.getCurrentModeState();
+      return {
+        name: state.name,
+        isUmbActive: state.isUmbActive,
+        memoryBankStatus: state.memoryBankStatus
+      };
+    }
+    return null;
+  }
+
+  /**
+   * Detects mode triggers in the given text
+   * 
+   * @param text - Text to check for mode triggers
+   * @returns Array of mode names that were triggered
+   */
+  detectModeTriggers(text: string): string[] {
+    if (this.modeManager) {
+      return this.modeManager.checkModeTriggers(text);
+    }
+    return [];
   }
 }

@@ -4,8 +4,18 @@
 
 Memory Bank MCP is an MCP (Model Context Protocol) server that provides tools and resources for managing memory banks. The code has been translated to English and improved with better error handling, more robust documentation, and additional utility methods. The build process has been configured to use Bun for improved performance. The project has been renamed from "memory-bank-server" to "@movibe/memory-bank-mcp" to follow npm scoped package naming conventions. Automated tests have been implemented for the clinerules integration using Bun's test runner. The package has been successfully published to npm and is available for global installation.
 
+**Recent Major Improvements (P0/P1 Completed):**
+- Fixed remote file/directory existence checks with proper stdout trimming
+- Made ProgressTracker and backups use FileSystemInterface for remote compatibility
+- Wired ModeManager (removed stubs) so mode tools/events work
+- Added path traversal protection for read/write tools
+- Removed dummy tool parameters (random_string)
+- Implemented atomic writes (local and remote)
+- Added ETag-based optimistic concurrency control
+
 ## Current Session Notes
 
+- [2026-02-08 1:26 PM] Completed P0/P1 improvements: Fixed all major blockers identified in areas-of-improvement.md. All 66 tests passing. Fixed nested folder creation issue caused by LocalFileSystem.getFullPath() not handling absolute paths. Fixed MemoryBankManager.initialize() race condition. Updated docs/internal/areas-of-improvement.md with implementation status.
 - [7:16:03 PM] [@movibe] Translated: Translated all remaining Portuguese content in Memory Bank files and documentation to English. Updated memory-bank-mcp-startup.md, active-context.md, decision-log.md, progress.md, and test-coverage.md to ensure all content is in English, maintaining consistency across the project.
 - [7:11:50 PM] [@movibe] Updated: Documentation updated to reflect the change from --user to --githubProfileUrl
 - [7:11:15 PM] [@movibe] Verified: Unit tests for GitHub URL formatting functionality are passing correctly

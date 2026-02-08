@@ -132,7 +132,7 @@ async function runValidationTests(client: Client) {
     console.log('\nTest 2: Get Memory Bank Status');
     const result = await client.callTool({
       name: 'get_memory_bank_status',
-      arguments: { random_string: 'dummy' }
+      arguments: {}
     });
     console.log('Result:', JSON.stringify(result, null, 2));
     

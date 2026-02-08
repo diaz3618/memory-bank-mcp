@@ -2,6 +2,7 @@ import path from 'path';
 import { MemoryBankManager } from '../../core/MemoryBankManager.js';
 import { MigrationUtils } from '../../utils/MigrationUtils.js';
 import { FileUtils } from '../../utils/FileUtils.js';
+import { ETagUtils } from '../../utils/ETagUtils.js';
 import os from 'os';
 
 /**
@@ -53,7 +54,7 @@ export const coreTools = [
   },
   {
     name: 'read_memory_bank_file',
-    description: 'Read a file from the Memory Bank',
+    description: 'Read a file from the Memory Bank. Returns content with ETag for optimistic concurrency control.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -61,13 +62,18 @@ export const coreTools = [
           type: 'string',
           description: 'Name of the file to read',
         },
+        includeEtag: {
+          type: 'boolean',
+          description: 'Whether to include ETag in response (default: true)',
+          default: true,
+        },
       },
       required: ['filename'],
     },
   },
   {
     name: 'write_memory_bank_file',
-    description: 'Write to a Memory Bank file',
+    description: 'Write to a Memory Bank file. Supports optimistic concurrency control via ifMatchEtag.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -79,6 +85,10 @@ export const coreTools = [
           type: 'string',
           description: 'Content to write to the file',
         },
+        ifMatchEtag: {
+          type: 'string',
+          description: 'Optional ETag from a previous read. If provided, write will only succeed if the file has not been modified since the read.',
+        },
       },
       required: ['filename', 'content'],
     },
@@ -88,13 +98,8 @@ export const coreTools = [
     description: 'List Memory Bank files',
     inputSchema: {
       type: 'object',
-      properties: {
-        random_string: {
-          type: 'string',
-          description: 'Dummy parameter for no-parameter tools',
-        },
-      },
-      required: ['random_string'],
+      properties: {},
+      additionalProperties: false,
     },
   },
   {
@@ -102,13 +107,8 @@ export const coreTools = [
     description: 'Check Memory Bank status',
     inputSchema: {
       type: 'object',
-      properties: {
-        random_string: {
-          type: 'string',
-          description: 'Dummy parameter for no-parameter tools',
-        },
-      },
-      required: ['random_string'],
+      properties: {},
+      additionalProperties: false,
     },
   },
   {
@@ -116,13 +116,8 @@ export const coreTools = [
     description: 'Migrate Memory Bank files from camelCase to kebab-case naming convention',
     inputSchema: {
       type: 'object',
-      properties: {
-        random_string: {
-          type: 'string',
-          description: 'Dummy parameter for no-parameter tools',
-        },
-      },
-      required: ['random_string'],
+      properties: {},
+      additionalProperties: false,
     },
   },
 ];
@@ -283,14 +278,32 @@ export async function handleInitializeMemoryBank(
  * Processes the read_memory_bank_file tool
  * @param memoryBankManager Memory Bank Manager
  * @param filename Name of the file to read
- * @returns Operation result
+ * @param includeEtag Whether to include ETag in response (default: true)
+ * @returns Operation result with content and optional ETag
  */
 export async function handleReadMemoryBankFile(
   memoryBankManager: MemoryBankManager,
-  filename: string
+  filename: string,
+  includeEtag: boolean = true
 ) {
   try {
     const content = await memoryBankManager.readFile(filename);
+    
+    if (includeEtag) {
+      const etag = ETagUtils.calculateETag(content);
+      return {
+        content: [
+          {
+            type: 'text',
+            text: JSON.stringify({
+              content,
+              etag,
+              filename,
+            }, null, 2),
+          },
+        ],
+      };
+    }
 
     return {
       content: [
@@ -318,21 +331,70 @@ export async function handleReadMemoryBankFile(
  * @param memoryBankManager Memory Bank Manager
  * @param filename Name of the file to write
  * @param content Content to write to the file
+ * @param ifMatchEtag Optional ETag for optimistic concurrency control
  * @returns Operation result
  */
 export async function handleWriteMemoryBankFile(
   memoryBankManager: MemoryBankManager,
   filename: string,
-  content: string
+  content: string,
+  ifMatchEtag?: string
 ) {
   try {
+    // If ifMatchEtag is provided, validate the ETag before writing
+    if (ifMatchEtag) {
+      try {
+        const currentContent = await memoryBankManager.readFile(filename);
+        const currentEtag = ETagUtils.calculateETag(currentContent);
+        
+        if (currentEtag !== ifMatchEtag) {
+          return {
+            content: [
+              {
+                type: 'text',
+                text: JSON.stringify({
+                  error: 'ETAG_MISMATCH',
+                  message: `File ${filename} has been modified by another process. Expected ETag: ${ifMatchEtag}, Current ETag: ${currentEtag}. Read the file again to get the latest content and ETag.`,
+                  expectedEtag: ifMatchEtag,
+                  currentEtag: currentEtag,
+                }, null, 2),
+              },
+            ],
+            isError: true,
+          };
+        }
+      } catch (readError) {
+        // If file doesn't exist and we have an ifMatchEtag, that's a conflict
+        return {
+          content: [
+            {
+              type: 'text',
+              text: JSON.stringify({
+                error: 'FILE_NOT_FOUND',
+                message: `File ${filename} not found. Cannot validate ETag against non-existent file.`,
+              }, null, 2),
+            },
+          ],
+          isError: true,
+        };
+      }
+    }
+    
     await memoryBankManager.writeFile(filename, content);
+    
+    // Return new ETag for potential subsequent writes
+    const newEtag = ETagUtils.calculateETag(content);
 
     return {
       content: [
         {
           type: 'text',
-          text: `File ${filename} successfully written to Memory Bank`,
+          text: JSON.stringify({
+            success: true,
+            message: `File ${filename} successfully written to Memory Bank`,
+            filename,
+            etag: newEtag,
+          }, null, 2),
         },
       ],
     };

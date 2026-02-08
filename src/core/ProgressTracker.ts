@@ -1,5 +1,6 @@
 import path from 'path';
 import { FileUtils } from '../utils/FileUtils.js';
+import { FileSystemInterface } from '../utils/storage/FileSystemInterface.js';
 
 /**
  * Interface for progress tracking details
@@ -69,19 +70,88 @@ export interface ActiveContext {
  * 
  * This class handles all operations related to tracking progress, logging decisions,
  * and updating the active context in the Memory Bank.
+ * 
+ * Supports both local and remote file systems through the FileSystemInterface.
  */
 export class ProgressTracker {
   private userId: string;
+  private fileSystem: FileSystemInterface | null = null;
+  private memoryBankRelativePath: string = '';
+  private isRemote: boolean = false;
 
   /**
    * Creates a new ProgressTracker instance
    * 
-   * @param memoryBankDir - Directory of the Memory Bank
+   * @param memoryBankDir - Directory of the Memory Bank (for backwards compatibility)
    * @param userId - GitHub profile URL for tracking changes
+   * @param fileSystem - Optional FileSystemInterface for remote support
+   * @param memoryBankRelativePath - Relative path to memory bank from fileSystem baseDir
    */
-  constructor(private memoryBankDir: string, userId?: string) {
+  constructor(
+    private memoryBankDir: string, 
+    userId?: string,
+    fileSystem?: FileSystemInterface,
+    memoryBankRelativePath?: string
+  ) {
     // Use provided userId or "Unknown User" as default
     this.userId = userId || "Unknown User";
+    this.fileSystem = fileSystem || null;
+    this.memoryBankRelativePath = memoryBankRelativePath || '';
+    this.isRemote = !!fileSystem;
+  }
+
+  /**
+   * Sets the file system to use for operations
+   * 
+   * @param fileSystem - FileSystemInterface implementation
+   * @param relativePath - Relative path to memory bank from fileSystem baseDir
+   */
+  setFileSystem(fileSystem: FileSystemInterface, relativePath: string): void {
+    this.fileSystem = fileSystem;
+    this.memoryBankRelativePath = relativePath;
+    this.isRemote = true;
+  }
+
+  /**
+   * Gets the path to a file, using either absolute path or relative path depending on mode
+   * 
+   * @param filename - Name of the file
+   * @returns Path to use for file operations
+   */
+  private getFilePath(filename: string): string {
+    if (this.isRemote && this.memoryBankRelativePath) {
+      // Use POSIX path joining for remote
+      return path.posix.join(this.memoryBankRelativePath, filename);
+    }
+    return path.join(this.memoryBankDir, filename);
+  }
+
+  /**
+   * Reads a file using either FileSystemInterface or FileUtils
+   * 
+   * @param filename - Name of the file to read
+   * @returns File contents
+   */
+  private async readFileContent(filename: string): Promise<string> {
+    if (this.fileSystem) {
+      const filePath = this.getFilePath(filename);
+      return this.fileSystem.readFile(filePath);
+    }
+    return FileUtils.readFile(path.join(this.memoryBankDir, filename));
+  }
+
+  /**
+   * Writes content to a file using either FileSystemInterface or FileUtils
+   * 
+   * @param filename - Name of the file to write
+   * @param content - Content to write
+   */
+  private async writeFileContent(filename: string, content: string): Promise<void> {
+    if (this.fileSystem) {
+      const filePath = this.getFilePath(filename);
+      return this.fileSystem.writeFile(filePath, content);
+    }
+    return FileUtils.writeFile(path.join(this.memoryBankDir, filename), content);
   }
 
   /**
@@ -152,13 +222,11 @@ export class ProgressTracker {
    * @private
    */
   private async updateProgressFile(action: string, details: ProgressDetails): Promise<string> {
-    const progressPath = path.join(this.memoryBankDir, 'progress.md');
-    
     try {
-      let progressContent = await FileUtils.readFile(progressPath);
+      let progressContent = await this.readFileContent('progress.md');
       
       const timestamp = new Date().toISOString().split('T')[0];
-      const time = new Date().toLocaleTimeString();
+      const time = new Date().toISOString().split('T')[1].split('.')[0]; // Use ISO time for consistency
       const userId = details.userId || this.userId;
       const formattedUserId = this.formatUserId(userId);
       const newEntry = `- [${timestamp} ${time}] [${formattedUserId}] - ${action}: ${details.description}`;
@@ -175,7 +243,7 @@ export class ProgressTracker {
         progressContent += `\n\n## Update History\n\n${newEntry}\n`;
       }
       
-      await FileUtils.writeFile(progressPath, progressContent);
+      await this.writeFileContent('progress.md', progressContent);
       
       // Return the updated progress content
       return progressContent;
@@ -193,14 +261,12 @@ export class ProgressTracker {
    * @private
    */
   private async updateActiveContextFile(action: string, details: ProgressDetails): Promise<void> {
-    const contextPath = path.join(this.memoryBankDir, 'active-context.md');
-    
     try {
-      let contextContent = await FileUtils.readFile(contextPath);
+      let contextContent = await this.readFileContent('active-context.md');
       
       // Add the entry to the current session notes section
       const sessionNotesRegex = /## Current Session Notes\s+/;
-      const time = new Date().toLocaleTimeString();
+      const time = new Date().toISOString().split('T')[1].split('.')[0]; // Use ISO time for consistency
       const userId = details.userId || this.userId;
       const formattedUserId = this.formatUserId(userId);
       const newNote = `- [${time}] [${formattedUserId}] ${action}: ${details.description}`;
@@ -215,7 +281,7 @@ export class ProgressTracker {
         contextContent += `\n\n## Current Session Notes\n\n${newNote}\n`;
       }
       
-      await FileUtils.writeFile(contextPath, contextContent);
+      await this.writeFileContent('active-context.md', contextContent);
     } catch (error) {
       console.error(`Error updating active context file: ${error}`);
       throw new Error(`Failed to update active context file: ${error}`);
@@ -235,10 +301,8 @@ export class ProgressTracker {
     issues?: string[];
     nextSteps?: string[];
   }): Promise<void> {
-    const contextPath = path.join(this.memoryBankDir, 'active-context.md');
-    
     try {
-      let contextContent = await FileUtils.readFile(contextPath);
+      let contextContent = await this.readFileContent('active-context.md');
       
       // Update ongoing tasks
       if (context.tasks && context.tasks.length > 0) {
@@ -276,7 +340,7 @@ export class ProgressTracker {
         }
       }
       
-      await FileUtils.writeFile(contextPath, contextContent);
+      await this.writeFileContent('active-context.md', contextContent);
     } catch (error) {
       console.error(`Error updating active context: ${error}`);
       throw new Error(`Failed to update active context: ${error}`);
@@ -289,10 +353,8 @@ export class ProgressTracker {
    * @throws Error if clearing fails
    */
   async clearSessionNotes(): Promise<void> {
-    const contextPath = path.join(this.memoryBankDir, 'active-context.md');
-    
     try {
-      let contextContent = await FileUtils.readFile(contextPath);
+      let contextContent = await this.readFileContent('active-context.md');
       
       // Replace the current session notes with an empty section
       const sessionNotesRegex = /## Current Session Notes\s+([^#]*)/s;
@@ -302,7 +364,7 @@ export class ProgressTracker {
           `## Current Session Notes\n\n`
         );
         
-        await FileUtils.writeFile(contextPath, contextContent);
+        await this.writeFileContent('active-context.md', contextContent);
       }
     } catch (error) {
       console.error(`Error clearing session notes: ${error}`);
@@ -319,13 +381,11 @@ export class ProgressTracker {
    * @throws Error if logging fails
    */
   async logDecision(decision: Decision): Promise<void> {
-    const decisionLogPath = path.join(this.memoryBankDir, 'decision-log.md');
-    
     try {
-      let decisionLogContent = await FileUtils.readFile(decisionLogPath);
+      let decisionLogContent = await this.readFileContent('decision-log.md');
       
       const timestamp = new Date().toISOString().split('T')[0];
-      const time = new Date().toLocaleTimeString();
+      const time = new Date().toISOString().split('T')[1].split('.')[0]; // Use ISO time for consistency
       const userId = decision.userId || this.userId;
       const formattedUserId = this.formatUserId(userId);
       
@@ -353,7 +413,7 @@ ${Array.isArray(decision.consequences) ? consequences : `  - ${consequences}`}
       // Add the new decision to the end of the file
       decisionLogContent += newDecision;
       
-      await FileUtils.writeFile(decisionLogPath, decisionLogContent);
+      await this.writeFileContent('decision-log.md', decisionLogContent);
     } catch (error) {
       console.error(`Error logging decision: ${error}`);
       throw new Error(`Failed to log decision: ${error}`);
