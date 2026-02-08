@@ -22,9 +22,9 @@
 | **P2** | Structured tools (progress/decision/context) | ✅ Completed (`add_progress_entry`, `add_session_note`, `update_tasks`) |
 | **P2** | Context bundle and digest tools/resources | ✅ Completed (`get_context_bundle`, `get_context_digest`) |
 | **P2** | Full-text search tool | ✅ Completed (`search_memory_bank`) |
-| **P3** | Persistent SSH / ssh2 SFTP | 🔲 Not started |
-| **P3** | Read caching + batch operations | 🔲 Not started |
-| **P3** | Optional embeddings + semantic search | 🔲 Not started |
+| **P3** | Persistent SSH / ssh2 SFTP | 🔲 Not started (low priority - current SSH works) |
+| **P3** | Read caching + batch operations | ✅ Completed (`CachingFileSystem`, `batch_read_files`, `batch_write_files`) |
+| **P3** | Optional embeddings + semantic search | 🔲 Not started (optional enhancement) |
 
 ### Bug Fixes (Additional)
 - ✅ Fixed nested folder creation issue: `LocalFileSystem.getFullPath()` now handles absolute paths correctly
@@ -693,11 +693,12 @@ This creates consistent, predictable behavior across clients.
 2. ✅ Add `get_context_bundle` and `get_context_digest` tools.
 3. ✅ Add `search_memory_bank` tool (full-text search).
 
-## P3 — Performance & scale 🔲 NOT STARTED
+## P3 — Performance & scale ✅ PARTIALLY COMPLETED
 
-1. 🔲 Persistent SSH / ssh2 SFTP.
-2. 🔲 Read caching + batch operations.
-3. 🔲 Optional embeddings + semantic search.
+1. 🔲 Persistent SSH / ssh2 SFTP. (low priority - current SSH approach works)
+2. ✅ Read caching (`CachingFileSystem` with LRU eviction, TTL, and size limits).
+3. ✅ Batch operations (`batch_read_files`, `batch_write_files` with parallel reads and ETag support).
+4. 🔲 Optional embeddings + semantic search. (optional advanced feature)
 
 # 14) Quick win code pointers (where to change)
 

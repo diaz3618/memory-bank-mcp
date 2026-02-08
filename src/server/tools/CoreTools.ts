@@ -308,6 +308,55 @@ export const coreTools = [
       },
     },
   },
+  // P3 Performance tools
+  {
+    name: 'batch_read_files',
+    description: 'Read multiple Memory Bank files in a single request. More efficient than individual reads for loading context.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        files: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'List of filenames to read (e.g., ["progress.md", "active-context.md"])',
+        },
+        includeEtags: {
+          type: 'boolean',
+          description: 'Whether to include ETags for each file (default: true)',
+          default: true,
+        },
+      },
+      required: ['files'],
+    },
+  },
+  {
+    name: 'batch_write_files',
+    description: 'Write multiple Memory Bank files in a single request. Supports optimistic concurrency via ETags.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        files: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              filename: { type: 'string', description: 'File name' },
+              content: { type: 'string', description: 'Content to write' },
+              ifMatchEtag: { type: 'string', description: 'Optional ETag for concurrency control' },
+            },
+            required: ['filename', 'content'],
+          },
+          description: 'Array of files to write',
+        },
+        stopOnError: {
+          type: 'boolean',
+          description: 'Whether to stop on first error (default: false)',
+          default: false,
+        },
+      },
+      required: ['files'],
+    },
+  },
 ];
 
 /**
@@ -1820,6 +1869,225 @@ export async function handleUpdateTasks(
         {
           type: 'text',
           text: `Error updating tasks: ${error}`,
+        },
+      ],
+      isError: true,
+    };
+  }
+}
+
+// P3 Batch Operations
+
+/**
+ * Processes the batch_read_files tool
+ * 
+ * Reads multiple files in a single request.
+ * 
+ * @param memoryBankManager Memory Bank Manager instance
+ * @param files List of filenames to read
+ * @param includeEtags Whether to include ETags
+ * @returns Operation result with file contents
+ */
+export async function handleBatchReadFiles(
+  memoryBankManager: MemoryBankManager,
+  files: string[],
+  includeEtags: boolean = true
+) {
+  try {
+    const memoryBankDir = memoryBankManager.getMemoryBankDir();
+    if (!memoryBankDir) {
+      return {
+        content: [
+          {
+            type: 'text',
+            text: 'Memory Bank not initialized. Use set_memory_bank_path or initialize_memory_bank first.',
+          },
+        ],
+        isError: true,
+      };
+    }
+
+    if (!files || files.length === 0) {
+      return {
+        content: [
+          {
+            type: 'text',
+            text: 'No files specified to read.',
+          },
+        ],
+        isError: true,
+      };
+    }
+
+    const results: Record<string, { content: string; etag?: string; error?: string }> = {};
+
+    // Read all files in parallel
+    await Promise.all(files.map(async (filename) => {
+      try {
+        const content = await memoryBankManager.readFile(filename);
+        results[filename] = {
+          content,
+          ...(includeEtags ? { etag: ETagUtils.calculateETag(content) } : {}),
+        };
+      } catch (error) {
+        results[filename] = {
+          content: '',
+          error: `Failed to read: ${error instanceof Error ? error.message : String(error)}`,
+        };
+      }
+    }));
+
+    const successCount = Object.values(results).filter(r => !r.error).length;
+
+    return {
+      content: [
+        {
+          type: 'text',
+          text: JSON.stringify({
+            results,
+            metadata: {
+              requested: files.length,
+              successful: successCount,
+              failed: files.length - successCount,
+              timestamp: new Date().toISOString(),
+            },
+          }, null, 2),
+        },
+      ],
+    };
+  } catch (error) {
+    console.error('Error in handleBatchReadFiles:', error);
+    return {
+      content: [
+        {
+          type: 'text',
+          text: `Error in batch read: ${error}`,
+        },
+      ],
+      isError: true,
+    };
+  }
+}
+
+/**
+ * File write request for batch operations
+ */
+interface BatchWriteRequest {
+  filename: string;
+  content: string;
+  ifMatchEtag?: string;
+}
+
+/**
+ * Processes the batch_write_files tool
+ * 
+ * Writes multiple files in a single request with optional ETag validation.
+ * 
+ * @param memoryBankManager Memory Bank Manager instance
+ * @param files Array of files to write
+ * @param stopOnError Whether to stop on first error
+ * @returns Operation result with write status
+ */
+export async function handleBatchWriteFiles(
+  memoryBankManager: MemoryBankManager,
+  files: BatchWriteRequest[],
+  stopOnError: boolean = false
+) {
+  try {
+    const memoryBankDir = memoryBankManager.getMemoryBankDir();
+    if (!memoryBankDir) {
+      return {
+        content: [
+          {
+            type: 'text',
+            text: 'Memory Bank not initialized. Use set_memory_bank_path or initialize_memory_bank first.',
+          },
+        ],
+        isError: true,
+      };
+    }
+
+    if (!files || files.length === 0) {
+      return {
+        content: [
+          {
+            type: 'text',
+            text: 'No files specified to write.',
+          },
+        ],
+        isError: true,
+      };
+    }
+
+    const results: Record<string, { success: boolean; etag?: string; error?: string }> = {};
+    let errorOccurred = false;
+
+    for (const file of files) {
+      if (stopOnError && errorOccurred) {
+        results[file.filename] = {
+          success: false,
+          error: 'Skipped due to previous error',
+        };
+        continue;
+      }
+
+      try {
+        // Validate ETag if provided
+        if (file.ifMatchEtag) {
+          const currentContent = await memoryBankManager.readFile(file.filename);
+          const currentEtag = ETagUtils.calculateETag(currentContent);
+          
+          if (currentEtag !== file.ifMatchEtag) {
+            results[file.filename] = {
+              success: false,
+              error: `ETag mismatch: expected ${file.ifMatchEtag}, got ${currentEtag}`,
+            };
+            errorOccurred = true;
+            continue;
+          }
+        }
+
+        await memoryBankManager.writeFile(file.filename, file.content);
+        const newEtag = ETagUtils.calculateETag(file.content);
+        
+        results[file.filename] = {
+          success: true,
+          etag: newEtag,
+        };
+      } catch (error) {
+        results[file.filename] = {
+          success: false,
+          error: `Write failed: ${error instanceof Error ? error.message : String(error)}`,
+        };
+        errorOccurred = true;
+      }
+    }
+
+    const successCount = Object.values(results).filter(r => r.success).length;
+
+    return {
+      content: [
+        {
+          type: 'text',
+          text: JSON.stringify({
+            results,
+            metadata: {
+              requested: files.length,
+              successful: successCount,
+              failed: files.length - successCount,
+              timestamp: new Date().toISOString(),
+            },
+          }, null, 2),
+        },
+      ],
+    };
+  } catch (error) {
+    console.error('Error in handleBatchWriteFiles:', error);
+    return {
+      content: [
+        {
+          type: 'text',
+          text: `Error in batch write: ${error}`,
         },
       ],
       isError: true,

@@ -4,7 +4,7 @@ import { MemoryBankManager } from '../../core/MemoryBankManager.js';
 import { ProgressTracker } from '../../core/ProgressTracker.js';
 
 // Import tools and handlers
-import { coreTools, handleSetMemoryBankPath, handleInitializeMemoryBank, handleReadMemoryBankFile, handleWriteMemoryBankFile, handleListMemoryBankFiles, handleGetMemoryBankStatus, handleMigrateFileNaming, handleDebugMcpConfig, handleGetContextBundle, handleGetContextDigest, handleSearchMemoryBank, handleCreateBackup, handleListBackups, handleRestoreBackup, handleAddProgressEntry, handleAddSessionNote, handleUpdateTasks } from './CoreTools.js';
+import { coreTools, handleSetMemoryBankPath, handleInitializeMemoryBank, handleReadMemoryBankFile, handleWriteMemoryBankFile, handleListMemoryBankFiles, handleGetMemoryBankStatus, handleMigrateFileNaming, handleDebugMcpConfig, handleGetContextBundle, handleGetContextDigest, handleSearchMemoryBank, handleCreateBackup, handleListBackups, handleRestoreBackup, handleAddProgressEntry, handleAddSessionNote, handleUpdateTasks, handleBatchReadFiles, handleBatchWriteFiles } from './CoreTools.js';
 import { progressTools, handleTrackProgress } from './ProgressTools.js';
 import { contextTools, handleUpdateActiveContext } from './ContextTools.js';
 import { decisionTools, handleLogDecision } from './DecisionTools.js';
@@ -384,6 +384,29 @@ export function setupToolHandlers(
             replace?: string[];
           };
           return handleUpdateTasks(memoryBankManager, add, remove, replace);
+        }
+
+        // P3 Batch operations
+        case 'batch_read_files': {
+          const { files, includeEtags } = request.params.arguments as {
+            files: string[];
+            includeEtags?: boolean;
+          };
+          if (!files || files.length === 0) {
+            throw new McpError(ErrorCode.InvalidParams, 'Files array is required');
+          }
+          return handleBatchReadFiles(memoryBankManager, files, includeEtags ?? true);
+        }
+
+        case 'batch_write_files': {
+          const { files, stopOnError } = request.params.arguments as {
+            files: Array<{ filename: string; content: string; ifMatchEtag?: string }>;
+            stopOnError?: boolean;
+          };
+          if (!files || files.length === 0) {
+            throw new McpError(ErrorCode.InvalidParams, 'Files array is required');
+          }
+          return handleBatchWriteFiles(memoryBankManager, files, stopOnError ?? false);
         }
 
         // Unknown tool
