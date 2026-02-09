@@ -45,9 +45,12 @@ describe('Memory Bank Validation Tests', () => {
       );
     }
     
-    // Create a new MemoryBankManager for each test
-    memoryBankManager = new MemoryBankManager(undefined, testUserId);
+    // Create a new MemoryBankManager for each test with tempDir as project path
+    memoryBankManager = new MemoryBankManager(tempDir, testUserId);
     rulesLoader = new ExternalRulesLoader(tempDir);
+    
+    // Wait a tick for any async constructor operations to complete
+    await new Promise(resolve => setTimeout(resolve, 10));
   });
   
   afterEach(async () => {

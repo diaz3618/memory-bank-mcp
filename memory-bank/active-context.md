@@ -4,8 +4,22 @@
 
 Memory Bank MCP is an MCP (Model Context Protocol) server that provides tools and resources for managing memory banks. The code has been translated to English and improved with better error handling, more robust documentation, and additional utility methods. The build process has been configured to use Bun for improved performance. The project has been renamed from "memory-bank-server" to "@movibe/memory-bank-mcp" to follow npm scoped package naming conventions. Automated tests have been implemented for the clinerules integration using Bun's test runner. The package has been successfully published to npm and is available for global installation.
 
+**Recent Major Improvements (P0/P1 Completed):**
+- Fixed remote file/directory existence checks with proper stdout trimming
+- Made ProgressTracker and backups use FileSystemInterface for remote compatibility
+- Wired ModeManager (removed stubs) so mode tools/events work
+- Added path traversal protection for read/write tools
+- Removed dummy tool parameters (random_string)
+- Implemented atomic writes (local and remote)
+- Added ETag-based optimistic concurrency control
+
 ## Current Session Notes
 
+- [3:33:10 PM] [Unknown User] Completed P3 caching and batch operations: Implemented: (1) CachingFileSystem - read cache wrapper with TTL, LRU eviction, and size limits; (2) batch_read_files - parallel file reading with ETags; (3) batch_write_files - batch writes with ETag concurrency control. All 66 tests passing. P0, P1, P2 complete. P3 partially complete (caching/batch done, ssh2/embeddings deferred as low priority).
+- [3:27:59 PM] [Unknown User] Completed P1 backup/rollback and P2 structured tools: Implemented: (1) P1 backup/rollback tools - create_backup, list_backups, restore_backup for disaster recovery; (2) P2 structured tools - add_progress_entry with type categories, add_session_note with categories, update_tasks for managing task lists. All 66 tests passing. P0, P1, and P2 are now COMPLETE. Only P3 (performance/scale) remains.
+- [2:04:21 PM] [Unknown User] Decision Made: Implementation order: P1 rollback then P2 structured tools
+- [2:04:07 PM] [Unknown User] Session continuation - P0/P1/P2 improvements: Current status: All 66 tests passing. P0/P1 mostly complete (ETag concurrency, atomic writes, path protection implemented). P2 partially complete (get_context_bundle, get_context_digest, search_memory_bank tools done). Next steps: implement P1 rollback tool (restore_backup) and P2 structured tools for progress/decision/context manipulation.
+- [2026-02-08 1:26 PM] Completed P0/P1 improvements: Fixed all major blockers identified in areas-of-improvement.md. All 66 tests passing. Fixed nested folder creation issue caused by LocalFileSystem.getFullPath() not handling absolute paths. Fixed MemoryBankManager.initialize() race condition. Updated docs/internal/areas-of-improvement.md with implementation status.
 - [7:16:03 PM] [@movibe] Translated: Translated all remaining Portuguese content in Memory Bank files and documentation to English. Updated memory-bank-mcp-startup.md, active-context.md, decision-log.md, progress.md, and test-coverage.md to ensure all content is in English, maintaining consistency across the project.
 - [7:11:50 PM] [@movibe] Updated: Documentation updated to reflect the change from --user to --githubProfileUrl
 - [7:11:15 PM] [@movibe] Verified: Unit tests for GitHub URL formatting functionality are passing correctly

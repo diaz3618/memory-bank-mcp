@@ -314,17 +314,44 @@ describe('Clinerules Integration Tests', () => {
     await fs.ensureDir(tempDir);
     
     try {
+      // Create .clinerules files with mode_triggers that we can test
+      const modeClinerules = {
+        mode: 'code',
+        instructions: {
+          general: ['Test instruction'],
+          umb: {
+            trigger: '^(Update Memory Bank|UMB)$',
+            instructions: ['Test UMB instruction'],
+          },
+        },
+        mode_triggers: {
+          test: [{ condition: "run tests" }, { condition: "test this" }],
+          architect: [{ condition: "design this" }],
+        }
+      };
+      
+      // Write clinerules files for all modes
+      for (const mode of ['architect', 'ask', 'code', 'debug', 'test']) {
+        await fs.writeFile(
+          path.join(tempDir, `.clinerules-${mode}`),
+          JSON.stringify({ ...modeClinerules, mode })
+        );
+      }
+      
       // Create a new MemoryBankManager
       const memoryBankManager = new MemoryBankManager(tempDir, 'test-user');
       
       // Initialize the Memory Bank
       await memoryBankManager.initializeMemoryBank(tempDir);
       
-      // Test messages with mode triggers
+      // Wait for mode manager to initialize
+      await new Promise(resolve => setTimeout(resolve, 50));
+      
+      // Test messages with mode triggers based on the conditions we set up
       const messages = [
         { text: 'No triggers here', expectedTriggers: [] },
-        { text: 'Let\'s code', expectedTriggers: ['code'] },
-        { text: 'Let\'s test', expectedTriggers: ['test'] },
+        { text: 'please run tests now', expectedTriggers: ['test'] },
+        { text: 'can you design this for me', expectedTriggers: ['architect'] },
       ];
       
       for (const message of messages) {

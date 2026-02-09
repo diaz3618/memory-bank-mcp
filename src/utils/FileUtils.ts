@@ -59,7 +59,10 @@ export class FileUtils {
   }
 
   /**
-   * Writes content to a file
+   * Writes content to a file atomically
+   * 
+   * Uses a write-to-temp-then-rename pattern for atomic writes.
+   * This prevents file corruption if the process crashes during write.
    * 
    * @param filePath - Path to the file
    * @param content - Content to write
@@ -67,7 +70,20 @@ export class FileUtils {
    */
   static async writeFile(filePath: string, content: string): Promise<void> {
     try {
-      await fs.writeFile(filePath, content);
+      // Generate a temporary file path in the same directory
+      const dir = path.dirname(filePath);
+      const tempFileName = `.${path.basename(filePath)}.${Date.now()}.tmp`;
+      const tempPath = path.join(dir, tempFileName);
+      
+      // Ensure directory exists
+      await fs.ensureDir(dir);
+      
+      // Write to temp file first
+      await fs.writeFile(tempPath, content);
+      
+      // Atomically rename temp file to target file
+      // rename is atomic on most filesystems when source and dest are on the same filesystem
+      await fs.rename(tempPath, filePath);
     } catch (error) {
       logger.error('FileUtils', `Failed to write to file ${filePath}: ${error instanceof Error ? error.message : String(error)}`);
       throw new Error(`Failed to write to file ${filePath}: ${error instanceof Error ? error.message : String(error)}`);

@@ -21,11 +21,16 @@ export class LocalFileSystem implements FileSystemInterface {
 
   /**
    * Gets the full path for a relative path
+   * If an absolute path is provided, it is returned as-is
    * 
-   * @param relativePath - Relative path
+   * @param relativePath - Relative path (or absolute path)
    * @returns Full path
    */
   private getFullPath(relativePath: string): string {
+    // If the path is already absolute, return it as-is
+    if (path.isAbsolute(relativePath)) {
+      return relativePath;
+    }
     return path.join(this.baseDir, relativePath);
   }
 

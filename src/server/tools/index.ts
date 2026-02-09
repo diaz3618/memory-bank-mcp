@@ -4,7 +4,7 @@ import { MemoryBankManager } from '../../core/MemoryBankManager.js';
 import { ProgressTracker } from '../../core/ProgressTracker.js';
 
 // Import tools and handlers
-import { coreTools, handleSetMemoryBankPath, handleInitializeMemoryBank, handleReadMemoryBankFile, handleWriteMemoryBankFile, handleListMemoryBankFiles, handleGetMemoryBankStatus, handleMigrateFileNaming, handleDebugMcpConfig } from './CoreTools.js';
+import { coreTools, handleSetMemoryBankPath, handleInitializeMemoryBank, handleReadMemoryBankFile, handleWriteMemoryBankFile, handleListMemoryBankFiles, handleGetMemoryBankStatus, handleMigrateFileNaming, handleDebugMcpConfig, handleGetContextBundle, handleGetContextDigest, handleSearchMemoryBank, handleCreateBackup, handleListBackups, handleRestoreBackup, handleAddProgressEntry, handleAddSessionNote, handleUpdateTasks, handleBatchReadFiles, handleBatchWriteFiles } from './CoreTools.js';
 import { progressTools, handleTrackProgress } from './ProgressTools.js';
 import { contextTools, handleUpdateActiveContext } from './ContextTools.js';
 import { decisionTools, handleLogDecision } from './DecisionTools.js';
@@ -54,6 +54,12 @@ export function setupToolHandlers(
         request.params.name !== 'get_memory_bank_status' &&
         request.params.name !== 'list_memory_bank_files' &&
         request.params.name !== 'get_current_mode' &&
+        request.params.name !== 'get_context_bundle' &&
+        request.params.name !== 'get_context_digest' &&
+        request.params.name !== 'migrate_file_naming' &&
+        request.params.name !== 'create_backup' &&
+        request.params.name !== 'list_backups' &&
+        request.params.name !== 'update_tasks' &&
         (!request.params.arguments || typeof request.params.arguments !== 'object')
       ) {
         throw new McpError(ErrorCode.InvalidParams, 'Invalid arguments');
@@ -272,6 +278,135 @@ export function setupToolHandlers(
 
         case 'complete_umb': {
           return handleCompleteUmb(memoryBankManager);
+        }
+
+        // Context bundle and digest tools (P2 improvements)
+        case 'get_context_bundle': {
+          const args = request.params.arguments as { includeEtags?: boolean } | undefined;
+          return handleGetContextBundle(memoryBankManager, args?.includeEtags ?? true);
+        }
+
+        case 'get_context_digest': {
+          const args = request.params.arguments as {
+            maxProgressEntries?: number;
+            maxDecisions?: number;
+            includeSystemPatterns?: boolean;
+          } | undefined;
+          return handleGetContextDigest(
+            memoryBankManager,
+            args?.maxProgressEntries ?? 10,
+            args?.maxDecisions ?? 5,
+            args?.includeSystemPatterns ?? false
+          );
+        }
+
+        case 'search_memory_bank': {
+          const { query, files, maxResults, caseSensitive } = request.params.arguments as {
+            query: string;
+            files?: string[];
+            maxResults?: number;
+            caseSensitive?: boolean;
+          };
+          if (!query) {
+            throw new McpError(ErrorCode.InvalidParams, 'Search query not specified');
+          }
+          return handleSearchMemoryBank(
+            memoryBankManager,
+            query,
+            files,
+            maxResults ?? 20,
+            caseSensitive ?? false
+          );
+        }
+
+        // Backup and restore tools (P1 improvements)
+        case 'create_backup': {
+          const args = request.params.arguments as { backupDir?: string } | undefined;
+          return handleCreateBackup(memoryBankManager, args?.backupDir);
+        }
+
+        case 'list_backups': {
+          return handleListBackups(memoryBankManager);
+        }
+
+        case 'restore_backup': {
+          const { backupId, createPreRestoreBackup } = request.params.arguments as {
+            backupId: string;
+            createPreRestoreBackup?: boolean;
+          };
+          if (!backupId) {
+            throw new McpError(ErrorCode.InvalidParams, 'Backup ID not specified');
+          }
+          return handleRestoreBackup(
+            memoryBankManager,
+            backupId,
+            createPreRestoreBackup ?? true
+          );
+        }
+
+        // P2 Structured tools
+        case 'add_progress_entry': {
+          const { type, summary, details, files, tags } = request.params.arguments as {
+            type: 'feature' | 'fix' | 'refactor' | 'docs' | 'test' | 'chore' | 'other';
+            summary: string;
+            details?: string;
+            files?: string[];
+            tags?: string[];
+          };
+          if (!type || !summary) {
+            throw new McpError(ErrorCode.InvalidParams, 'Type and summary are required');
+          }
+          return handleAddProgressEntry(
+            memoryBankManager,
+            type,
+            summary,
+            details,
+            files,
+            tags
+          );
+        }
+
+        case 'add_session_note': {
+          const { note, category } = request.params.arguments as {
+            note: string;
+            category?: 'observation' | 'blocker' | 'question' | 'decision' | 'todo' | 'other';
+          };
+          if (!note) {
+            throw new McpError(ErrorCode.InvalidParams, 'Note text is required');
+          }
+          return handleAddSessionNote(memoryBankManager, note, category);
+        }
+
+        case 'update_tasks': {
+          const { add, remove, replace } = request.params.arguments as {
+            add?: string[];
+            remove?: string[];
+            replace?: string[];
+          };
+          return handleUpdateTasks(memoryBankManager, add, remove, replace);
+        }
+
+        // P3 Batch operations
+        case 'batch_read_files': {
+          const { files, includeEtags } = request.params.arguments as {
+            files: string[];
+            includeEtags?: boolean;
+          };
+          if (!files || files.length === 0) {
+            throw new McpError(ErrorCode.InvalidParams, 'Files array is required');
+          }
+          return handleBatchReadFiles(memoryBankManager, files, includeEtags ?? true);
+        }
+
+        case 'batch_write_files': {
+          const { files, stopOnError } = request.params.arguments as {
+            files: Array<{ filename: string; content: string; ifMatchEtag?: string }>;
+            stopOnError?: boolean;
+          };
+          if (!files || files.length === 0) {
+            throw new McpError(ErrorCode.InvalidParams, 'Files array is required');
+          }
+          return handleBatchWriteFiles(memoryBankManager, files, stopOnError ?? false);
         }
 
         // Unknown tool

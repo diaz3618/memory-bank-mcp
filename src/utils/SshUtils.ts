@@ -16,6 +16,8 @@ export class SshUtils {
   private remoteUser: string;
   private remoteHost: string;
   private remotePath: string;
+  private debugMode: boolean;
+  private strictHostKeyChecking: boolean;
 
   /**
    * Creates a new SshUtils instance
@@ -24,12 +26,22 @@ export class SshUtils {
    * @param remoteUser - Username for the remote server
    * @param remoteHost - Hostname or IP address of the remote server
    * @param remotePath - Base path on the remote server for memory bank storage
+   * @param options - Optional configuration (debugMode, strictHostKeyChecking)
    */
-  constructor(sshKeyPath: string, remoteUser: string, remoteHost: string, remotePath: string) {
+  constructor(
+    sshKeyPath: string, 
+    remoteUser: string, 
+    remoteHost: string, 
+    remotePath: string,
+    options?: { debugMode?: boolean; strictHostKeyChecking?: boolean }
+  ) {
     this.sshKeyPath = sshKeyPath;
     this.remoteUser = remoteUser;
     this.remoteHost = remoteHost;
     this.remotePath = remotePath;
+    this.debugMode = options?.debugMode ?? false;
+    // Default to strict host key checking for security, but allow opt-out
+    this.strictHostKeyChecking = options?.strictHostKeyChecking ?? true;
   }
 
   /**
@@ -41,7 +53,11 @@ export class SshUtils {
   private async executeCommand(command: string): Promise<string> {
     return new Promise((resolve, reject) => {
       // Build SSH command with options
-      const sshCommand = `ssh -v -i "${this.sshKeyPath}" -o StrictHostKeyChecking=no -o ConnectTimeout=10 -o ServerAliveInterval=30 -o ServerAliveCountMax=3 ${this.remoteUser}@${this.remoteHost} "${command}"`;
+      const verboseFlag = this.debugMode ? '-v ' : '';
+      const hostKeyOption = this.strictHostKeyChecking 
+        ? '-o StrictHostKeyChecking=accept-new' 
+        : '-o StrictHostKeyChecking=no';
+      const sshCommand = `ssh ${verboseFlag}-i "${this.sshKeyPath}" ${hostKeyOption} -o ConnectTimeout=10 -o ServerAliveInterval=30 -o ServerAliveCountMax=3 ${this.remoteUser}@${this.remoteHost} "${command}"`;
       logger.debug('SshUtils', `Executing SSH command: ${sshCommand}`);
       
       // Set a timeout for the command execution (30 seconds)
@@ -86,6 +102,24 @@ export class SshUtils {
   }
 
   /**
+   * Checks if a remote path exists (file or directory)
+   * 
+   * @param remotePath - Path to check (relative to base remote path)
+   * @returns True if the path exists, false otherwise
+   */
+  async exists(remotePath: string): Promise<boolean> {
+    try {
+      const fullRemotePath = `${this.remotePath}/${remotePath}`;
+      const command = `[ -e "${fullRemotePath}" ] && echo "EXISTS" || echo "NOT_EXISTS"`;
+      const result = await this.executeCommand(command);
+      return result.trim() === 'EXISTS';
+    } catch (error) {
+      logger.error('SshUtils', `Error checking if remote path exists: ${error}`);
+      return false;
+    }
+  }
+
+  /**
    * Checks if a remote directory exists
    * 
    * @param dirPath - Path to check
@@ -96,11 +130,39 @@ export class SshUtils {
       const remoteDirPath = `${this.remotePath}/${dirPath}`;
       const command = `[ -d "${remoteDirPath}" ] && echo "EXISTS" || echo "NOT_EXISTS"`;
       const result = await this.executeCommand(command);
-      return result === 'EXISTS';
+      return result.trim() === 'EXISTS';
     } catch (error) {
       logger.error('SshUtils', `Error checking if remote directory exists: ${error}`);
       return false;
     }
+  }
+
+  /**
+   * Checks if a remote path is a file
+   * 
+   * @param filePath - Path to check
+   * @returns True if the path is a file, false otherwise
+   */
+  async isFile(filePath: string): Promise<boolean> {
+    try {
+      const remoteFilePath = `${this.remotePath}/${filePath}`;
+      const command = `[ -f "${remoteFilePath}" ] && echo "IS_FILE" || echo "NOT_FILE"`;
+      const result = await this.executeCommand(command);
+      return result.trim() === 'IS_FILE';
+    } catch (error) {
+      logger.error('SshUtils', `Error checking if remote path is a file: ${error}`);
+      return false;
+    }
+  }
+
+  /**
+   * Checks if a remote path is a directory
+   * 
+   * @param dirPath - Path to check
+   * @returns True if the path is a directory, false otherwise
+   */
+  async isDirectory(dirPath: string): Promise<boolean> {
+    return this.directoryExists(dirPath);
   }
 
   /**
@@ -139,15 +201,20 @@ export class SshUtils {
   }
 
   /**
-   * Writes content to a file on the remote server
+   * Writes content to a file on the remote server atomically
    * 
-   * @param filePath - Path to the file
+   * Uses a write-to-temp-then-mv pattern for atomic writes.
+   * This prevents file corruption if the connection drops during write.
+   * 
+   * @param filePath - Path to the file (relative to remotePath)
    * @param content - Content to write
    * @throws Error if file writing fails
    */
   async writeFile(filePath: string, content: string): Promise<void> {
     try {
       const remoteFilePath = `${this.remotePath}/${filePath}`;
+      const timestamp = Date.now();
+      const tempFilePath = `${remoteFilePath}.${timestamp}.tmp`;
       
       // Ensure the directory exists first
       const dirPath = remoteFilePath.substring(0, remoteFilePath.lastIndexOf('/'));
@@ -159,11 +226,23 @@ export class SshUtils {
       const contentBuffer = Buffer.from(content);
       const base64Content = contentBuffer.toString('base64');
       
-      // Create the command that will decode the base64 and write to the file
-      const writeCommand = `echo "${base64Content}" | base64 -d > "${remoteFilePath}"`;
+      // Write to temp file first
+      const writeCommand = `echo "${base64Content}" | base64 -d > "${tempFilePath}"`;
       await this.executeCommand(writeCommand);
       
-      // Verify file was written successfully
+      // Verify temp file was written successfully
+      const checkTempCommand = `[ -f "${tempFilePath}" ] && echo "FILE_EXISTS" || echo "FILE_NOT_EXISTS"`;
+      const checkTempResult = await this.executeCommand(checkTempCommand);
+      
+      if (checkTempResult.trim() !== "FILE_EXISTS") {
+        throw new Error(`Failed to write temp file: ${tempFilePath}`);
+      }
+      
+      // Atomically move temp file to final location
+      const mvCommand = `mv "${tempFilePath}" "${remoteFilePath}"`;
+      await this.executeCommand(mvCommand);
+      
+      // Verify final file exists
       const checkCommand = `[ -f "${remoteFilePath}" ] && echo "FILE_EXISTS" || echo "FILE_NOT_EXISTS"`;
       const checkResult = await this.executeCommand(checkCommand);
       
