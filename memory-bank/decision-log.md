@@ -335,3 +335,16 @@ This document tracks important decisions made during the development of the Memo
   - None
 - **Consequences:** 
   - None
+
+## Knowledge Graph Implementation Approach
+- **Date:** 2026-02-09 8:46:52 PM
+- **Author:** Unknown User
+- **Context:** Implementing docs/internal/knowledge-graph-plans.md which defines a typed memory model using append-only JSONL event log architecture.
+- **Decision:** Implemented Phase 1 (server foundation) following the design goals: filesystem as source of truth, safe by default with marker validation, idempotent operations, and Markdown renderable output. Used branded TypeScript types for type-safe IDs. Deferred multi-store support (Phase 2), VS Code extension (Phase 3), and polish (Phase 4) for later.
+- **Alternatives Considered:** 
+  - None
+- **Consequences:** 
+  - 7 new MCP tools available for knowledge graph operations
+  - 33 new tests added (99 total)
+  - Graph storage in graph/ subfolder of memory bank
+  - Ready for Phase 2 (multi-store) when needed

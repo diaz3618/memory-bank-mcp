@@ -57,6 +57,25 @@ The Memory Bank follows a standardized structure with the following core files:
 - `decision-log.md` - Decision log
 - `system-patterns.md` - System patterns (this file)
 
+### Knowledge Graph Structure
+
+The Knowledge Graph extends the Memory Bank with structured entity storage in the `graph/` subfolder:
+
+- `graph/graph.jsonl` - Append-only event log (source of truth)
+- `graph/graph.snapshot.json` - Computed snapshot for fast reads
+- `graph/graph.md` - Human-readable Markdown rendering
+
+**Event Types:**
+- `entity_upsert` - Create/update entities
+- `observation_add` - Add observations to entities
+- `relation_add` - Create relations between entities
+- `relation_remove` - Remove relations
+
+**Core Types:**
+- `Entity` - Named nodes with type and attributes
+- `Observation` - Timestamped notes attached to entities
+- `Relation` - Typed edges between entities (e.g., "uses", "depends-on")
+
 ## MCP Tool Patterns
 
 ### Tool Structure

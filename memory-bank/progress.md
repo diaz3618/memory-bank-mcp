@@ -6,6 +6,36 @@ Memory Bank MCP is an MCP (Model Context Protocol) server that provides tools an
 
 ## Update History
 
+- [2026-02-09 8:46:52 PM] [Unknown User] - Decision Made: Knowledge Graph Implementation Approach
+- [2026-02-09 8:46:38 PM] [Unknown User] - Implemented Knowledge Graph Phase 1: Completed Phase 1 of knowledge-graph-plans.md implementation on feature/knowledge-graph branch:
+
+**Core Graph Modules Created (src/core/graph/):**
+- GraphIds.ts - SHA-256 based deterministic ID generation with branded types (EntityId, ObservationId, RelationId)
+- GraphSchemas.ts - Runtime validation and type guards for all graph types
+- GraphReducer.ts - JSONL event log to snapshot transformation
+- GraphSearch.ts - Entity/observation search and neighborhood expansion
+- GraphRenderer.ts - Markdown output generation (graph.md)
+- GraphStore.ts - Main storage manager using FileSystemInterface
+
+**MCP Tools Implemented (src/server/tools/GraphTools.ts):**
+- graph_upsert_entity - Create/update entities with type and attributes
+- graph_add_observation - Add timestamped observations to entities
+- graph_link_entities - Create typed relations between entities
+- graph_unlink_entities - Remove relations
+- graph_search - Search entities/observations with neighborhood expansion
+- graph_open_nodes - Get subgraph snapshot by node names/IDs
+- graph_rebuild - Rebuild snapshot from JSONL event log
+
+**Test Suite (src/__tests__/graphStore.test.ts):**
+- 33 comprehensive tests covering all graph modules
+- All 99 tests passing (66 existing + 33 new)
+
+**Architecture:**
+- Append-only JSONL event log (graph/graph.jsonl) as source of truth
+- JSON snapshot (graph/graph.snapshot.json) for fast reads
+- Markdown rendering (graph/graph.md) for human readability
+- Marker-based safety (prevents writing to non-graph files)
+- Idempotent operations (upsert, link deduplication)
 - [2026-02-08 3:33:10 PM] [Unknown User] - Completed P3 caching and batch operations: Implemented: (1) CachingFileSystem - read cache wrapper with TTL, LRU eviction, and size limits; (2) batch_read_files - parallel file reading with ETags; (3) batch_write_files - batch writes with ETag concurrency control. All 66 tests passing. P0, P1, P2 complete. P3 partially complete (caching/batch done, ssh2/embeddings deferred as low priority).
 - [2026-02-08 3:27:59 PM] [Unknown User] - Completed P1 backup/rollback and P2 structured tools: Implemented: (1) P1 backup/rollback tools - create_backup, list_backups, restore_backup for disaster recovery; (2) P2 structured tools - add_progress_entry with type categories, add_session_note with categories, update_tasks for managing task lists. All 66 tests passing. P0, P1, and P2 are now COMPLETE. Only P3 (performance/scale) remains.
 - [2026-02-08 2:04:21 PM] [Unknown User] - Decision Made: Implementation order: P1 rollback then P2 structured tools
