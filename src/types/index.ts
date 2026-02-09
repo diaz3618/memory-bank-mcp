@@ -19,6 +19,9 @@ export * from './constants.js';
 // Re-export type guards
 export * from './guards.js';
 
+// Re-export graph types
+export * from './graph.js';
+
 /**
  * Interface for Memory Bank status
  */

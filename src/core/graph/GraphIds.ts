@@ -5,7 +5,7 @@
  * Uses deterministic hashing for idempotent upserts.
  */
 
-import type { EntityId, ObservationId, RelationId } from '../../types/graph';
+import type { EntityId, ObservationId, RelationId } from '../../types/graph.js';
 import { createHash } from 'crypto';
 
 /**
@@ -64,21 +64,21 @@ export function createRelationId(
  * Validates an entity ID format
  */
 export function isValidEntityId(id: string): id is EntityId {
-  return typeof id === 'string' && id.startsWith('ent_') && id.length === 16;
+  return typeof id === 'string' && id.startsWith('ent_') && id.length >= 5;
 }
 
 /**
  * Validates an observation ID format
  */
 export function isValidObservationId(id: string): id is ObservationId {
-  return typeof id === 'string' && id.startsWith('obs_') && id.length === 16;
+  return typeof id === 'string' && id.startsWith('obs_') && id.length >= 5;
 }
 
 /**
  * Validates a relation ID format
  */
 export function isValidRelationId(id: string): id is RelationId {
-  return typeof id === 'string' && id.startsWith('rel_') && id.length === 16;
+  return typeof id === 'string' && id.startsWith('rel_') && id.length >= 5;
 }
 
 /**

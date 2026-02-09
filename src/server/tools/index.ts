@@ -9,6 +9,7 @@ import { progressTools, handleTrackProgress } from './ProgressTools.js';
 import { contextTools, handleUpdateActiveContext } from './ContextTools.js';
 import { decisionTools, handleLogDecision } from './DecisionTools.js';
 import { modeTools, handleSwitchMode, handleGetCurrentMode, handleProcessUmbCommand, handleCompleteUmb } from './ModeTools.js';
+import { graphTools, handleGraphUpsertEntity, handleGraphAddObservation, handleGraphLinkEntities, handleGraphUnlinkEntities, handleGraphSearch, handleGraphOpenNodes, handleGraphRebuild } from './GraphTools.js';
 
 /**
  * Sets up all tool handlers for the MCP server
@@ -34,6 +35,7 @@ export function setupToolHandlers(
       ...contextTools,
       ...decisionTools,
       ...modeTools,
+      ...graphTools,
     ],
   }));
 
@@ -407,6 +409,84 @@ export function setupToolHandlers(
             throw new McpError(ErrorCode.InvalidParams, 'Files array is required');
           }
           return handleBatchWriteFiles(memoryBankManager, files, stopOnError ?? false);
+        }
+
+        // Graph tools
+        case 'graph_upsert_entity': {
+          const { name, entityType, attrs } = request.params.arguments as {
+            name: string;
+            entityType: string;
+            attrs?: Record<string, unknown>;
+          };
+          if (!name || !entityType) {
+            throw new McpError(ErrorCode.InvalidParams, 'name and entityType are required');
+          }
+          return handleGraphUpsertEntity(memoryBankManager, name, entityType, attrs);
+        }
+
+        case 'graph_add_observation': {
+          const { entity, text, source, timestamp } = request.params.arguments as {
+            entity: string;
+            text: string;
+            source?: string;
+            timestamp?: string;
+          };
+          if (!entity || !text) {
+            throw new McpError(ErrorCode.InvalidParams, 'entity and text are required');
+          }
+          return handleGraphAddObservation(memoryBankManager, entity, text, source, timestamp);
+        }
+
+        case 'graph_link_entities': {
+          const { from, relationType, to } = request.params.arguments as {
+            from: string;
+            relationType: string;
+            to: string;
+          };
+          if (!from || !relationType || !to) {
+            throw new McpError(ErrorCode.InvalidParams, 'from, relationType, and to are required');
+          }
+          return handleGraphLinkEntities(memoryBankManager, from, relationType, to);
+        }
+
+        case 'graph_unlink_entities': {
+          const { from, relationType, to } = request.params.arguments as {
+            from: string;
+            relationType: string;
+            to: string;
+          };
+          if (!from || !relationType || !to) {
+            throw new McpError(ErrorCode.InvalidParams, 'from, relationType, and to are required');
+          }
+          return handleGraphUnlinkEntities(memoryBankManager, from, relationType, to);
+        }
+
+        case 'graph_search': {
+          const { query, limit, includeNeighborhood, neighborhoodDepth } = request.params.arguments as {
+            query: string;
+            limit?: number;
+            includeNeighborhood?: boolean;
+            neighborhoodDepth?: 1 | 2;
+          };
+          if (!query) {
+            throw new McpError(ErrorCode.InvalidParams, 'query is required');
+          }
+          return handleGraphSearch(memoryBankManager, query, limit, includeNeighborhood, neighborhoodDepth);
+        }
+
+        case 'graph_open_nodes': {
+          const { nodes, depth } = request.params.arguments as {
+            nodes: string[];
+            depth?: 1 | 2;
+          };
+          if (!nodes || nodes.length === 0) {
+            throw new McpError(ErrorCode.InvalidParams, 'nodes array is required');
+          }
+          return handleGraphOpenNodes(memoryBankManager, nodes, depth);
+        }
+
+        case 'graph_rebuild': {
+          return handleGraphRebuild(memoryBankManager);
         }
 
         // Unknown tool

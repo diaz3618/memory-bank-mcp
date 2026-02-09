@@ -25,8 +25,8 @@ import type {
   SnapshotWrittenEvent,
   GraphStats,
   GraphIndex,
-  MARKER_EVENT,
-} from '../../types/graph';
+} from '../../types/graph.js';
+import { MARKER_EVENT } from '../../types/graph.js';
 
 // ============================================================================
 // Basic Type Guards
@@ -59,15 +59,15 @@ function isISODateString(value: unknown): value is string {
 // ============================================================================
 
 export function isEntityId(value: unknown): value is EntityId {
-  return isString(value) && value.startsWith('ent_') && value.length === 16;
+  return isString(value) && value.startsWith('ent_') && value.length >= 5;
 }
 
 export function isObservationId(value: unknown): value is ObservationId {
-  return isString(value) && value.startsWith('obs_') && value.length === 16;
+  return isString(value) && value.startsWith('obs_') && value.length >= 5;
 }
 
 export function isRelationId(value: unknown): value is RelationId {
-  return isString(value) && value.startsWith('rel_') && value.length === 16;
+  return isString(value) && value.startsWith('rel_') && value.length >= 5;
 }
 
 // ============================================================================

@@ -14,8 +14,8 @@ import type {
   NeighborhoodResult,
   Observation,
   Relation,
-} from '../../types/graph';
-import { normalizeName } from './GraphIds';
+} from '../../types/graph.js';
+import { normalizeName } from './GraphIds.js';
 
 // ============================================================================
 // Search Types
@@ -170,28 +170,28 @@ export function searchGraph(
   const { query, entityTypes, relationTypes, includeNeighborhood, neighborhoodDepth } = options;
 
   // Filter entities by type if specified
-  let entities = snapshot.entities;
+  let entities: readonly Entity[] = snapshot.entities;
   if (entityTypes && entityTypes.length > 0) {
-    const typeSet = new Set(entityTypes.map((t) => t.toLowerCase()));
-    entities = entities.filter((e) => typeSet.has(e.entityType.toLowerCase()));
+    const typeSet = new Set(entityTypes.map((t: string) => t.toLowerCase()));
+    entities = entities.filter((e: Entity) => typeSet.has(e.entityType.toLowerCase()));
   }
 
   // Search entities
   const entityMatches = searchEntities(entities, query, limit);
-  const matchedEntityIds = new Set(entityMatches.map((m) => m.entity.id));
+  const matchedEntityIds = new Set(entityMatches.map((m: EntityMatch) => m.entity.id));
 
   // Search observations
   const observationMatches = searchObservations(snapshot.observations, query, limit);
 
   // Find relations involving matched entities
-  let matchedRelations = snapshot.relations.filter(
-    (r) => matchedEntityIds.has(r.fromId) || matchedEntityIds.has(r.toId)
+  let matchedRelations: Relation[] = (snapshot.relations as Relation[]).filter(
+    (r: Relation) => matchedEntityIds.has(r.fromId) || matchedEntityIds.has(r.toId)
   );
 
   // Filter by relation type if specified
   if (relationTypes && relationTypes.length > 0) {
-    const relTypeSet = new Set(relationTypes.map((t) => t.toLowerCase()));
-    matchedRelations = matchedRelations.filter((r) =>
+    const relTypeSet = new Set(relationTypes.map((t: string) => t.toLowerCase()));
+    matchedRelations = matchedRelations.filter((r: Relation) =>
       relTypeSet.has(r.relationType.toLowerCase())
     );
   }
@@ -203,7 +203,7 @@ export function searchGraph(
   if (includeNeighborhood && matchedEntityIds.size > 0) {
     const depth = neighborhoodDepth ?? 1;
     const neighborhood = expandNeighborhood(snapshot, Array.from(matchedEntityIds), depth);
-    neighborhoodEntities = neighborhood.entities.filter((e) => !matchedEntityIds.has(e.id));
+    neighborhoodEntities = neighborhood.entities.filter((e: Entity) => !matchedEntityIds.has(e.id));
     neighborhoodRelations = neighborhood.relations;
   }
 
@@ -279,7 +279,7 @@ export function expandNeighborhood(
   }
 
   // Get all visited entities
-  const entities = snapshot.entities.filter((e) => visitedIds.has(e.id));
+  const entities = snapshot.entities.filter((e: Entity) => visitedIds.has(e.id));
 
   // Deduplicate relations
   const relationMap = new Map<string, Relation>();
@@ -288,7 +288,7 @@ export function expandNeighborhood(
   }
 
   return {
-    entities,
+    entities: entities as Entity[],
     relations: Array.from(relationMap.values()),
   };
 }
@@ -301,7 +301,7 @@ export function getEntityNeighborhood(
   entityId: EntityId,
   depth: 1 | 2
 ): NeighborhoodResult | null {
-  const centerEntity = snapshot.entities.find((e) => e.id === entityId);
+  const centerEntity = snapshot.entities.find((e: Entity) => e.id === entityId);
   if (!centerEntity) {
     return null;
   }
@@ -309,12 +309,12 @@ export function getEntityNeighborhood(
   const neighborhood = expandNeighborhood(snapshot, [entityId], depth);
 
   // Get observations for center entity
-  const observations = snapshot.observations.filter((o) => o.entityId === entityId);
+  const observations = snapshot.observations.filter((o: Observation) => o.entityId === entityId);
 
   return {
     centerEntity,
     entities: neighborhood.entities,
-    observations,
+    observations: observations as Observation[],
     relations: neighborhood.relations,
     depth,
   };
@@ -332,18 +332,18 @@ export function findEntity(
   nameOrId: string
 ): Entity | null {
   // Try exact ID match first
-  const byId = snapshot.entities.find((e) => e.id === nameOrId);
+  const byId = snapshot.entities.find((e: Entity) => e.id === nameOrId);
   if (byId) return byId;
 
   // Try exact name match
   const normalizedInput = normalizeName(nameOrId);
   const byName = snapshot.entities.find(
-    (e) => normalizeName(e.name) === normalizedInput
+    (e: Entity) => normalizeName(e.name) === normalizedInput
   );
   if (byName) return byName;
 
   // Try partial name match
-  const byPartialName = snapshot.entities.find((e) =>
+  const byPartialName = snapshot.entities.find((e: Entity) =>
     normalizeName(e.name).includes(normalizedInput)
   );
 
@@ -357,9 +357,9 @@ export function getEntityObservations(
   snapshot: GraphSnapshot,
   entityId: EntityId
 ): Observation[] {
-  return snapshot.observations
-    .filter((o) => o.entityId === entityId)
-    .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+  return (snapshot.observations as Observation[])
+    .filter((o: Observation) => o.entityId === entityId)
+    .sort((a: Observation, b: Observation) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
 }
 
 /**
@@ -369,8 +369,8 @@ export function getEntityRelations(
   snapshot: GraphSnapshot,
   entityId: EntityId
 ): { outgoing: Relation[]; incoming: Relation[] } {
-  const outgoing = snapshot.relations.filter((r) => r.fromId === entityId);
-  const incoming = snapshot.relations.filter((r) => r.toId === entityId);
+  const outgoing = (snapshot.relations as Relation[]).filter((r: Relation) => r.fromId === entityId);
+  const incoming = (snapshot.relations as Relation[]).filter((r: Relation) => r.toId === entityId);
   return { outgoing, incoming };
 }
 
@@ -384,3 +384,4 @@ export function buildNameToIdMap(snapshot: GraphSnapshot): Map<string, EntityId>
   }
   return map;
 }
+

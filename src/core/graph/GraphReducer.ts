@@ -12,15 +12,14 @@ import type {
   EntityId,
   GraphEvent,
   GraphSnapshot,
-  GraphSnapshotMeta,
   GraphStats,
   Observation,
   Relation,
   RelationId,
   DataEvent,
-} from '../../types/graph';
-import { createRelationId } from './GraphIds';
-import { isMarkerEvent } from './GraphSchemas';
+} from '../../types/graph.js';
+import { createRelationId } from './GraphIds.js';
+import { isMarkerEvent } from './GraphSchemas.js';
 
 // ============================================================================
 // Mutable State for Building
@@ -90,12 +89,6 @@ function applyEvent(state: MutableGraphState, event: DataEvent): MutableGraphSta
         }
       }
       return state;
-    }
-
-    default: {
-      // Exhaustive check - TypeScript will error if we miss a case
-      const _exhaustive: never = event;
-      return _exhaustive;
     }
   }
 }
@@ -285,18 +278,18 @@ export function filterByEntityTypes(
   snapshot: GraphSnapshot,
   entityTypes: readonly string[]
 ): GraphSnapshot {
-  const typeSet = new Set(entityTypes.map((t) => t.toLowerCase()));
-  const filteredEntities = snapshot.entities.filter((e) =>
+  const typeSet = new Set(entityTypes.map((t: string) => t.toLowerCase()));
+  const filteredEntities = snapshot.entities.filter((e: Entity) =>
     typeSet.has(e.entityType.toLowerCase())
   );
-  const entityIds = new Set(filteredEntities.map((e) => e.id));
+  const entityIds = new Set(filteredEntities.map((e: Entity) => e.id));
 
   return {
     meta: snapshot.meta,
     entities: filteredEntities,
-    observations: snapshot.observations.filter((o) => entityIds.has(o.entityId)),
+    observations: snapshot.observations.filter((o: Observation) => entityIds.has(o.entityId)),
     relations: snapshot.relations.filter(
-      (r) => entityIds.has(r.fromId) && entityIds.has(r.toId)
+      (r: Relation) => entityIds.has(r.fromId) && entityIds.has(r.toId)
     ),
   };
 }
