@@ -50,3 +50,5 @@ test-*.js
 run-*.sh
 prepare-*.sh
 home
+docs/internal
+repos
