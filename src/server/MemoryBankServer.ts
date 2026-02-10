@@ -65,7 +65,7 @@ export class MemoryBankServer {
     
     this.server = new Server(
       {
-        name: '@aakarsh-sasi/memory-bank-mcp',
+        name: '@diaz3618/memory-bank-mcp',
         version: '0.5.0',
       },
       {

@@ -1,0 +1,240 @@
+{
+  "name": "memory-bank-mcp",
+  "displayName": "Memory Bank MCP",
+  "description": "VS Code extension for Memory Bank file management via MCP",
+  "version": "1.1.0",
+  "publisher": "memory-bank",
+  "license": "MIT",
+  "icon": "icon.png",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/movibe/memory-bank-mcp.git"
+  },
+  "engines": {
+    "vscode": "^1.99.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "keywords": [
+    "memory-bank",
+    "mcp",
+    "model-context-protocol",
+    "ai",
+    "context-management"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "memoryBank.openSidebar",
+        "title": "Open Sidebar",
+        "category": "Memory Bank"
+      },
+      {
+        "command": "memoryBank.refreshData",
+        "title": "Refresh Data",
+        "category": "Memory Bank",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "memoryBank.openFile",
+        "title": "Open Memory Bank File",
+        "category": "Memory Bank",
+        "icon": "$(file)"
+      },
+      {
+        "command": "memoryBank.openActiveContext",
+        "title": "Open Active Context",
+        "category": "Memory Bank"
+      },
+      {
+        "command": "memoryBank.openProgress",
+        "title": "Open Progress",
+        "category": "Memory Bank"
+      },
+      {
+        "command": "memoryBank.openDecisionLog",
+        "title": "Open Decision Log",
+        "category": "Memory Bank"
+      },
+      {
+        "command": "memoryBank.showConnectionStatus",
+        "title": "Show Connection Status",
+        "category": "Memory Bank"
+      },
+      {
+        "command": "memoryBank.reconnect",
+        "title": "Reconnect to MCP Server",
+        "category": "Memory Bank",
+        "icon": "$(plug)"
+      },
+      {
+        "command": "memoryBank.showLogs",
+        "title": "Show Logs",
+        "category": "Memory Bank",
+        "icon": "$(output)"
+      },
+      {
+        "command": "memoryBank.setPath",
+        "title": "Set Memory Bank Path",
+        "category": "Memory Bank",
+        "icon": "$(folder-opened)"
+      }
+    ],
+    "views": {
+      "memory-bank": [
+        {
+          "type": "webview",
+          "id": "memoryBank.sidebar",
+          "name": "Memory Bank",
+          "when": "workspaceFolderCount > 0",
+          "icon": "./icons/activity-bar-icon.svg"
+        }
+      ]
+    },
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "memory-bank",
+          "title": "Memory Bank",
+          "icon": "./icons/activity-bar-icon.svg"
+        }
+      ]
+    },
+    "menus": {
+      "view/title": [
+        {
+          "command": "memoryBank.refreshData",
+          "when": "view == memoryBank.sidebar",
+          "group": "navigation"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "Memory Bank MCP",
+      "properties": {
+        "memoryBank.path": {
+          "type": "string",
+          "default": "",
+          "scope": "resource",
+          "description": "Path to project root containing memory-bank folder (defaults to workspace root)"
+        },
+        "memoryBank.connectionMode": {
+          "type": "string",
+          "enum": [
+            "stdio",
+            "http"
+          ],
+          "enumDescriptions": [
+            "Spawn memory-bank-mcp as a local process (recommended)",
+            "Connect to a remote MCP server via HTTP"
+          ],
+          "default": "stdio",
+          "scope": "window",
+          "description": "How to connect to the Memory Bank MCP server"
+        },
+        "memoryBank.stdio.command": {
+          "type": "string",
+          "default": "npx",
+          "scope": "window",
+          "description": "Command to run the MCP server (e.g., 'npx', 'node', or path to binary)"
+        },
+        "memoryBank.stdio.args": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [
+            "memory-bank-mcp"
+          ],
+          "scope": "window",
+          "description": "Arguments to pass to the MCP server command"
+        },
+        "memoryBank.stdio.cwd": {
+          "type": "string",
+          "default": "",
+          "scope": "resource",
+          "description": "Working directory for the MCP server (defaults to workspace root)"
+        },
+        "memoryBank.http.baseUrl": {
+          "type": "string",
+          "default": "http://localhost:3000",
+          "scope": "window",
+          "description": "Base URL for the remote MCP server"
+        },
+        "memoryBank.http.authToken": {
+          "type": "string",
+          "default": "",
+          "scope": "window",
+          "description": "Authentication token for the remote MCP server (optional)"
+        },
+        "memoryBank.statusBar.enabled": {
+          "type": "boolean",
+          "default": true,
+          "scope": "window",
+          "description": "Show Memory Bank status in the status bar"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run check-types && npm run lint && node esbuild.js --production",
+    "compile": "npm run check-types && npm run lint && node esbuild.js",
+    "watch": "npm-run-all -p watch:*",
+    "watch:esbuild": "node esbuild.js --watch",
+    "watch:tsc": "tsc -p tsconfig.extension.json --watch",
+    "package": "npm run check-types && npm run lint && node esbuild.js --production",
+    "compile-tests": "tsc -p tsconfig.test.json",
+    "watch-tests": "tsc -p tsconfig.test.json -w",
+    "pretest": "npm run compile-tests && npm run compile && npm run lint",
+    "check-types": "tsc -b",
+    "lint": "eslint src",
+    "test": "vscode-test"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.0.0",
+    "@types/cytoscape": "^3.21.9",
+    "@types/mocha": "^10.0.10",
+    "@types/node": "20.x",
+    "@types/react": "^19.1.10",
+    "@types/react-dom": "^19.1.7",
+    "@types/vscode": "^1.99.0",
+    "@typescript-eslint/eslint-plugin": "^8.25.0",
+    "@typescript-eslint/parser": "^8.25.0",
+    "@vitejs/plugin-react": "^4.3.4",
+    "@vscode/test-cli": "^0.0.10",
+    "@vscode/test-electron": "^2.4.1",
+    "@vscode/vsce": "^3.7.1",
+    "esbuild": "^0.25.0",
+    "eslint": "^9.21.0",
+    "npm-run-all": "^4.1.5",
+    "tailwindcss": "^4.0.0",
+    "typescript": "^5.7.3",
+    "vite": "^6.0.3"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "@radix-ui/react-accordion": "^1.2.12",
+    "@radix-ui/react-dialog": "^1.1.0",
+    "@radix-ui/react-dropdown-menu": "^2.1.16",
+    "@radix-ui/react-progress": "^1.1.7",
+    "@radix-ui/react-select": "^2.2.6",
+    "@radix-ui/react-separator": "^1.1.7",
+    "@radix-ui/react-slot": "^1.2.3",
+    "@radix-ui/react-tabs": "^1.1.13",
+    "@radix-ui/react-tooltip": "^1.1.0",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "cytoscape": "^3.30.0",
+    "cytoscape-cola": "^2.5.1",
+    "lucide-react": "^0.468.0",
+    "react": "^19.1.1",
+    "react-cytoscapejs": "^2.0.0",
+    "react-dom": "^19.1.1",
+    "tailwind-merge": "^2.6.0"
+  }
+}

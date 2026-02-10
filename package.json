@@ -1,5 +1,5 @@
 {
-  "name": "@aakarsh-sasi/memory-bank-mcp",
+  "name": "@diaz3618/memory-bank-mcp",
   "version": "1.1.4",
   "description": "MCP Server for managing Memory Bank with remote server support",
   "type": "module",
@@ -28,16 +28,16 @@
     "assistant",
     "context"
   ],
-  "author": "Aakarsh Sasi (forked from Movibe)",
+  "author": "Daniel Diaz Santiago (forked from aakarsh-sasi)",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/aakarsh-sasi/memory-bank-mcp.git"
+    "url": "git+https://github.com/diaz3618/memory-bank-mcp.git"
   },
   "bugs": {
-    "url": "https://github.com/aakarsh-sasi/memory-bank-mcp/issues"
+    "url": "https://github.com/diaz3618/memory-bank-mcp/issues"
   },
-  "homepage": "https://github.com/aakarsh-sasi/memory-bank-mcp#readme",
+  "homepage": "https://github.com/diaz3618/memory-bank-mcp#readme",
   "publishConfig": {
     "access": "public"
   },

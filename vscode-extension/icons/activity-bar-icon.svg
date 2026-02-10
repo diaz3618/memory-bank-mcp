@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg"
+     width="96" height="96" viewBox="0 0 24 24"
+     fill="none" stroke="currentColor" stroke-width="1.5"
+     stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+  <title>Memory Bank - Knowledge Graph</title>
+  
+  <!-- Brain outline simplified as interconnected nodes representing memory/knowledge -->
+  
+  <!-- Central node (brain/memory core) -->
+  <circle cx="12" cy="12" r="2.5"/>
+  
+  <!-- Surrounding nodes (memory entities) -->
+  <circle cx="5" cy="8" r="1.5"/>
+  <circle cx="19" cy="8" r="1.5"/>
+  <circle cx="5" cy="16" r="1.5"/>
+  <circle cx="19" cy="16" r="1.5"/>
+  <circle cx="12" cy="4" r="1.5"/>
+  <circle cx="12" cy="20" r="1.5"/>
+  
+  <!-- Connections (relations) from center -->
+  <line x1="9.7" y1="10.6" x2="6.3" y2="8.8"/>
+  <line x1="14.3" y1="10.6" x2="17.7" y2="8.8"/>
+  <line x1="9.7" y1="13.4" x2="6.3" y2="15.2"/>
+  <line x1="14.3" y1="13.4" x2="17.7" y2="15.2"/>
+  <line x1="12" y1="9.5" x2="12" y2="5.5"/>
+  <line x1="12" y1="14.5" x2="12" y2="18.5"/>
+  
+  <!-- Cross connections (knowledge web) -->
+  <line x1="6.3" y1="8" x2="10.5" y2="4.5"/>
+  <line x1="17.7" y1="8" x2="13.5" y2="4.5"/>
+</svg>

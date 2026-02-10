@@ -39,7 +39,7 @@ Examples:
   memory-bank-mcp --debug
   memory-bank-mcp --remote --remote-user username --remote-host example.host.com --remote-path /home/username/memory-bank
   
-For more information, visit: https://github.com/aakarsh-sasi/memory-bank-mcp
+For more information, visit: https://github.com/diaz3618/memory-bank-mcp
 `);
   process?.exit?.(0);
   // This is to satisfy TypeScript that the function never returns

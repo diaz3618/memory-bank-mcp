@@ -348,3 +348,17 @@ This document tracks important decisions made during the development of the Memo
   - 33 new tests added (99 total)
   - Graph storage in graph/ subfolder of memory bank
   - Ready for Phase 2 (multi-store) when needed
+
+## Knowledge Graph Implementation - Phase 1 Approach
+- **Date:** 2026-02-09 8:50:51 PM
+- **Author:** Unknown User
+- **Context:** Implementing docs/internal/knowledge-graph-plans.md which defines a typed memory model using append-only JSONL event log architecture for structured entity/relation storage.
+- **Decision:** Implemented Phase 1 (server foundation) following design goals: filesystem as source of truth, safe by default with marker validation, idempotent operations, Markdown renderable. Used branded TypeScript types for type-safe IDs. Deferred multi-store (Phase 2), VS Code extension (Phase 3), and polish (Phase 4).
+- **Alternatives Considered:** 
+  - None
+- **Consequences:** 
+  - 7 new MCP tools for knowledge graph operations
+  - 33 new tests (99 total passing)
+  - Graph storage in graph/ subfolder of memory bank
+  - Ready for Phase 2 multi-store support when needed
+  - Branch: feature/knowledge-graph (not yet merged to main)

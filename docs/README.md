@@ -1,106 +1,177 @@
-# Memory Bank MCP - Documentation
+# Memory Bank MCP Documentation
 
-## Overview
+Welcome to the Memory Bank MCP documentation! This directory contains comprehensive documentation for the Model Context Protocol (MCP) server that enables AI assistants to maintain persistent context and memory across sessions.
 
-This directory contains the documentation for Memory Bank MCP, an MCP (Model Context Protocol) server that provides tools and resources for managing memory banks. Memory Bank MCP allows AI assistants to store and retrieve information across sessions.
+## Quick Links
+
+- 📚 [Main Project README](../README.md)
+- 🚀 [Quick Start Guide](getting-started/npx-usage.md)
+- 🔧 [Building with Bun](getting-started/build-with-bun.md)
+- 🔌 [Integration Guides](integration/)
+- 📖 [API Reference](reference/)
+
+---
 
 ## Documentation Structure
 
 The documentation is organized into the following categories:
 
-### 1. Getting Started
+### 📦 Getting Started
 
-- [**README.md**](../README.md) - Main project README with overview and quick start
-- [**npx-usage.md**](./npx-usage.md) - Guide for using Memory Bank MCP with npx
-- [**build-with-bun.md**](./build-with-bun.md) - Guide for building the project with Bun
+New to Memory Bank MCP? Start here!
 
-### 2. Core Concepts
+- **[NPX Usage Guide](getting-started/npx-usage.md)** - Run Memory Bank MCP without installation using npx
+- **[Build with Bun](getting-started/build-with-bun.md)** - Build the project using the Bun runtime
+- **[Custom Folder Name](getting-started/custom-folder-name.md)** - Customize your Memory Bank directory name
 
-- [**memory-bank-status-prefix.md**](./memory-bank-status-prefix.md) - Documentation on the Memory Bank status prefix system
-- [**usage-modes.md**](./usage-modes.md) - Detailed descriptions of each mode and usage examples
-- [**file-naming-convention.md**](./file-naming-convention.md) - Documentation on file naming conventions (kebab-case)
+### 📘 User Guides
 
-### 3. Integration Guides
+Comprehensive guides for using Memory Bank MCP features:
 
-- [**cursor-integration.md**](./cursor-integration.md) - Detailed guide for integrating with Cursor code editor
-- [**cline-integration.md**](./cline-integration.md) - Guide for integrating with clinerules (includes auto-creation)
-- [**roo-code-integration.md**](./roo-code-integration.md) - Explanation of the relationship with Roo Code Memory Bank
-- [**ai-assistant-integration.md**](./ai-assistant-integration.md) - Guide for integrating with AI assistants
-- [**mcp-protocol-specification.md**](./mcp-protocol-specification.md) - Complete specification of the Memory Bank MCP protocol
+- **[Usage Modes](guides/usage-modes.md)** - Detailed descriptions of each operational mode (code, architect, ask, debug, test)
+- **[Remote Server Setup](guides/remote-server.md)** - Store Memory Banks on remote servers via SSH
+- **[SSH Keys Guide](guides/ssh-keys-guide.md)** - Set up SSH key authentication for remote servers
+- **[Migration Guide](guides/migration-guide.md)** - Migrate from older versions or other memory bank systems
+- **[Memory Bank Status Prefix](guides/memory-bank-status-prefix.md)** - Understanding status indicators in responses
+- **[Debug MCP Config](guides/debug-mcp-config.md)** - Troubleshoot MCP configuration issues
 
-### 4. Rule Formats and Examples
+### 🔌 Integration Guides
 
-- [**rule-formats.md**](./rule-formats.md) - Documentation on supported file formats for rules
-- [**rule-examples.md**](./rule-examples.md) - Complete examples of rule files in JSON, YAML, and TOML
-- [**implementation-plan-rule-formats.md**](./implementation-plan-rule-formats.md) - Implementation plan for multi-format rule support
+Connect Memory Bank MCP with your favorite development tools:
 
-### 5. Testing and Development
+- **[Cursor Integration](integration/cursor-integration.md)** - Set up Memory Bank MCP in Cursor editor
+- **[Cline Integration](integration/cline-integration.md)** - Use with Cline VS Code extension (includes .clinerules)
+- **[Roo Code Integration](integration/roo-code-integration.md)** - Integration with Roo Code Memory Bank
+- **[AI Assistant Integration](integration/ai-assistant-integration.md)** - Generic guide for integrating with AI assistants
 
-- [**testing.md**](./testing.md) - Information about testing the project
-- [**testing-guide.md**](./testing-guide.md) - Comprehensive guide for testing
-- [**testing-clinerules.md**](./testing-clinerules.md) - Guide for testing clinerules integration
-- [**integration-testing-guide.md**](./integration-testing-guide.md) - Step-by-step testing instructions for integration
-- [**test-coverage.md**](./test-coverage.md) - Documentation on test coverage
+### 📖 Reference
 
-### 6. Architecture and Design
+Technical reference documentation:
 
-- [**architecture-plan.md**](./architecture-plan.md) - Overall architecture plan
-- [**modular-architecture-proposal.md**](./modular-architecture-proposal.md) - Proposal for modular architecture
-- [**documentation-structure.md**](./documentation-structure.md) - Documentation on the structure of documentation
-- [**logging-system.md**](./logging-system.md) - Documentation on the logging system
+- **[MCP Protocol Specification](reference/mcp-protocol-specification.md)** - Complete MCP protocol implementation details
+- **[Rule Formats](reference/rule-formats.md)** - Supported formats for configuration rules (JSON, YAML, TOML)
+- **[Rule Examples](reference/rule-examples.md)** - Complete examples of rule files in all supported formats
+- **[File Naming Convention](reference/file-naming-convention.md)** - Memory Bank file naming standards (kebab-case)
+- **[MCP Client Requirements](reference/requirements.md)** - Comprehensive list of MCP-compatible clients and their feature support
 
-### 7. Migration and Updates
+### 🛠️ Development
 
-- [**migration-guide.md**](./migration-guide.md) - Guide for migrating between versions
-- [**bun-migration.md**](./bun-migration.md) - Guide for migrating to Bun
-- [**memory-bank-path-changes.md**](./memory-bank-path-changes.md) - Documentation on path handling changes
-- [**file-naming-convention-update.md**](./file-naming-convention-update.md) - Update on file naming convention (camelCase to kebab-case)
-- [**memory-bank-bug-fixes.md**](./memory-bank-bug-fixes.md) - Documentation on bug fixes
-- [**memory-bank-status-fix.md**](./memory-bank-status-fix.md) - Documentation on Memory Bank status detection fix
-- [**code-improvements.md**](./code-improvements.md) - Documentation on code improvements
+For contributors and developers working on Memory Bank MCP:
 
-## Supported Modes
-
-Memory Bank MCP supports the following operation modes:
-
-1. **Architect Mode** - For high-level planning and system design
-2. **Code Mode** - For implementation and development
-3. **Ask Mode** - For providing information and explanations
-4. **Debug Mode** - For problem-solving and troubleshooting
-5. **Test Mode** - For test-driven development and quality assurance
-
-Each mode is configured through rule files (`.clinerules-[mode]`) that can be written in JSON, YAML, or TOML.
-
-## Supported File Formats
-
-Memory Bank MCP supports the following formats for rule files:
-
-- **JSON** (JavaScript Object Notation)
-- **YAML** (YAML Ain't Markup Language)
-- **TOML** (Tom's Obvious, Minimal Language)
-
-## AI Assistant Integration
-
-Memory Bank MCP can be integrated with any AI assistant that supports the Model Context Protocol, including:
-
-- Claude (via Anthropic's MCP implementation)
-- GPT models (via OpenAI's MCP implementation)
-- Custom AI assistants built on MCP-compatible frameworks
-
-## Supported Editors
-
-Memory Bank MCP can be integrated with the following code editors:
-
-- **Cursor** - AI-powered code editor built on VS Code
-- **VS Code** - Through custom extensions that support MCP
-- **Any editor** - Through command-line interface
-
-## Inspiration
-
-Memory Bank MCP was inspired by [Roo Code Memory Bank](https://github.com/GreatScottyMac/roo-code-memory-bank) developed by Scott MacKenzie.
+- **[Architecture Plan](development/architecture-plan.md)** - Overall system architecture and design
+- **[Modular Architecture Proposal](development/modular-architecture-proposal.md)** - Proposed modular design improvements
+- **[Logging System](development/logging-system.md)** - How logging works in Memory Bank MCP
+- **[Startup Process](development/memory-bank-mcp-startup.md)** - Detailed startup sequence documentation
+- **[Testing Guide](development/testing-guide.md)** - Comprehensive testing instructions
+- **[Testing](development/testing.md)** - Basic testing information
+- **[Testing Clinerules](development/testing-clinerules.md)** - Testing .clinerules integration
+- **[Integration Testing Guide](development/integration-testing-guide.md)** - Step-by-step integration testing
+- **[Test Coverage](development/test-coverage.md)** - Current test coverage status
+- **[Testing Strategy](development/testing-strategy.md)** - Overall testing approach and patterns
 
 ---
 
-_Last updated: March 8, 2024_
+## Common Tasks
 
-_Memory Bank MCP - Maintaining context and memory across sessions_
+### Installing Memory Bank MCP
+
+```bash
+# Using npx (no installation required)
+npx @diaz3618/memory-bank-mcp --help
+
+# Using Smithery (automatic installation for Claude Desktop)
+npx -y @smithery/cli install @diaz3618/memory-bank-mcp --client claude
+
+# Global installation
+npm install -g @diaz3618/memory-bank-mcp
+```
+
+### Basic Usage
+
+```bash
+# Run with default settings
+npx @diaz3618/memory-bank-mcp
+
+# Run with specific mode
+npx @diaz3618/memory-bank-mcp --mode code
+
+# Run with custom project path
+npx @diaz3618/memory-bank-mcp --path /path/to/project
+
+# Run with remote server
+npx @diaz3618/memory-bank-mcp --remote \
+  --remote-user username \
+  --remote-host server.example.com \
+  --remote-path /home/username/memory-bank
+```
+
+### Integration Examples
+
+**VS Code (.vscode/mcp.json):**
+```json
+{
+  "servers": {
+    "memory-bank-mcp": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["@diaz3618/memory-bank-mcp", "--mode", "code"]
+    }
+  }
+}
+```
+
+**Claude Desktop (claude_desktop_config.json):**
+```json
+{
+  "mcpServers": {
+    "memory-bank-mcp": {
+      "command": "npx",
+      "args": ["@diaz3618/memory-bank-mcp"]
+    }
+  }
+}
+```
+
+---
+
+## Documentation Conventions
+
+### Formatting
+
+- **File names**: Use kebab-case (e.g., `memory-bank-status-prefix.md`)
+- **Code blocks**: Include syntax highlighting (e.g., ```bash, ```json, ```typescript)
+- **Headings**: Use descriptive headings with proper hierarchy
+- **Links**: Use relative paths for internal documentation links
+
+### Structure
+
+Each documentation file should include:
+
+1. **Title**: Clear, descriptive title
+2. **Overview**: Brief summary of what the document covers
+3. **Table of Contents**: For longer documents (optional)
+4. **Content**: Well-organized sections with examples
+5. **Related Links**: Links to related documentation
+
+---
+
+## Contributing to Documentation
+
+We welcome documentation improvements! When contributing:
+
+1. Follow the existing structure and formatting conventions
+2. Place new documentation in the appropriate category
+3. Update this README.md if adding new categories or major sections
+4. Keep examples up-to-date and tested
+5. Use clear, concise language
+6. Add screenshots or diagrams where helpful
+
+For more information, see [CONTRIBUTING.md](../CONTRIBUTING.md).
+
+---
+
+## Version Information
+
+This documentation corresponds to **Memory Bank MCP v1.1.4**
+
+For older versions, see the [CHANGELOG.md](../CHANGELOG.md) and check out the corresponding git tag.

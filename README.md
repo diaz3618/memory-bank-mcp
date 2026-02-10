@@ -1,15 +1,10 @@
 # Memory Bank MCP With Remote SSH Support 🧠
 
-[![NPM Version](https://img.shields.io/npm/v/@aakarsh-sasi/memory-bank-mcp.svg)](https://www.npmjs.com/package/@aakarsh-sasi/memory-bank-mcp)
+[![NPM Version](https://img.shields.io/npm/v/@diaz3618/memory-bank-mcp.svg)](https://www.npmjs.com/package/@diaz3618/memory-bank-mcp)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Tests](https://github.com/movibe/memory-bank-mcp/actions/workflows/test.yml/badge.svg)](https://github.com/movibe/memory-bank-mcp/actions/workflows/test.yml)
-[![smithery badge](https://smithery.ai/badge/@aakarsh-sasi/memory-bank-mcp)](https://smithery.ai/server/@aakarsh-sasi/memory-bank-mcp)
 
 A Model Context Protocol (MCP) server for managing Memory Banks, allowing AI assistants to store and retrieve information across sessions. Now with remote server support!
-
-<a href="https://glama.ai/mcp/servers/@aakarsh-sasi/memory-bank-mcp">
-  <img width="380" height="200" src="https://glama.ai/mcp/servers/@aakarsh-sasi/memory-bank-mcp/badge" alt="Memory Bank MCP server" />
-</a>
 
 ## Overview 📋
 
@@ -52,22 +47,23 @@ For more details, see [Memory Bank Bug Fixes](docs/memory-bank-bug-fixes.md).
 
 ### Installing via Smithery
 
-To install Memory Bank for Claude Desktop automatically via [Smithery](https://smithery.ai/server/@aakarsh-sasi/memory-bank-mcp):
+To install Memory Bank for Claude Desktop automatically via [Smithery](https://smithery.ai/server/@diaz3618/memory-bank-mcp):
 
 ```bash
-npx -y @smithery/cli install @aakarsh-sasi/memory-bank-mcp --client claude
+npx -y @smithery/cli install @diaz3618/memory-bank-mcp --client claude
 ```
 
 ### Manual Installation
+
 ```bash
 # Install from npm
-npm install @aakarsh-sasi/memory-bank-mcp
+npm install @diaz3618/memory-bank-mcp
 
 # Or install globally
-npm install -g @aakarsh-sasi/memory-bank-mcp
+npm install -g @diaz3618/memory-bank-mcp
 
 # Or run directly with npx (no installation required)
-npx @aakarsh-sasi/memory-bank-mcp
+npx @diaz3618/memory-bank-mcp
 ```
 
 ## Usage with npx 💻
@@ -76,22 +72,22 @@ You can run Memory Bank MCP directly without installation using npx:
 
 ```bash
 # Run with default settings
-npx @aakarsh-sasi/memory-bank-mcp
+npx @diaz3618/memory-bank-mcp
 
 # Run with specific mode
-npx @aakarsh-sasi/memory-bank-mcp --mode code
+npx @diaz3618/memory-bank-mcp --mode code
 
 # Run with custom project path
-npx @aakarsh-sasi/memory-bank-mcp --path /path/to/project
+npx @diaz3618/memory-bank-mcp --path /path/to/project
 
 # Run with custom folder name
-npx @aakarsh-sasi/memory-bank-mcp --folder custom-memory-bank
+npx @diaz3618/memory-bank-mcp --folder custom-memory-bank
 
 # Run with remote server
-npx @aakarsh-sasi/memory-bank-mcp --remote --remote-user username --remote-host example.host.com --remote-path /home/username/memory-bank
+npx @diaz3618/memory-bank-mcp --remote --remote-user username --remote-host example.host.com --remote-path /home/username/memory-bank
 
 # Show help
-npx @aakarsh-sasi/memory-bank-mcp --help
+npx @diaz3618/memory-bank-mcp --help
 ```
 
 For more detailed information about using npx, see [npx-usage.md](docs/npx-usage.md).
@@ -115,7 +111,7 @@ Memory Bank MCP now supports storing your Memory Bank on a remote server via SSH
 To set up SSH key authentication for the remote server:
 
 1. **Generate a new SSH key pair** (if you don't already have one):
-   
+
    ```bash
    # Using modern Ed25519 algorithm (recommended)
    ssh-keygen -t ed25519 -C "your_email@example.com"
@@ -125,7 +121,7 @@ To set up SSH key authentication for the remote server:
    ```
 
 2. **Start the SSH agent and add your key**:
-   
+
    ```bash
    # Start the agent
    eval "$(ssh-agent -s)"
@@ -135,7 +131,7 @@ To set up SSH key authentication for the remote server:
    ```
 
 3. **Copy your public key to the remote server**:
-   
+
    ```bash
    # Easiest method (if available)
    ssh-copy-id username@your-remote-host.com
@@ -143,15 +139,15 @@ To set up SSH key authentication for the remote server:
    # Alternative: manually copy your public key
    cat ~/.ssh/id_ed25519.pub  # copy the output
    ```
-   
+
    Then paste the key into the `~/.ssh/authorized_keys` file on the remote server.
 
 4. **Test your connection**:
-   
+
    ```bash
    ssh username@your-remote-host.com
    ```
-   
+
    You should be able to log in without a password.
 
 For more detailed SSH key setup instructions, see our [SSH Keys Guide](docs/ssh-keys-guide.md).
@@ -161,7 +157,7 @@ For more detailed SSH key setup instructions, see our [SSH Keys Guide](docs/ssh-
 To use remote server mode, you need to provide the following parameters:
 
 ```bash
-npx @aakarsh-sasi/memory-bank-mcp --remote \
+npx @diaz3618/memory-bank-mcp --remote \
   --ssh-key ~/.ssh/your_ssh_key \
   --remote-user username \
   --remote-host example.host.com \
@@ -174,7 +170,7 @@ By default, the SSH key is assumed to be at `~/.ssh/your_ssh_key`. You can speci
 
 ```bash
 # Using with a server at example.host.com
-npx @aakarsh-sasi/memory-bank-mcp --remote \
+npx @diaz3618/memory-bank-mcp --remote \
   --remote-user username \
   --remote-host example.host.com \
   --remote-path /home/username/memory-bank
@@ -190,7 +186,7 @@ Cursor is an AI-powered code editor that supports the Model Context Protocol (MC
 
    ```bash
    # Verify npx is working correctly
-   npx @aakarsh-sasi/memory-bank-mcp --help
+   npx @diaz3618/memory-bank-mcp --help
    ```
 
 2. **Open Cursor Settings**:
@@ -202,10 +198,10 @@ Cursor is an AI-powered code editor that supports the Model Context Protocol (MC
 
    - **Name**: Memory Bank MCP
    - **Command**: npx
-   - **Arguments**: `@aakarsh-sasi/memory-bank-mcp --mode code` (or other mode as needed)
-   
+   - **Arguments**: `@diaz3618/memory-bank-mcp --mode code` (or other mode as needed)
+
    For remote server:
-   - **Arguments**: `@aakarsh-sasi/memory-bank-mcp --mode code --remote --remote-user username --remote-host example.host.com --remote-path /home/username/memory-bank`
+   - **Arguments**: `@diaz3618/memory-bank-mcp --mode code --remote --remote-user username --remote-host example.host.com --remote-path /home/username/memory-bank`
 
 4. **Save and Activate**:
 
@@ -236,30 +232,30 @@ Memory Bank MCP supports different operational modes to optimize AI interactions
 1. **Code Mode** 👨‍💻
 
    - Focus: Code implementation and development
-   - Usage: `npx @aakarsh-sasi/memory-bank-mcp --mode code`
+   - Usage: `npx @diaz3618/memory-bank-mcp --mode code`
    - Best for: Writing, refactoring, and optimizing code
 
 2. **Architect Mode** 🏗️
 
    - Focus: System design and architecture
-   - Usage: `npx @aakarsh-sasi/memory-bank-mcp --mode architect`
+   - Usage: `npx @diaz3618/memory-bank-mcp --mode architect`
    - Best for: Planning project structure, designing components, and making architectural decisions
 
 3. **Ask Mode** ❓
 
    - Focus: Answering questions and providing information
-   - Usage: `npx @aakarsh-sasi/memory-bank-mcp --mode ask`
+   - Usage: `npx @diaz3618/memory-bank-mcp --mode ask`
    - Best for: Getting explanations, clarifications, and information
 
 4. **Debug Mode** 🐛
 
    - Focus: Troubleshooting and problem-solving
-   - Usage: `npx @aakarsh-sasi/memory-bank-mcp --mode debug`
+   - Usage: `npx @diaz3618/memory-bank-mcp --mode debug`
    - Best for: Finding and fixing bugs, analyzing issues
 
 5. **Test Mode** ✅
    - Focus: Testing and quality assurance
-   - Usage: `npx @aakarsh-sasi/memory-bank-mcp --mode test`
+   - Usage: `npx @diaz3618/memory-bank-mcp --mode test`
    - Best for: Writing tests, test-driven development
 
 ### Switching Modes
@@ -269,7 +265,7 @@ You can switch modes in several ways:
 1. **When starting the server**:
 
    ```bash
-   npx @aakarsh-sasi/memory-bank-mcp --mode architect
+   npx @diaz3618/memory-bank-mcp --mode architect
    ```
 
 2. **During a session**:
@@ -368,7 +364,7 @@ memory-bank-mcp switch_mode mode=code
 ### As a Library 📚
 
 ```typescript
-import { MemoryBankServer } from "@aakarsh-sasi/memory-bank-mcp";
+import { MemoryBankServer } from "@diaz3618/memory-bank-mcp";
 
 // Create a new server instance
 const server = new MemoryBankServer();

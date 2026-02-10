@@ -51,4 +51,6 @@ run-*.sh
 prepare-*.sh
 home
 docs/internal
+docs/archive
 repos
+backup
