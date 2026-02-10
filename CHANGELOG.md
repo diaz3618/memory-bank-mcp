@@ -2,6 +2,58 @@
 
 All notable changes to this project will be documented in this file.
 
+### 1.1.5 (2026-02-10)
+
+
+### Features
+
+* Add comprehensive test-memory-bank configuration and clinerule templates ([e95cd29](https://github.com/diaz3618/memory-bank-mcp/commit/e95cd2956003171c9989e40480d9736f1fb6f921))
+* Add customizable Memory Bank folder name and user tracking ([60d0b53](https://github.com/diaz3618/memory-bank-mcp/commit/60d0b53192c1cc3b907e15ad05949e5be946fedc))
+* Add MIT License file ([e19e4da](https://github.com/diaz3618/memory-bank-mcp/commit/e19e4da551dc33011cf4821153fc3bae786e5fbd))
+* add P2 context bundle and search tools ([264e89c](https://github.com/diaz3618/memory-bank-mcp/commit/264e89c262108d0b70027d042e06f82f3f375be1)), closes [#1](https://github.com/diaz3618/memory-bank-mcp/issues/1)
+* Add semantic versioning and changelog generation ([79493a4](https://github.com/diaz3618/memory-bank-mcp/commit/79493a4a42bdaa5e40c878ea948116e941b0a8b2))
+* Automate NPM publication with GitHub Actions ([588d2db](https://github.com/diaz3618/memory-bank-mcp/commit/588d2dbc0bd3ed17fb5a2447f7468990a00cb57f))
+* complete P0/P1 improvements for production readiness ([20cefce](https://github.com/diaz3618/memory-bank-mcp/commit/20cefcef06223ff524c2a8c1ee698f8b7dbc2268))
+* complete P1 backup/rollback and P2 structured tools ([eafd36f](https://github.com/diaz3618/memory-bank-mcp/commit/eafd36f2b6e07ccedfed8f7f11ea50252795c0b2))
+* Configure project for npm publication and enhance documentation ([b387dcf](https://github.com/diaz3618/memory-bank-mcp/commit/b387dcf7c048197404f59cd7a7abdd38c10c1480))
+* Enhance Memory Bank Language Enforcement and Error Handling ([78af3d6](https://github.com/diaz3618/memory-bank-mcp/commit/78af3d60db863fcd57710ba51ea5ccd744b9e7ca))
+* Enhance Memory Bank MCP with Environment Variables and Roo Code Integration ([7059e5a](https://github.com/diaz3618/memory-bank-mcp/commit/7059e5a4e0363f184b4918982d9141474f39e9a1))
+* Enhance Type Safety and Interfaces for Memory Bank MCP ([7422abc](https://github.com/diaz3618/memory-bank-mcp/commit/7422abce3caa01a1a54d702506c6ad025285fa89))
+* **graph:** implement knowledge graph storage and MCP tools ([9bd023d](https://github.com/diaz3618/memory-bank-mcp/commit/9bd023d5cfa30af5dc011830764591381f62e773))
+* Implement Centralized Logging System with Debug Mode Support ([6b84223](https://github.com/diaz3618/memory-bank-mcp/commit/6b842230e8eb3763c74403b1a34ce28832cc1b86))
+* implement P3 caching and batch operations ([3d6ba12](https://github.com/diaz3618/memory-bank-mcp/commit/3d6ba12c1d0217b29f903b909c657a46a05110cf))
+* Standardize Clinerule Templates to YAML Format ([dad5009](https://github.com/diaz3618/memory-bank-mcp/commit/dad5009d050ad36cfed7374facb45dc0045600d5))
+* Standardize Memory Bank file naming and improve migration support ([0c9e540](https://github.com/diaz3618/memory-bank-mcp/commit/0c9e54002b596d25821520cf57617c4415367447))
+* Standardize Memory Bank Language and Path Configuration ([71a9c79](https://github.com/diaz3618/memory-bank-mcp/commit/71a9c796535c58d017dfb85d5da6b7a563e26a54))
+* Update User Identification with GitHub Profile URL Support ([4311147](https://github.com/diaz3618/memory-bank-mcp/commit/43111473af58f434b0ea5891036ca9cedbda02ce))
+
+
+### Bug Fixes
+
+* **core:** resolve nested directory creation with absolute paths ([c70ab1b](https://github.com/diaz3618/memory-bank-mcp/commit/c70ab1bbec1aa21f36814a8b3efbbd24ab5c8535))
+
+
+### Tests
+
+* Add comprehensive test suite for Memory Bank MCP server components ([0b2e244](https://github.com/diaz3618/memory-bank-mcp/commit/0b2e244effd78df94f6f6b7510372a9d479ce5e7))
+
+
+### Code Refactoring
+
+* Remove deprecated environment variable support ([15bfc7f](https://github.com/diaz3618/memory-bank-mcp/commit/15bfc7fd8dc348bd0f666eaa5007231e507a3fa0))
+* Simplify Memory Bank initialization and file structure ([1b5cf9f](https://github.com/diaz3618/memory-bank-mcp/commit/1b5cf9f9b3b076a7f4d9dfc281fc709a9dbbae26))
+
+
+### Documentation
+
+* Add debug MCP configuration tool and documentation ([22744cc](https://github.com/diaz3618/memory-bank-mcp/commit/22744cc9dbc72725ba9d71cb261c64b6216758ed))
+* Add Memory Bank Status Prefix System Documentation ([8a0f1ca](https://github.com/diaz3618/memory-bank-mcp/commit/8a0f1caa3090cceabf4e3ad017c5a42cf2411cf7))
+* Consolidate Cline Integration Documentation ([6dac2df](https://github.com/diaz3618/memory-bank-mcp/commit/6dac2df805762267f8d73d56984e898b9c9e15e2))
+* Enhance README and add Cursor integration documentation ([7fcf2d3](https://github.com/diaz3618/memory-bank-mcp/commit/7fcf2d3ac9a353a821fc37413261fbad67628ab0))
+* **memory-bank:** update with knowledge graph implementation status ([8ad23a1](https://github.com/diaz3618/memory-bank-mcp/commit/8ad23a12dfe6f20104e1ad934d90cb4eb2e3fae1))
+* Update Memory Bank documentation with comprehensive improvements ([4476c77](https://github.com/diaz3618/memory-bank-mcp/commit/4476c771bbfca5342697624d1514fa1918b20abd))
+* Update repository URLs and English translation ([75afb2c](https://github.com/diaz3618/memory-bank-mcp/commit/75afb2cad335709bc01cca3fcaf91a4e66346341))
+
 ## [1.1.3] - 2025-03-25
 
 ### Fixed
