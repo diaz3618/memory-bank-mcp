@@ -1,5 +1,5 @@
 {
-  "name": "@diaz3618/memory-bank-mcp",
+  "name": "@diazstg/memory-bank-mcp",
   "version": "1.1.4",
   "description": "MCP Server for managing Memory Bank with remote server support",
   "type": "module",
@@ -28,7 +28,7 @@
     "assistant",
     "context"
   ],
-  "author": "Daniel Diaz Santiago (forked from aakarsh-sasi)",
+  "author": "Daniel Diaz Santiago (diaz3618)",
   "license": "MIT",
   "repository": {
     "type": "git",

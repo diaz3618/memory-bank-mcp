@@ -63,7 +63,7 @@ This document tracks important decisions made during the development of the Memo
 
 - **Date:** 2025-03-08 1:56:18 AM
 - **Context:** The Memory Bank was not being correctly recognized by the MCP. We needed to configure the correct path for the Memory Bank.
-- **Decision:** We configured the Memory Bank path to /Users/movibe/Documents/Cline/MCP/memory-bank-server/memory-bank using the mcp\_\_set_memory_bank_path command.
+- **Decision:** We configured the Memory Bank path to /home/diaz/Documents/Cline/MCP/memory-bank-server/memory-bank using the mcp\_\_set_memory_bank_path command.
 - **Alternatives Considered:**
   - Initialize a new Memory Bank
   - Migrate existing files to a new directory
@@ -154,7 +154,7 @@ This document tracks important decisions made during the development of the Memo
 
 - **Date:** 2025-03-08 10:59:25 AM
 - **Context:** Needed to determine where to store the Memory Bank files for the project
-- **Decision:** Initialized Memory Bank in /Users/movibe/Documents/Cline/MCP/memory-bank-server
+- **Decision:** Initialized Memory Bank in /home/diaz/Documents/Cline/MCP/memory-bank-server
 - **Alternatives Considered:**
   - Use default location
   - Create a separate repository for Memory Bank
@@ -196,7 +196,7 @@ This document tracks important decisions made during the development of the Memo
 ## Memory Bank Update Strategy
 
 - **Date:** 2025-03-08 5:06:53 PM
-- **Author:** @movibe
+- **Author:** @diaz3618
 - **Context:** The Memory Bank needed to be updated to reflect the current state of the project, ensuring all files are in English and contain comprehensive information.
 - **Decision:** Update the Memory Bank with the latest project status, verifying all files are in English and properly documenting recent improvements including type safety enhancements, documentation updates, and bug fixes.
 - **Alternatives Considered:**
@@ -212,7 +212,7 @@ This document tracks important decisions made during the development of the Memo
 ## Removal of Environment Variables Support
 
 - **Date:** 2025-03-08 5:19:03 PM
-- **Author:** @movibe
+- **Author:** @diaz3618
 - **Context:** The project was using environment variables (MEMORY_BANK_PROJECT_PATH, MEMORY_BANK_FOLDER_NAME, MEMORY_BANK_MODE, MEMORY_BANK_USER_ID) as an alternative way to configure the Memory Bank MCP. This approach was adding complexity to the codebase and documentation.
 - **Decision:** Remove all support for environment variables from the codebase and documentation, focusing exclusively on command-line arguments for configuration.
 - **Alternatives Considered:**
@@ -229,7 +229,7 @@ This document tracks important decisions made during the development of the Memo
 ## Memory Bank Directory Structure Simplification
 
 - **Date:** 2025-03-08 5:23:30 PM
-- **Author:** @movibe
+- **Author:** @diaz3618
 - **Context:** The Memory Bank initialization was creating unnecessary subdirectories (progress, decisions, context, templates, backups, modes) and placing files in those subdirectories, but the rest of the codebase expected the files to be in the root directory of the Memory Bank. This was causing confusion and potential issues with file access.
 - **Decision:** Simplify the Memory Bank directory structure by removing the creation of subdirectories and placing all core files directly in the root directory of the Memory Bank.
 - **Alternatives Considered:**
@@ -246,7 +246,7 @@ This document tracks important decisions made during the development of the Memo
 ## Memory Bank Path Correction to Use folderName
 
 - **Date:** 2025-03-09 6:13:29 PM
-- **Author:** @movibe
+- **Author:** @diaz3618
 - **Context:** Memory Bank files were being created and updated in the project root, instead of using the directory + folder name received via arguments or defined in the prompt. This was happening because the code wasn't using the folderName correctly.
 - **Decision:** Modify the setCustomPath, findMemoryBankDir, and initializeMemoryBank methods to combine the base path with the folderName, ensuring that the Memory Bank is created and accessed in the correct directory.
 - **Alternatives Considered:**
@@ -262,7 +262,7 @@ This document tracks important decisions made during the development of the Memo
 ## Approach for Unit Test Correction
 
 - **Date:** 2025-03-09 6:25:57 PM
-- **Author:** @movibe
+- **Author:** @diaz3618
 - **Context:** Several unit tests were failing due to incorrect expectations regarding the current behavior of the implementation.
 - **Decision:** Adjust the tests to match the current behavior of the implementation instead of modifying the implementation to match the tests.
 - **Alternatives Considered:**
@@ -277,7 +277,7 @@ This document tracks important decisions made during the development of the Memo
 ## Memory Bank Status Detection Fix Approach
 
 - **Date:** 2025-03-09 6:46:21 PM
-- **Author:** @movibe
+- **Author:** @diaz3618
 - **Context:** The Memory Bank MCP server was correctly finding the Memory Bank directory but was not properly setting its status to ACTIVE. This was causing the status prefix in responses to show as [MEMORY BANK: INACTIVE] even when a valid Memory Bank was present.
 - **Decision:** Modify the isMemoryBank method to check for each core file individually using FileUtils.fileExists() instead of relying on the list of files returned by FileUtils.listFiles(). Also enhance the setCustomPath method to update the Memory Bank status immediately after finding a valid Memory Bank.
 - **Alternatives Considered:**
@@ -295,7 +295,7 @@ This document tracks important decisions made during the development of the Memo
 ## Logging System Implementation Approach
 
 - **Date:** 2025-03-09 6:52:08 PM
-- **Author:** @movibe
+- **Author:** @diaz3618
 - **Context:** The Memory Bank MCP server was showing debug logs in normal operation mode, which could be confusing for users. A system was needed to control which logs are displayed based on the execution mode.
 - **Decision:** Implement a centralized logging system with support for different log levels and debug mode, using a singleton pattern to ensure consistent logging across the application.
 - **Alternatives Considered:**
@@ -313,7 +313,7 @@ This document tracks important decisions made during the development of the Memo
 ## User Identification Format Change
 
 - **Date:** 2025-03-09
-- **Author:** @movibe
+- **Author:** @diaz3618
 - **Context:** The system was using a simple user ID to identify who made changes in the Memory Bank. It was necessary to change it to use GitHub URLs and display the username in a more user-friendly way.
 - **Decision:** Replace the --user argument with --githubProfileUrl and implement a display format [@username](https://github.com/username) to improve user identification in the Memory Bank.
 - **Alternatives Considered:**

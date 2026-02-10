@@ -50,7 +50,7 @@ import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 
 const server = new Server(
-  { name: '@diaz3618/memory-bank-mcp', version: '0.5.0' },
+  { name: '@diazstg/memory-bank-mcp', version: '0.5.0' },
   { capabilities: { tools: {}, resources: {} } }
 );
 

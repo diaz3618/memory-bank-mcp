@@ -4,16 +4,29 @@ on:
   push:
     branches:
       - main
+  workflow_dispatch:
+    inputs:
+      version_bump:
+        description: 'Version bump type'
+        required: false
+        default: 'auto'
+        type: choice
+        options:
+          - auto
+          - patch
+          - minor
+          - major
 
 permissions:
   contents: write
   packages: write
+  id-token: write
 
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v1
         with:
           bun-version: latest
@@ -25,16 +38,20 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
       - uses: oven-sh/setup-bun@v1
         with:
           bun-version: latest
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          registry-url: 'https://registry.npmjs.org'
       - run: bun install
       - run: bun run build
-      - name: Configure NPM
+      - name: Configure NPM (Granular Token)
         run: |
           echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}" > ~/.npmrc
       - name: Configure Git
@@ -44,19 +61,26 @@ jobs:
       - name: Generate Changelog and Bump Version
         if: github.ref == 'refs/heads/main'
         run: |
-          # Get the latest commit message
-          COMMIT_MSG=$(git log -1 --pretty=%B)
+          # Determine version bump type
+          MANUAL_BUMP="${{ github.event.inputs.version_bump || 'auto' }}"
 
-          # Determine version bump type based on commit message
-          if [[ "$COMMIT_MSG" == *"BREAKING CHANGE"* || "$COMMIT_MSG" == *"!:"* ]]; then
-            echo "Detected breaking change, bumping major version"
-            npx standard-version --release-as major
-          elif [[ "$COMMIT_MSG" == *"feat:"* || "$COMMIT_MSG" == *"feat("* ]]; then
-            echo "Detected new feature, bumping minor version"
-            npx standard-version --release-as minor
+          if [[ "$MANUAL_BUMP" != "auto" ]]; then
+            echo "Manual version bump: $MANUAL_BUMP"
+            npx standard-version --release-as "$MANUAL_BUMP"
           else
-            echo "Bumping patch version"
-            npx standard-version --release-as patch
+            # Auto-detect from commit message
+            COMMIT_MSG=$(git log -1 --pretty=%B)
+
+            if [[ "$COMMIT_MSG" == *"BREAKING CHANGE"* || "$COMMIT_MSG" == *"!:"* ]]; then
+              echo "Detected breaking change, bumping major version"
+              npx standard-version --release-as major
+            elif [[ "$COMMIT_MSG" == *"feat:"* || "$COMMIT_MSG" == *"feat("* ]]; then
+              echo "Detected new feature, bumping minor version"
+              npx standard-version --release-as minor
+            else
+              echo "Bumping patch version"
+              npx standard-version --release-as patch
+            fi
           fi
 
           # Extract the new version number
@@ -88,6 +112,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Publish to NPM
-        run: npm publish
+        run: npm publish --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

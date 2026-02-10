@@ -6,7 +6,7 @@ Memory Bank MCP is a Model Context Protocol (MCP) server that provides AI assist
 
 **Tech Stack**: TypeScript 5.1.6 | Bun (build, test, package manager) | Node.js runtime target | MCP SDK v1.6.1
 
-**Repository**: `@diaz3618/memory-bank-mcp`
+**Repository**: `@diazstg/memory-bank-mcp`
 
 ## Skills
 

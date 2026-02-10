@@ -28,11 +28,16 @@ Thumbs.db
 .env.test.local
 .env.production.local
 
-# Arquivos de IDE
+# IDE and tool config
 .idea/
 .vscode/
 *.swp
 *.swo
+
+# MCP config files (may contain API keys)
+.mcp.json
+.claude/
+.npmrc
 
 # Arquivos de cache
 .cache/
@@ -54,3 +59,6 @@ docs/internal
 docs/archive
 repos
 backup
+
+# Temporary ignore until they’re updated
+docs

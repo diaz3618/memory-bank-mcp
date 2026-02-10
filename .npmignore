@@ -1,15 +1,42 @@
+# Version control & CI
 .git
 .github
-node_modules
+.gitignore
+.gitattributes
+
+# Source (only build/ is needed)
 src
 __tests__
-*.log
-.cursor
-.gitignore
-.clinerules-*
-bunfig.toml
-bun.lock
+
+# Dependencies
+node_modules
+
+# Config files not needed at runtime
 tsconfig.json
+bunfig.toml
 bunbuild.toml
+bun.lock
+package-lock.json
+.versionrc.json
+memory-bank-config.json
+
+# IDE & agent config
+.cursor
+.vscode
+.agents
+.claude
+.mcp.json
+.clinerules-*
+
+# Large directories not part of the package
+repos
+vscode-extension
+backup
+docs
 memory-bank
-docs 
+
+# Build artifacts & logs
+*.log
+Dockerfile
+smithery.yaml
+CONTRIBUTING.md

@@ -1,76 +1,97 @@
 {
   "name": "memory-bank-mcp",
   "displayName": "Memory Bank MCP",
-  "description": "VS Code extension for Memory Bank file management via MCP",
-  "version": "1.1.0",
-  "publisher": "memory-bank",
+  "description": "Memory Bank management for AI-assisted development via MCP (Model Context Protocol)",
+  "version": "2.0.0",
+  "publisher": "diaz3618",
   "license": "MIT",
-  "icon": "icon.png",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/movibe/memory-bank-mcp.git"
-  },
   "engines": {
-    "vscode": "^1.99.0"
+    "vscode": "^1.93.0"
   },
   "categories": [
+    "AI",
     "Other"
   ],
   "keywords": [
     "memory-bank",
     "mcp",
-    "model-context-protocol",
     "ai",
-    "context-management"
+    "context",
+    "knowledge-graph"
   ],
+  "icon": "resources/memoryBank.png",
   "activationEvents": [
     "onStartupFinished"
   ],
   "main": "./dist/extension.js",
   "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "icon": "resources/memoryBank.svg",
+          "id": "memoryBankView",
+          "title": "Memory Bank"
+        }
+      ]
+    },
+    "views": {
+      "memoryBankView": [
+        {
+          "id": "memoryBank.views.status",
+          "name": "Status"
+        },
+        {
+          "id": "memoryBank.views.files",
+          "name": "Files"
+        },
+        {
+          "id": "memoryBank.views.actions",
+          "name": "Actions"
+        },
+        {
+          "id": "memoryBank.views.mode",
+          "name": "Mode"
+        },
+        {
+          "id": "memoryBank.views.graph",
+          "name": "Knowledge Graph",
+          "visibility": "collapsed"
+        },
+        {
+          "id": "memoryBank.views.stores",
+          "name": "Stores",
+          "visibility": "collapsed"
+        },
+        {
+          "id": "memoryBank.views.help",
+          "name": "Help & Links"
+        }
+      ]
+    },
     "commands": [
       {
-        "command": "memoryBank.openSidebar",
-        "title": "Open Sidebar",
-        "category": "Memory Bank"
+        "command": "memoryBank.initialize",
+        "title": "Initialize Memory Bank",
+        "category": "Memory Bank",
+        "icon": "$(add)"
       },
       {
-        "command": "memoryBank.refreshData",
-        "title": "Refresh Data",
+        "command": "memoryBank.setPath",
+        "title": "Set Memory Bank Path",
+        "category": "Memory Bank",
+        "icon": "$(folder-opened)"
+      },
+      {
+        "command": "memoryBank.refresh",
+        "title": "Refresh",
         "category": "Memory Bank",
         "icon": "$(refresh)"
-      },
-      {
-        "command": "memoryBank.openFile",
-        "title": "Open Memory Bank File",
-        "category": "Memory Bank",
-        "icon": "$(file)"
-      },
-      {
-        "command": "memoryBank.openActiveContext",
-        "title": "Open Active Context",
-        "category": "Memory Bank"
-      },
-      {
-        "command": "memoryBank.openProgress",
-        "title": "Open Progress",
-        "category": "Memory Bank"
-      },
-      {
-        "command": "memoryBank.openDecisionLog",
-        "title": "Open Decision Log",
-        "category": "Memory Bank"
-      },
-      {
-        "command": "memoryBank.showConnectionStatus",
-        "title": "Show Connection Status",
-        "category": "Memory Bank"
       },
       {
         "command": "memoryBank.reconnect",
         "title": "Reconnect to MCP Server",
         "category": "Memory Bank",
-        "icon": "$(plug)"
+        "icon": "$(debug-restart)"
       },
       {
         "command": "memoryBank.showLogs",
@@ -79,49 +100,175 @@
         "icon": "$(output)"
       },
       {
-        "command": "memoryBank.setPath",
-        "title": "Set Memory Bank Path",
+        "command": "memoryBank.openFile",
+        "title": "Open File",
         "category": "Memory Bank",
-        "icon": "$(folder-opened)"
+        "icon": "$(go-to-file)"
+      },
+      {
+        "command": "memoryBank.trackProgress",
+        "title": "Track Progress",
+        "category": "Memory Bank",
+        "icon": "$(graph-line)"
+      },
+      {
+        "command": "memoryBank.logDecision",
+        "title": "Log Decision",
+        "category": "Memory Bank",
+        "icon": "$(notebook)"
+      },
+      {
+        "command": "memoryBank.updateContext",
+        "title": "Update Active Context",
+        "category": "Memory Bank",
+        "icon": "$(edit)"
+      },
+      {
+        "command": "memoryBank.switchMode",
+        "title": "Switch Mode",
+        "category": "Memory Bank",
+        "icon": "$(symbol-enum)"
+      },
+      {
+        "command": "memoryBank.installServer",
+        "title": "Install MCP Server",
+        "category": "Memory Bank",
+        "icon": "$(desktop-download)"
+      },
+      {
+        "command": "memoryBank.configureServer",
+        "title": "Configure MCP Server",
+        "category": "Memory Bank",
+        "icon": "$(settings-gear)"
+      },
+      {
+        "command": "memoryBank.status.refresh",
+        "title": "Refresh Status",
+        "category": "Memory Bank",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "memoryBank.files.refresh",
+        "title": "Refresh Files",
+        "category": "Memory Bank",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "memoryBank.graph.refresh",
+        "title": "Refresh Graph",
+        "category": "Memory Bank",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "memoryBank.graph.addObservation",
+        "title": "Add Observation",
+        "category": "Memory Bank",
+        "icon": "$(comment)"
+      },
+      {
+        "command": "memoryBank.graph.linkEntities",
+        "title": "Link Entities",
+        "category": "Memory Bank",
+        "icon": "$(link)"
+      },
+      {
+        "command": "memoryBank.graph.search",
+        "title": "Search Graph",
+        "category": "Memory Bank",
+        "icon": "$(search)"
       }
     ],
-    "views": {
-      "memory-bank": [
-        {
-          "type": "webview",
-          "id": "memoryBank.sidebar",
-          "name": "Memory Bank",
-          "when": "workspaceFolderCount > 0",
-          "icon": "./icons/activity-bar-icon.svg"
-        }
-      ]
-    },
-    "viewsContainers": {
-      "activitybar": [
-        {
-          "id": "memory-bank",
-          "title": "Memory Bank",
-          "icon": "./icons/activity-bar-icon.svg"
-        }
-      ]
-    },
     "menus": {
       "view/title": [
         {
-          "command": "memoryBank.refreshData",
-          "when": "view == memoryBank.sidebar",
+          "command": "memoryBank.status.refresh",
+          "when": "view == memoryBank.views.status",
           "group": "navigation"
+        },
+        {
+          "command": "memoryBank.initialize",
+          "when": "view == memoryBank.views.status",
+          "group": "navigation"
+        },
+        {
+          "command": "memoryBank.reconnect",
+          "when": "view == memoryBank.views.status",
+          "group": "1_connection"
+        },
+        {
+          "command": "memoryBank.showLogs",
+          "when": "view == memoryBank.views.status",
+          "group": "2_debug"
+        },
+        {
+          "command": "memoryBank.files.refresh",
+          "when": "view == memoryBank.views.files",
+          "group": "navigation"
+        },
+        {
+          "command": "memoryBank.setPath",
+          "when": "view == memoryBank.views.files",
+          "group": "navigation"
+        },
+        {
+          "command": "memoryBank.graph.refresh",
+          "when": "view == memoryBank.views.graph",
+          "group": "navigation"
+        },
+        {
+          "command": "memoryBank.graph.search",
+          "when": "view == memoryBank.views.graph",
+          "group": "navigation"
+        },
+        {
+          "command": "memoryBank.graph.addObservation",
+          "when": "view == memoryBank.views.graph",
+          "group": "1_actions"
+        },
+        {
+          "command": "memoryBank.graph.linkEntities",
+          "when": "view == memoryBank.views.graph",
+          "group": "1_actions"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "memoryBank.openFile",
+          "when": "view == memoryBank.views.files && viewItem == memoryBankFile",
+          "group": "inline"
+        },
+        {
+          "command": "memoryBank.switchMode",
+          "when": "view == memoryBank.views.mode && viewItem =~ /^mode-/",
+          "group": "inline"
+        }
+      ],
+      "commandPalette": [
+        {
+          "command": "memoryBank.openFile",
+          "when": "false"
+        },
+        {
+          "command": "memoryBank.status.refresh",
+          "when": "false"
+        },
+        {
+          "command": "memoryBank.files.refresh",
+          "when": "false"
+        },
+        {
+          "command": "memoryBank.graph.refresh",
+          "when": "false"
         }
       ]
     },
     "configuration": {
-      "title": "Memory Bank MCP",
+      "title": "Memory Bank",
       "properties": {
         "memoryBank.path": {
           "type": "string",
           "default": "",
-          "scope": "resource",
-          "description": "Path to project root containing memory-bank folder (defaults to workspace root)"
+          "description": "Path to the Memory Bank directory. Leave empty to use the workspace root."
         },
         "memoryBank.connectionMode": {
           "type": "string",
@@ -129,19 +276,13 @@
             "stdio",
             "http"
           ],
-          "enumDescriptions": [
-            "Spawn memory-bank-mcp as a local process (recommended)",
-            "Connect to a remote MCP server via HTTP"
-          ],
           "default": "stdio",
-          "scope": "window",
-          "description": "How to connect to the Memory Bank MCP server"
+          "description": "How to connect to the MCP server."
         },
         "memoryBank.stdio.command": {
           "type": "string",
           "default": "npx",
-          "scope": "window",
-          "description": "Command to run the MCP server (e.g., 'npx', 'node', or path to binary)"
+          "description": "Command to start the MCP server in stdio mode."
         },
         "memoryBank.stdio.args": {
           "type": "array",
@@ -149,92 +290,92 @@
             "type": "string"
           },
           "default": [
-            "memory-bank-mcp"
+            "-y",
+            "@diazstg/memory-bank-mcp"
           ],
-          "scope": "window",
-          "description": "Arguments to pass to the MCP server command"
-        },
-        "memoryBank.stdio.cwd": {
-          "type": "string",
-          "default": "",
-          "scope": "resource",
-          "description": "Working directory for the MCP server (defaults to workspace root)"
+          "description": "Arguments for the MCP server command."
         },
         "memoryBank.http.baseUrl": {
           "type": "string",
-          "default": "http://localhost:3000",
-          "scope": "window",
-          "description": "Base URL for the remote MCP server"
+          "default": "",
+          "description": "Base URL for the MCP server in HTTP mode."
         },
         "memoryBank.http.authToken": {
           "type": "string",
           "default": "",
-          "scope": "window",
-          "description": "Authentication token for the remote MCP server (optional)"
+          "description": "Auth token for the MCP server in HTTP mode."
+        },
+        "memoryBank.autoInitialize": {
+          "type": "boolean",
+          "default": false,
+          "description": "Automatically initialize Memory Bank on startup if not already initialized."
         },
         "memoryBank.statusBar.enabled": {
           "type": "boolean",
           "default": true,
-          "scope": "window",
-          "description": "Show Memory Bank status in the status bar"
+          "description": "Show Memory Bank status in the status bar."
         }
       }
-    }
+    },
+    "chatParticipants": [
+      {
+        "id": "memoryBank.agent",
+        "fullName": "Memory Bank Agent",
+        "name": "memory-bank",
+        "description": "AI assistant that uses Memory Bank MCP to maintain persistent context across sessions. Ask me anything about your project's memory bank.",
+        "isSticky": false,
+        "commands": [
+          {
+            "name": "status",
+            "description": "Show current Memory Bank status and mode"
+          },
+          {
+            "name": "update",
+            "description": "Update the active context with current work"
+          },
+          {
+            "name": "progress",
+            "description": "Track progress on the current task"
+          },
+          {
+            "name": "decision",
+            "description": "Log an architectural or design decision"
+          }
+        ]
+      }
+    ],
+    "languageModelTools": [
+      {
+        "name": "memory-bank_get-instructions",
+        "tags": [
+          "memory-bank",
+          "context",
+          "mcp"
+        ],
+        "toolReferenceName": "memoryBankInstructions",
+        "displayName": "Memory Bank Instructions",
+        "modelDescription": "Retrieves Memory Bank MCP usage instructions and current project context. This tool **MUST** be called at the start of EVERY coding task, before making any changes, and after completing work. The Memory Bank MCP server maintains persistent context across AI sessions. Non-negotiable: always read memory bank context before starting work, update it during work, and save progress after completing work. The tool returns the current memory bank status, active context, and instructions for using all available MCP tools (initialize_memory_bank, track_progress, update_active_context, log_decision, switch_mode, read/write files, etc.).",
+        "userDescription": "Get Memory Bank usage instructions and current project context",
+        "canBeReferencedInPrompt": true,
+        "icon": "$(book)"
+      }
+    ]
   },
   "scripts": {
-    "vscode:prepublish": "npm run check-types && npm run lint && node esbuild.js --production",
-    "compile": "npm run check-types && npm run lint && node esbuild.js",
-    "watch": "npm-run-all -p watch:*",
-    "watch:esbuild": "node esbuild.js --watch",
-    "watch:tsc": "tsc -p tsconfig.extension.json --watch",
-    "package": "npm run check-types && npm run lint && node esbuild.js --production",
-    "compile-tests": "tsc -p tsconfig.test.json",
-    "watch-tests": "tsc -p tsconfig.test.json -w",
-    "pretest": "npm run compile-tests && npm run compile && npm run lint",
-    "check-types": "tsc -b",
+    "vscode:prepublish": "npm run compile",
+    "compile": "npm run check-types && node esbuild.js --production",
+    "check-types": "tsc --noEmit",
+    "watch": "node esbuild.js --watch",
     "lint": "eslint src",
-    "test": "vscode-test"
+    "package": "npx @vscode/vsce package --no-dependencies"
   },
   "devDependencies": {
-    "@tailwindcss/vite": "^4.0.0",
-    "@types/cytoscape": "^3.21.9",
-    "@types/mocha": "^10.0.10",
-    "@types/node": "20.x",
-    "@types/react": "^19.1.10",
-    "@types/react-dom": "^19.1.7",
-    "@types/vscode": "^1.99.0",
-    "@typescript-eslint/eslint-plugin": "^8.25.0",
-    "@typescript-eslint/parser": "^8.25.0",
-    "@vitejs/plugin-react": "^4.3.4",
-    "@vscode/test-cli": "^0.0.10",
-    "@vscode/test-electron": "^2.4.1",
-    "@vscode/vsce": "^3.7.1",
+    "@types/node": "^20.11.0",
+    "@types/vscode": "^1.93.0",
+    "@typescript-eslint/eslint-plugin": "^7.0.0",
+    "@typescript-eslint/parser": "^7.0.0",
     "esbuild": "^0.25.0",
-    "eslint": "^9.21.0",
-    "npm-run-all": "^4.1.5",
-    "tailwindcss": "^4.0.0",
-    "typescript": "^5.7.3",
-    "vite": "^6.0.3"
-  },
-  "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.0.0",
-    "@radix-ui/react-accordion": "^1.2.12",
-    "@radix-ui/react-dialog": "^1.1.0",
-    "@radix-ui/react-dropdown-menu": "^2.1.16",
-    "@radix-ui/react-progress": "^1.1.7",
-    "@radix-ui/react-select": "^2.2.6",
-    "@radix-ui/react-separator": "^1.1.7",
-    "@radix-ui/react-slot": "^1.2.3",
-    "@radix-ui/react-tabs": "^1.1.13",
-    "@radix-ui/react-tooltip": "^1.1.0",
-    "class-variance-authority": "^0.7.1",
-    "clsx": "^2.1.1",
-    "cytoscape": "^3.30.0",
-    "cytoscape-cola": "^2.5.1",
-    "lucide-react": "^0.468.0",
-    "react": "^19.1.1",
-    "react-cytoscapejs": "^2.0.0",
-    "react-dom": "^19.1.1",
-    "tailwind-merge": "^2.6.0"
+    "eslint": "^8.56.0",
+    "typescript": "^5.3.0"
   }
 }
