@@ -169,6 +169,9 @@ export function searchGraph(
   const limit = options.limit ?? 20;
   const { query, entityTypes, relationTypes, includeNeighborhood, neighborhoodDepth } = options;
 
+  // Handle wildcard / empty query — return everything (up to limit)
+  const isWildcard = !query || query === '*' || query.trim() === '';
+
   // Filter entities by type if specified
   let entities: readonly Entity[] = snapshot.entities;
   if (entityTypes && entityTypes.length > 0) {
@@ -176,12 +179,29 @@ export function searchGraph(
     entities = entities.filter((e: Entity) => typeSet.has(e.entityType.toLowerCase()));
   }
 
-  // Search entities
-  const entityMatches = searchEntities(entities, query, limit);
+  // Search or return all entities
+  let entityMatches: EntityMatch[];
+  if (isWildcard) {
+    entityMatches = entities.slice(0, limit).map(entity => ({
+      entity,
+      score: 100,
+      matchedIn: ['name' as const],
+    }));
+  } else {
+    entityMatches = searchEntities(entities, query, limit);
+  }
   const matchedEntityIds = new Set(entityMatches.map((m: EntityMatch) => m.entity.id));
 
-  // Search observations
-  const observationMatches = searchObservations(snapshot.observations, query, limit);
+  // Search or return all observations
+  let observationMatches: ObservationMatch[];
+  if (isWildcard) {
+    observationMatches = snapshot.observations.slice(0, limit).map(obs => ({
+      observation: obs,
+      score: 100,
+    }));
+  } else {
+    observationMatches = searchObservations(snapshot.observations, query, limit);
+  }
 
   // Find relations involving matched entities
   let matchedRelations: Relation[] = (snapshot.relations as Relation[]).filter(

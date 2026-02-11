@@ -52,36 +52,41 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     trees.mode.refresh();
   });
 
-  // 7. Connect to MCP server
+  // 7. Connect to MCP server (only if config exists)
   try {
     const config = ext.mcpClientManager.getConnectionConfig();
-    await ext.mcpClientManager.connect(config);
-    ext.outputChannel.appendLine('Connected to MCP server.');
+    if (!config) {
+      ext.outputChannel.appendLine('No MCP server configured. Use "Memory Bank: Install Server" to set up.');
+      ext.initialized = false;
+    } else {
+      await ext.mcpClientManager.connect(config);
+      ext.outputChannel.appendLine('Connected to MCP server.');
 
-    // Auto-initialize if configured
-    const autoInit = vscode.workspace.getConfiguration('memoryBank').get<boolean>('autoInitialize', false);
-    if (autoInit) {
-      const workspacePath = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
-      if (workspacePath) {
-        const mbConfig = vscode.workspace.getConfiguration('memoryBank');
-        const configuredPath = mbConfig.get<string>('path');
-        try {
-          await ext.memoryBankService.initialize(configuredPath || workspacePath);
-          ext.outputChannel.appendLine('Auto-initialized memory bank.');
-        } catch (err) {
-          ext.outputChannel.appendLine(`Auto-initialize failed: ${err}`);
+      // Auto-initialize if configured
+      const autoInit = vscode.workspace.getConfiguration('memoryBank').get<boolean>('autoInitialize', false);
+      if (autoInit) {
+        const workspacePath = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+        if (workspacePath) {
+          const mbConfig = vscode.workspace.getConfiguration('memoryBank');
+          const configuredPath = mbConfig.get<string>('path');
+          try {
+            await ext.memoryBankService.initialize(configuredPath || workspacePath);
+            ext.outputChannel.appendLine('Auto-initialized memory bank.');
+          } catch (err) {
+            ext.outputChannel.appendLine(`Auto-initialize failed: ${err}`);
+          }
         }
       }
-    }
 
-    // Initial refresh
-    try {
-      await ext.memoryBankService.refresh();
-    } catch {
-      ext.outputChannel.appendLine('Initial refresh skipped (memory bank may not be initialized yet).');
-    }
+      // Initial refresh
+      try {
+        await ext.memoryBankService.refresh();
+      } catch {
+        ext.outputChannel.appendLine('Initial refresh skipped (memory bank may not be initialized yet).');
+      }
 
-    ext.initialized = true;
+      ext.initialized = true;
+    }
   } catch (error) {
     ext.outputChannel.appendLine(`MCP connection failed: ${error}`);
     ext.outputChannel.appendLine('Use "Memory Bank: Install Server" or "Memory Bank: Reconnect" to connect.');
@@ -95,12 +100,17 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         try {
           ext.memoryBankService.clearCache();
           const config = ext.mcpClientManager.getConnectionConfig();
-          await ext.mcpClientManager.connect(config);
-          await ext.memoryBankService.refresh();
+          if (config) {
+            await ext.mcpClientManager.connect(config);
+            await ext.memoryBankService.refresh();
+            ext.outputChannel.appendLine('Reconnected after config change.');
+          } else {
+            await ext.mcpClientManager.disconnect();
+            ext.outputChannel.appendLine('Config removed — disconnected.');
+          }
           trees.status.refresh();
           trees.files.refresh();
           trees.mode.refresh();
-          ext.outputChannel.appendLine('Reconnected after config change.');
         } catch (err) {
           ext.outputChannel.appendLine(`Reconnect after config change failed: ${err}`);
         }

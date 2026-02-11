@@ -67,6 +67,11 @@
           "visibility": "collapsed"
         },
         {
+          "id": "memoryBank.views.remote",
+          "name": "Remote Servers",
+          "visibility": "collapsed"
+        },
+        {
           "id": "memoryBank.views.help",
           "name": "Help & Links"
         }
@@ -109,24 +114,7 @@
         "category": "Memory Bank",
         "icon": "$(go-to-file)"
       },
-      {
-        "command": "memoryBank.trackProgress",
-        "title": "Track Progress",
-        "category": "Memory Bank",
-        "icon": "$(graph-line)"
-      },
-      {
-        "command": "memoryBank.logDecision",
-        "title": "Log Decision",
-        "category": "Memory Bank",
-        "icon": "$(notebook)"
-      },
-      {
-        "command": "memoryBank.updateContext",
-        "title": "Update Active Context",
-        "category": "Memory Bank",
-        "icon": "$(edit)"
-      },
+
       {
         "command": "memoryBank.switchMode",
         "title": "Switch Mode",
@@ -144,6 +132,24 @@
         "title": "Configure MCP Server",
         "category": "Memory Bank",
         "icon": "$(settings-gear)"
+      },
+      {
+        "command": "memoryBank.createCopilotAgent",
+        "title": "Create Copilot Agent Instructions",
+        "category": "Memory Bank",
+        "icon": "$(hubot)"
+      },
+      {
+        "command": "memoryBank.addRemoteServer",
+        "title": "Add Remote Server",
+        "category": "Memory Bank",
+        "icon": "$(add)"
+      },
+      {
+        "command": "memoryBank.remote.refresh",
+        "title": "Refresh Remote Servers",
+        "category": "Memory Bank",
+        "icon": "$(refresh)"
       },
       {
         "command": "memoryBank.status.refresh",
@@ -244,6 +250,16 @@
           "command": "memoryBank.graph.upsertEntity",
           "when": "view == memoryBank.views.graph",
           "group": "1_actions"
+        },
+        {
+          "command": "memoryBank.remote.refresh",
+          "when": "view == memoryBank.views.remote",
+          "group": "navigation"
+        },
+        {
+          "command": "memoryBank.addRemoteServer",
+          "when": "view == memoryBank.views.remote",
+          "group": "navigation"
         }
       ],
       "view/item/context": [
@@ -273,6 +289,10 @@
         },
         {
           "command": "memoryBank.graph.refresh",
+          "when": "false"
+        },
+        {
+          "command": "memoryBank.remote.refresh",
           "when": "false"
         }
       ]

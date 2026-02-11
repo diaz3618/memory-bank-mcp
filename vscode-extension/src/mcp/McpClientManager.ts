@@ -63,7 +63,12 @@ export class McpClientManager implements vscode.Disposable {
     this.statusListeners.push(callback);
   }
 
-  getConnectionConfig(): ConnectionConfig {
+  /**
+   * Resolve connection config. Returns null if no config is found
+   * (no .vscode/mcp.json, no explicit settings). The extension must
+   * NOT auto-connect with a blind npx fallback.
+   */
+  getConnectionConfig(): ConnectionConfig | null {
     const config = vscode.workspace.getConfiguration('memoryBank');
     const mode = config.get<string>('connectionMode', 'stdio');
 
@@ -98,23 +103,27 @@ export class McpClientManager implements vscode.Disposable {
         };
       }
 
-      // Priority 3: Fallback defaults (npx)
+      // No config found — do NOT blindly fallback to npx
       ext.outputChannel.appendLine(
-        'No .vscode/mcp.json or explicit settings found. Using npx fallback.'
+        'No .vscode/mcp.json or explicit settings found. Use "Install Server" to configure.'
       );
+      return null;
+    }
+
+    if (mode === 'http') {
+      const baseUrl = config.get<string>('http.baseUrl', '');
+      if (!baseUrl) {
+        ext.outputChannel.appendLine('HTTP mode configured but no baseUrl set.');
+        return null;
+      }
       return {
-        mode: 'stdio',
-        command: 'npx',
-        args: ['-y', '@diazstg/memory-bank-mcp'],
-        cwd: vscode.workspace.workspaceFolders?.[0]?.uri.fsPath,
+        mode: 'http',
+        baseUrl,
+        authToken: config.get<string>('http.authToken', ''),
       };
     }
 
-    return {
-      mode: 'http',
-      baseUrl: config.get<string>('http.baseUrl', ''),
-      authToken: config.get<string>('http.authToken', ''),
-    };
+    return null;
   }
 
   /**

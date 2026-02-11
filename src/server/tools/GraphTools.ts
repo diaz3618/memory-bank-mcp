@@ -647,6 +647,20 @@ export async function handleGraphSearch(
     neighborhoodDepth: neighborhoodDepth ?? 1,
   });
 
+  // Build entity ID → name map for relation display
+  const entityNameMap = new Map<string, string>();
+  for (const e of snapshot.data.entities) {
+    entityNameMap.set(e.id, e.name);
+  }
+
+  // Map observations to their entities
+  const entityObsMap = new Map<string, Array<{ text: string; timestamp: string }>>();
+  for (const obs of searchResults.observations) {
+    const existing = entityObsMap.get(obs.entityId) ?? [];
+    existing.push({ text: obs.text, timestamp: obs.timestamp });
+    entityObsMap.set(obs.entityId, existing);
+  }
+
   return {
     content: [
       {
@@ -654,9 +668,26 @@ export async function handleGraphSearch(
         text: JSON.stringify(
           {
             query,
-            entities: searchResults.entities,
-            observations: searchResults.observations,
-            relations: searchResults.relations,
+            entities: searchResults.entities.map(e => ({
+              id: e.id,
+              name: e.name,
+              entityType: e.entityType,
+              attrs: e.attrs,
+              observations: entityObsMap.get(e.id) ?? getEntityObservations(snapshot.data, e.id)
+                .slice(0, 5)
+                .map(o => ({ text: o.text, timestamp: o.timestamp })),
+            })),
+            observations: searchResults.observations.map(o => ({
+              text: o.text,
+              entityId: o.entityId,
+              entityName: entityNameMap.get(o.entityId) ?? o.entityId,
+              timestamp: o.timestamp,
+            })),
+            relations: searchResults.relations.map(r => ({
+              from: entityNameMap.get(r.fromId) ?? r.fromId,
+              to: entityNameMap.get(r.toId) ?? r.toId,
+              relationType: r.relationType,
+            })),
           },
           null,
           2

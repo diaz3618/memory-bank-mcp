@@ -157,6 +157,22 @@ export interface GraphLinkEntitiesParams {
   relationType: string;
 }
 
+// Store types
+export interface StoreInfo {
+  id: string;
+  path: string;
+  kind: 'local' | 'remote';
+  isActive: boolean;
+  hasGraph: boolean;
+  fileCount: number;
+  lastUsedAt: string;
+}
+
+export interface ListStoresResult {
+  stores: StoreInfo[];
+  selectedStoreId: string | null;
+}
+
 // MCP Client Interface
 
 export interface IMcpClient {
@@ -188,4 +204,8 @@ export interface IMcpClient {
   graphUpsertEntity(params: GraphUpsertEntityParams): Promise<unknown>;
   graphAddObservation(params: GraphAddObservationParams): Promise<unknown>;
   graphLinkEntities(params: GraphLinkEntitiesParams): Promise<unknown>;
+
+  // Store operations
+  listStores(): Promise<ListStoresResult>;
+  selectStore(path: string): Promise<unknown>;
 }

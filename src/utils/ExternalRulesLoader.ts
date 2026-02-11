@@ -45,7 +45,8 @@ export class ExternalRulesLoader extends EventEmitter {
   }
 
   /**
-   * Validates that all required .clinerules files exist
+   * Validates that all required .clinerules files exist.
+   * Does NOT auto-create missing files — use createMissingClinerules() explicitly.
    * @returns Validation result with missing and existing files
    */
   async validateRequiredFiles(): Promise<ValidationResult> {
@@ -54,7 +55,13 @@ export class ExternalRulesLoader extends EventEmitter {
     const existingFiles: string[] = [];
     
     // Get a writable directory for .clinerules files
-    const targetDir = await this.getWritableDirectory();
+    let targetDir: string;
+    try {
+      targetDir = await this.getWritableDirectory();
+    } catch {
+      // If not writable, just check project dir
+      targetDir = this.projectDir;
+    }
     
     // Check for files in both project directory and fallback directory
     for (const mode of modes) {
@@ -69,19 +76,8 @@ export class ExternalRulesLoader extends EventEmitter {
       }
     }
     
-    // If there are missing files, try to create them
     if (missingFiles.length > 0) {
-      logger.warn('ExternalRulesLoader', `Missing .clinerules files: ${missingFiles.join(', ')}`);
-      const createdFiles = await this.createMissingClinerules(missingFiles);
-      
-      // Update the lists
-      for (const file of createdFiles) {
-        const index = missingFiles.indexOf(file);
-        if (index !== -1) {
-          missingFiles.splice(index, 1);
-          existingFiles.push(file);
-        }
-      }
+      logger.debug('ExternalRulesLoader', `Missing .clinerules files (will not auto-create): ${missingFiles.join(', ')}`);
     }
     
     return {
@@ -100,7 +96,7 @@ export class ExternalRulesLoader extends EventEmitter {
     // Validate required files and create missing ones
     const validation = await this.validateRequiredFiles();
     if (!validation.valid) {
-      logger.warn('ExternalRulesLoader', `Warning: Some .clinerules files could not be created: ${validation.missingFiles.join(', ')}`);
+      logger.debug('ExternalRulesLoader', `Some .clinerules files not found (optional): ${validation.missingFiles.join(', ')}`);
     }
     
     // Clear existing watchers

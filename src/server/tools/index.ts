@@ -10,6 +10,7 @@ import { contextTools, handleUpdateActiveContext } from './ContextTools.js';
 import { decisionTools, handleLogDecision } from './DecisionTools.js';
 import { modeTools, handleSwitchMode, handleGetCurrentMode, handleProcessUmbCommand, handleCompleteUmb } from './ModeTools.js';
 import { graphTools, handleGraphUpsertEntity, handleGraphAddObservation, handleGraphLinkEntities, handleGraphUnlinkEntities, handleGraphSearch, handleGraphOpenNodes, handleGraphRebuild } from './GraphTools.js';
+import { storeToolDefinitions, handleListStores, handleSelectStore } from './StoreTools.js';
 
 /**
  * Sets up all tool handlers for the MCP server
@@ -31,6 +32,7 @@ export function setupToolHandlers(
       ...decisionTools,
       ...modeTools,
       ...graphTools,
+      ...storeToolDefinitions,
     ],
   }));
 
@@ -57,6 +59,7 @@ export function setupToolHandlers(
         request.params.name !== 'create_backup' &&
         request.params.name !== 'list_backups' &&
         request.params.name !== 'update_tasks' &&
+        request.params.name !== 'list_stores' &&
         (!request.params.arguments || typeof request.params.arguments !== 'object')
       ) {
         throw new McpError(ErrorCode.InvalidParams, 'Invalid arguments');
@@ -482,6 +485,19 @@ export function setupToolHandlers(
 
         case 'graph_rebuild': {
           return handleGraphRebuild(memoryBankManager);
+        }
+
+        // Store tools
+        case 'list_stores': {
+          return handleListStores(memoryBankManager);
+        }
+
+        case 'select_store': {
+          const { path: storePath } = request.params.arguments as { path: string };
+          if (!storePath) {
+            throw new McpError(ErrorCode.InvalidParams, 'path is required');
+          }
+          return handleSelectStore(memoryBankManager, storePath);
         }
 
         // Unknown tool

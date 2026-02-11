@@ -1,5 +1,9 @@
 /**
- * Actions Tree - quick action buttons for Memory Bank operations
+ * Actions Tree - quick action buttons for Memory Bank management
+ *
+ * Only extension-level operations belong here.
+ * MCP server operations (track progress, log decision, update context) are
+ * handled by the AI agent through MCP tools — not the extension UI.
  */
 
 import * as vscode from 'vscode';
@@ -18,18 +22,16 @@ export class ActionsTreeProvider implements vscode.TreeDataProvider<ActionItem> 
 
   async getChildren(): Promise<ActionItem[]> {
     return [
-      new ActionItem('Track Progress', 'Log progress on current task', 'graph-line',
-        { command: 'memoryBank.trackProgress', title: 'Track Progress' }),
-      new ActionItem('Log Decision', 'Record an architectural decision', 'notebook',
-        { command: 'memoryBank.logDecision', title: 'Log Decision' }),
-      new ActionItem('Update Context', 'Update active context', 'edit',
-        { command: 'memoryBank.updateContext', title: 'Update Context' }),
       new ActionItem('Set Path', 'Change Memory Bank path', 'folder-opened',
         { command: 'memoryBank.setPath', title: 'Set Path' }),
+      new ActionItem('Initialize', 'Initialize Memory Bank in workspace', 'add',
+        { command: 'memoryBank.initialize', title: 'Initialize' }),
       new ActionItem('Install Server', 'Install or configure MCP server', 'desktop-download',
         { command: 'memoryBank.installServer', title: 'Install Server' }),
       new ActionItem('Configure Server', 'Edit MCP server configuration', 'settings-gear',
         { command: 'memoryBank.configureServer', title: 'Configure Server' }),
+      new ActionItem('Create Copilot Agent', 'Generate .github/copilot-instructions.md', 'hubot',
+        { command: 'memoryBank.createCopilotAgent', title: 'Create Copilot Agent' }),
     ];
   }
 }

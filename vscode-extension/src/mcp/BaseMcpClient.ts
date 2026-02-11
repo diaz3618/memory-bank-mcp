@@ -20,6 +20,7 @@ import {
   GraphSearchResult,
   GraphUpsertEntityParams,
   IMcpClient,
+  ListStoresResult,
   LogDecisionParams,
   McpResource,
   McpResourceContent,
@@ -177,5 +178,16 @@ export abstract class BaseMcpClient implements IMcpClient {
       to: params.to,
       relationType: params.relationType,
     });
+  }
+
+  // ---------- Store Operations ----------
+
+  async listStores(): Promise<ListStoresResult> {
+    const result = await this.callTool<ListStoresResult>('list_stores', {});
+    return result ?? { stores: [], selectedStoreId: null };
+  }
+
+  async selectStore(path: string): Promise<unknown> {
+    return await this.callTool('select_store', { path });
   }
 }

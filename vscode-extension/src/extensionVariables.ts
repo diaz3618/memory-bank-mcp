@@ -24,6 +24,7 @@ export namespace ext {
   export let modeTreeView: vscode.TreeView<vscode.TreeItem>;
   export let graphTreeView: vscode.TreeView<vscode.TreeItem>;
   export let storesTreeView: vscode.TreeView<vscode.TreeItem>;
+  export let remoteTreeView: vscode.TreeView<vscode.TreeItem>;
   export let helpTreeView: vscode.TreeView<vscode.TreeItem>;
 
   // State

@@ -29,14 +29,12 @@ describe('ExternalRulesLoader Tests', () => {
   });
   
   test('Should use provided project directory', async () => {
-    // Create a .clinerules file in the project directory
-    const clineruleContent = `
-mode: test
-instructions:
-  general:
-    - "This is a test rule"
-`;
-    await fs.writeFile(path.join(projectDir, '.clinerules'), clineruleContent);
+    // Create all required .clinerules-* files so detectAndLoadRules can find them
+    const modes = ['architect', 'ask', 'code', 'debug', 'test'];
+    for (const mode of modes) {
+      const content = `mode: ${mode}\ninstructions:\n  general:\n    - "Rule for ${mode}"`;
+      await fs.writeFile(path.join(projectDir, `.clinerules-${mode}`), content);
+    }
     
     // Load rules
     const rules = await rulesLoader.detectAndLoadRules();
@@ -87,17 +85,32 @@ instructions:
     }
   });
   
-  test('Should create missing .clinerules files in project directory', async () => {
-    // Validate required files (should create missing files)
+  test('Should NOT auto-create missing .clinerules files', async () => {
+    // Validate required files — should report missing, NOT create them
     const result = await rulesLoader.validateRequiredFiles();
     
-    // Verify files were created in the project directory
-    expect(result.valid).toBe(true);
-    expect(result.existingFiles.length).toBeGreaterThan(0);
+    // All files should be reported as missing (nothing auto-created)
+    expect(result.valid).toBe(false);
+    expect(result.missingFiles.length).toBe(5);
+    expect(result.existingFiles.length).toBe(0);
     
-    // Check if files exist in the project directory
-    // Note: The files are created with a different naming convention than expected in the test
-    // They are created as .clinerules-code instead of .clinerules.code
+    // Verify files were NOT created in the project directory
+    const codeRuleExists = await fs.pathExists(path.join(projectDir, '.clinerules-code'));
+    expect(codeRuleExists).toBe(false);
+    
+    const askRuleExists = await fs.pathExists(path.join(projectDir, '.clinerules-ask'));
+    expect(askRuleExists).toBe(false);
+  });
+
+  test('Should create clinerules files when explicitly asked', async () => {
+    // Explicitly create missing files
+    const created = await rulesLoader.createMissingClinerules([
+      '.clinerules-code',
+      '.clinerules-ask',
+    ]);
+    
+    expect(created.length).toBe(2);
+    
     const codeRuleExists = await fs.pathExists(path.join(projectDir, '.clinerules-code'));
     expect(codeRuleExists).toBe(true);
     

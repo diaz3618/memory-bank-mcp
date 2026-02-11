@@ -31,7 +31,13 @@ export class StatusTreeProvider implements vscode.TreeDataProvider<StatusItem> {
 
     if (!connected) {
       items.push(new StatusItem(
-        'Click to reconnect',
+        'Install / Configure Server',
+        'Set up MCP server connection',
+        new vscode.ThemeIcon('desktop-download'),
+        { command: 'memoryBank.installServer', title: 'Install Server' },
+      ));
+      items.push(new StatusItem(
+        'Reconnect',
         'Reconnect to MCP server',
         new vscode.ThemeIcon('debug-restart'),
         { command: 'memoryBank.reconnect', title: 'Reconnect' },

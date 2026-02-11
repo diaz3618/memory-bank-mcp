@@ -51,29 +51,31 @@ export class GraphTreeProvider implements vscode.TreeDataProvider<GraphNode> {
   private async getCategoryChildren(categoryId: string): Promise<GraphNode[]> {
     try {
       const client = await ext.mcpClientManager.getClient();
-      // Search with wildcard to get everything
+      // Search with wildcard to get everything (server now supports '*' as all-match)
       const result = await client.graphSearch({ query: '*', limit: 50 });
 
       if (categoryId === 'entities') {
-        if (!result.entities || result.entities.length === 0) {
-          return [new InfoItem('No entities yet', 'info')];
+        const entities = result?.entities;
+        if (!entities || entities.length === 0) {
+          return [new InfoItem('No entities yet — use graph_upsert_entity to create', 'info')];
         }
-        return result.entities.map(e => new EntityItem(
-          e.name,
-          e.entityType,
-          e.id,
-          e.observations || [],
+        return entities.map(e => new EntityItem(
+          e.name ?? 'unnamed',
+          e.entityType ?? 'unknown',
+          e.id ?? '',
+          Array.isArray(e.observations) ? e.observations : [],
         ));
       }
 
       if (categoryId === 'relations') {
-        if (!result.relations || result.relations.length === 0) {
-          return [new InfoItem('No relations yet', 'info')];
+        const relations = result?.relations;
+        if (!relations || relations.length === 0) {
+          return [new InfoItem('No relations yet — use graph_link_entities to create', 'info')];
         }
-        return result.relations.map(r => new RelationItem(
-          r.from,
-          r.to,
-          r.relationType,
+        return relations.map(r => new RelationItem(
+          r.from ?? '?',
+          r.to ?? '?',
+          r.relationType ?? 'related',
         ));
       }
 
@@ -81,9 +83,10 @@ export class GraphTreeProvider implements vscode.TreeDataProvider<GraphNode> {
     } catch (error) {
       const msg = error instanceof Error ? error.message : String(error);
       if (msg.includes('not initialized') || msg.includes('Unknown tool')) {
-        return [new InfoItem('Graph not available', 'info')];
+        return [new InfoItem('Graph not available — initialize Memory Bank first', 'info')];
       }
-      return [new InfoItem(`Error: ${msg}`, 'error')];
+      ext.outputChannel.appendLine(`Graph tree error: ${msg}`);
+      return [new InfoItem(`Error loading graph`, 'error')];
     }
   }
 }
