@@ -54,7 +54,6 @@ test-*.js
 # Runtime scripts (unless specifically needed for distribution)
 run-*.sh
 prepare-*.sh
-home
 docs/internal
 docs/archive
 repos
@@ -67,3 +66,4 @@ scripts
 .venv
 backup-icons
 *.vsix
+grype-report.md

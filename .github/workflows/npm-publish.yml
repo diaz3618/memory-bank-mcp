@@ -25,6 +25,8 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
+    # Skip CI on release commits made by standard-version
+    if: "!contains(github.event.head_commit.message, '[skip ci]')"
     steps:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v1
@@ -51,9 +53,6 @@ jobs:
           registry-url: 'https://registry.npmjs.org'
       - run: bun install
       - run: bun run build
-      - name: Configure NPM (Granular Token)
-        run: |
-          echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}" > ~/.npmrc
       - name: Configure Git
         run: |
           git config --global user.name "GitHub Actions"
@@ -83,13 +82,20 @@ jobs:
             fi
           fi
 
-          # Extract the new version number
+          # Extract the new version number and verify it was bumped
           NEW_VERSION=$(node -p "require('./package.json').version")
           echo "NEW_VERSION=$NEW_VERSION" >> $GITHUB_ENV
+          echo "Detected version: $NEW_VERSION"
+
+          # Verify standard-version actually modified package.json
+          if ! git diff HEAD~1 HEAD -- package.json | grep -q '"version"'; then
+            echo "::error::standard-version did not bump package.json — check .gitignore and .versionrc.json"
+            exit 1
+          fi
 
           # Extract the current version's changelog
-          VERSION_HEADER="## $NEW_VERSION"
-          RELEASE_NOTES=$(awk -v version="$VERSION_HEADER" '/^## [0-9]+\.[0-9]+\.[0-9]+/ {if (p) { exit }; if ($0 ~ version) { p=1; print; next }} p { print }' CHANGELOG.md)
+          VERSION_HEADER="## \\[$NEW_VERSION\\]"
+          RELEASE_NOTES=$(awk "/^## \\[$NEW_VERSION\\]/{p=1; print; next} /^## \\[/{if(p) exit} p{print}" CHANGELOG.md)
           echo "RELEASE_NOTES<<EOF" >> $GITHUB_ENV
           echo "$RELEASE_NOTES" >> $GITHUB_ENV
           echo "EOF" >> $GITHUB_ENV
