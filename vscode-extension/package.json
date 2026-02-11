@@ -114,7 +114,6 @@
         "category": "Memory Bank",
         "icon": "$(go-to-file)"
       },
-
       {
         "command": "memoryBank.switchMode",
         "title": "Switch Mode",
@@ -390,6 +389,11 @@
           "type": "boolean",
           "default": true,
           "description": "Show Memory Bank status in the status bar."
+        },
+        "memoryBank.defaultStoreId": {
+          "type": "string",
+          "default": "",
+          "description": "Default store ID to auto-select on startup (must be registered in the server's stores.json)."
         }
       }
     },
@@ -443,6 +447,8 @@
     "check-types": "tsc --noEmit",
     "watch": "node esbuild.js --watch",
     "lint": "eslint src",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "package": "npx @vscode/vsce package --no-dependencies"
   },
   "devDependencies": {
@@ -452,6 +458,7 @@
     "@typescript-eslint/parser": "^7.0.0",
     "esbuild": "^0.25.0",
     "eslint": "^8.56.0",
-    "typescript": "^5.3.0"
+    "typescript": "^5.3.0",
+    "vitest": "^4.0.18"
   }
 }

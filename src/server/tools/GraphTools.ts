@@ -14,6 +14,7 @@
 import { MemoryBankManager } from '../../core/MemoryBankManager.js';
 import { GraphStore } from '../../core/graph/GraphStore.js';
 import { searchGraph, expandNeighborhood, findEntity, getEntityObservations } from '../../core/graph/GraphSearch.js';
+import { StoreRegistry } from '../../core/StoreRegistry.js';
 import type {
   EntityInput,
   ObservationInput,
@@ -29,6 +30,14 @@ import path from 'path';
 // Tool Definitions
 // ============================================================================
 
+/** Shared storeId property for all graph tools (optional store targeting) */
+const storeIdProperty = {
+  storeId: {
+    type: 'string',
+    description: 'Optional store ID to target a specific registered store instead of the active one',
+  },
+};
+
 /**
  * Graph tool definitions for MCP registration
  */
@@ -40,6 +49,7 @@ export const graphTools = [
     inputSchema: {
       type: 'object',
       properties: {
+        ...storeIdProperty,
         name: {
           type: 'string',
           description: 'Entity name (human-readable identifier)',
@@ -64,6 +74,7 @@ export const graphTools = [
     inputSchema: {
       type: 'object',
       properties: {
+        ...storeIdProperty,
         entity: {
           type: 'string',
           description: 'Entity name or ID to attach the observation to',
@@ -90,6 +101,7 @@ export const graphTools = [
     inputSchema: {
       type: 'object',
       properties: {
+        ...storeIdProperty,
         from: {
           type: 'string',
           description: 'Source entity name or ID',
@@ -112,6 +124,7 @@ export const graphTools = [
     inputSchema: {
       type: 'object',
       properties: {
+        ...storeIdProperty,
         from: {
           type: 'string',
           description: 'Source entity name or ID',
@@ -135,6 +148,7 @@ export const graphTools = [
     inputSchema: {
       type: 'object',
       properties: {
+        ...storeIdProperty,
         query: {
           type: 'string',
           description: 'Search query string',
@@ -163,6 +177,7 @@ export const graphTools = [
     inputSchema: {
       type: 'object',
       properties: {
+        ...storeIdProperty,
         nodes: {
           type: 'array',
           items: { type: 'string' },
@@ -183,7 +198,9 @@ export const graphTools = [
       'Rebuild the graph snapshot from the event log. Use this to fix inconsistencies or recover from errors.',
     inputSchema: {
       type: 'object',
-      properties: {},
+      properties: {
+        ...storeIdProperty,
+      },
       required: [],
     },
   },
@@ -194,6 +211,7 @@ export const graphTools = [
     inputSchema: {
       type: 'object',
       properties: {
+        ...storeIdProperty,
         entity: {
           type: 'string',
           description: 'Entity name or ID to delete',
@@ -209,6 +227,7 @@ export const graphTools = [
     inputSchema: {
       type: 'object',
       properties: {
+        ...storeIdProperty,
         observationId: {
           type: 'string',
           description: 'The observation ID (starts with obs_)',
@@ -223,7 +242,9 @@ export const graphTools = [
       'Compact the graph event log by replacing the full history with a minimal representation of the current state. Reduces file size without losing data.',
     inputSchema: {
       type: 'object',
-      properties: {},
+      properties: {
+        ...storeIdProperty,
+      },
       required: [],
     },
   },
@@ -236,11 +257,44 @@ export const graphTools = [
 /** Cache of GraphStore instances by memory bank path */
 const storeCache = new Map<string, GraphStore>();
 
+/** Singleton store registry */
+let _storeRegistry: StoreRegistry | null = null;
+function getStoreRegistry(): StoreRegistry {
+  if (!_storeRegistry) {
+    _storeRegistry = new StoreRegistry();
+  }
+  return _storeRegistry;
+}
+
 /**
- * Gets or creates a GraphStore for the given memory bank manager
+ * Gets or creates a GraphStore for the given memory bank manager.
+ *
+ * If `storeId` is provided, resolves the store path from the registry
+ * instead of using the active store from `memoryBankManager`.
  */
-async function getGraphStore(memoryBankManager: MemoryBankManager): Promise<GraphStore | null> {
-  const memoryBankDir = memoryBankManager.getMemoryBankDir();
+async function getGraphStore(
+  memoryBankManager: MemoryBankManager,
+  storeId?: string,
+): Promise<GraphStore | null> {
+  let memoryBankDir: string | null = null;
+
+  if (storeId) {
+    // Resolve from registry
+    const registry = getStoreRegistry();
+    const projectPath = await registry.resolveStorePath(storeId);
+    if (projectPath) {
+      const folderName = memoryBankManager.getFolderName();
+      memoryBankDir = path.join(projectPath, folderName);
+      // Touch the store timestamp in registry
+      await registry.touchStore(storeId).catch(() => {});
+    }
+  }
+
+  // Fall back to active store
+  if (!memoryBankDir) {
+    memoryBankDir = memoryBankManager.getMemoryBankDir();
+  }
+
   if (!memoryBankDir) {
     return null;
   }
@@ -254,8 +308,8 @@ async function getGraphStore(memoryBankManager: MemoryBankManager): Promise<Grap
   // Create new store — LocalFileSystem already has memoryBankDir as root,
   // so storeRoot must be empty to avoid double-path (memory-bank/memory-bank/graph/)
   const fs = new LocalFileSystem(memoryBankDir);
-  const storeId = path.basename(memoryBankDir);
-  const store = new GraphStore(fs, '', storeId);
+  const resolvedStoreId = storeId ?? path.basename(memoryBankDir);
+  const store = new GraphStore(fs, '', resolvedStoreId);
 
   // Initialize
   const initResult = await store.initialize();
@@ -279,9 +333,10 @@ export async function handleGraphUpsertEntity(
   memoryBankManager: MemoryBankManager,
   name: string,
   entityType: string,
-  attrs?: Record<string, unknown>
+  attrs?: Record<string, unknown>,
+  storeId?: string,
 ) {
-  const store = await getGraphStore(memoryBankManager);
+  const store = await getGraphStore(memoryBankManager, storeId);
   if (!store) {
     return {
       content: [
@@ -339,9 +394,10 @@ export async function handleGraphAddObservation(
   entity: string,
   text: string,
   source?: string,
-  timestamp?: string
+  timestamp?: string,
+  storeId?: string,
 ) {
-  const store = await getGraphStore(memoryBankManager);
+  const store = await getGraphStore(memoryBankManager, storeId);
   if (!store) {
     return {
       content: [
@@ -440,9 +496,10 @@ export async function handleGraphLinkEntities(
   memoryBankManager: MemoryBankManager,
   from: string,
   relationType: string,
-  to: string
+  to: string,
+  storeId?: string,
 ) {
-  const store = await getGraphStore(memoryBankManager);
+  const store = await getGraphStore(memoryBankManager, storeId);
   if (!store) {
     return {
       content: [
@@ -548,9 +605,10 @@ export async function handleGraphUnlinkEntities(
   memoryBankManager: MemoryBankManager,
   from: string,
   relationType: string,
-  to: string
+  to: string,
+  storeId?: string,
 ) {
-  const store = await getGraphStore(memoryBankManager);
+  const store = await getGraphStore(memoryBankManager, storeId);
   if (!store) {
     return {
       content: [
@@ -651,9 +709,10 @@ export async function handleGraphSearch(
   query: string,
   limit?: number,
   includeNeighborhood?: boolean,
-  neighborhoodDepth?: 1 | 2
+  neighborhoodDepth?: 1 | 2,
+  storeId?: string,
 ) {
-  const store = await getGraphStore(memoryBankManager);
+  const store = await getGraphStore(memoryBankManager, storeId);
   if (!store) {
     return {
       content: [
@@ -743,9 +802,10 @@ export async function handleGraphSearch(
 export async function handleGraphOpenNodes(
   memoryBankManager: MemoryBankManager,
   nodes: string[],
-  depth?: 1 | 2
+  depth?: 1 | 2,
+  storeId?: string,
 ) {
-  const store = await getGraphStore(memoryBankManager);
+  const store = await getGraphStore(memoryBankManager, storeId);
   if (!store) {
     return {
       content: [
@@ -829,8 +889,8 @@ export async function handleGraphOpenNodes(
 /**
  * Handler for graph_rebuild
  */
-export async function handleGraphRebuild(memoryBankManager: MemoryBankManager) {
-  const store = await getGraphStore(memoryBankManager);
+export async function handleGraphRebuild(memoryBankManager: MemoryBankManager, storeId?: string) {
+  const store = await getGraphStore(memoryBankManager, storeId);
   if (!store) {
     return {
       content: [
@@ -887,9 +947,10 @@ export async function handleGraphRebuild(memoryBankManager: MemoryBankManager) {
  */
 export async function handleGraphDeleteEntity(
   memoryBankManager: MemoryBankManager,
-  entity: string
+  entity: string,
+  storeId?: string,
 ) {
-  const store = await getGraphStore(memoryBankManager);
+  const store = await getGraphStore(memoryBankManager, storeId);
   if (!store) {
     return {
       content: [{ type: 'text', text: 'Memory Bank not initialized. Use initialize_memory_bank first.' }],
@@ -923,9 +984,10 @@ export async function handleGraphDeleteEntity(
  */
 export async function handleGraphDeleteObservation(
   memoryBankManager: MemoryBankManager,
-  observationId: string
+  observationId: string,
+  storeId?: string,
 ) {
-  const store = await getGraphStore(memoryBankManager);
+  const store = await getGraphStore(memoryBankManager, storeId);
   if (!store) {
     return {
       content: [{ type: 'text', text: 'Memory Bank not initialized. Use initialize_memory_bank first.' }],
@@ -957,8 +1019,8 @@ export async function handleGraphDeleteObservation(
 /**
  * Handler for graph_compact
  */
-export async function handleGraphCompact(memoryBankManager: MemoryBankManager) {
-  const store = await getGraphStore(memoryBankManager);
+export async function handleGraphCompact(memoryBankManager: MemoryBankManager, storeId?: string) {
+  const store = await getGraphStore(memoryBankManager, storeId);
   if (!store) {
     return {
       content: [{ type: 'text', text: 'Memory Bank not initialized. Use initialize_memory_bank first.' }],

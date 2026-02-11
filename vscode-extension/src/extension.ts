@@ -16,6 +16,25 @@ import { registerTrees } from './tree/registerTrees';
 import { registerCommands } from './commands/registerCommands';
 import { registerChatParticipant, registerInstructionsTool } from './copilot';
 
+/** Format a Date relative to now (e.g. "2 min ago", "just now"). */
+export function formatRelativeTime(date: Date): string {
+  const seconds = Math.round((Date.now() - date.getTime()) / 1000);
+  if (seconds < 10) return 'just now';
+  if (seconds < 60) return `${seconds}s ago`;
+  const minutes = Math.round(seconds / 60);
+  if (minutes < 60) return `${minutes} min ago`;
+  const hours = Math.round(minutes / 60);
+  return `${hours}h ago`;
+}
+
+/** Derive a short label for the active store. */
+function getActiveStoreLabel(): string {
+  const defaultId = vscode.workspace.getConfiguration('memoryBank').get<string>('defaultStoreId', '');
+  if (defaultId) return defaultId;
+  const workspaceName = vscode.workspace.name;
+  return workspaceName ?? 'default';
+}
+
 export async function activate(context: vscode.ExtensionContext): Promise<void> {
   // 1. Initialize ext namespace
   ext.context = context;
@@ -118,17 +137,24 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     }),
   );
 
-  // 9. Status bar item
+  // 9. Status bar item (enhanced per B6)
   const statusBarEnabled = vscode.workspace.getConfiguration('memoryBank').get<boolean>('statusBar.enabled', true);
   if (statusBarEnabled) {
     const statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 0);
     statusBarItem.command = 'memoryBank.showLogs';
     context.subscriptions.push(statusBarItem);
 
+    let lastSyncTime: Date | null = null;
+
     const updateStatusBar = (connected: boolean) => {
       if (connected) {
-        statusBarItem.text = '$(check) Memory Bank';
-        statusBarItem.tooltip = 'Memory Bank: Connected';
+        const mode = ext.mcpClientManager.getConnectionStatus().mode ?? 'stdio';
+        const storeLabel = getActiveStoreLabel();
+        const syncInfo = lastSyncTime
+          ? ` | synced ${formatRelativeTime(lastSyncTime)}`
+          : '';
+        statusBarItem.text = `$(check) MB: ${storeLabel} (${mode})`;
+        statusBarItem.tooltip = `Memory Bank: Connected via ${mode}${syncInfo}\nClick to view logs`;
         statusBarItem.backgroundColor = undefined;
       } else {
         statusBarItem.text = '$(error) Memory Bank';
@@ -137,6 +163,12 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       }
       statusBarItem.show();
     };
+
+    // Update sync time when service refreshes
+    ext.memoryBankService.onDidRefresh(() => {
+      lastSyncTime = new Date();
+      updateStatusBar(ext.mcpClientManager.isConnected());
+    });
 
     updateStatusBar(ext.mcpClientManager.isConnected());
     ext.mcpClientManager.onStatusChange((status) => {

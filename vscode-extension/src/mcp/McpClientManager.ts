@@ -7,6 +7,7 @@
 import * as vscode from 'vscode';
 import { ConnectionConfig, ConnectionStatus, IMcpClient } from './types';
 import { StdioMcpClient } from './StdioMcpClient';
+import { HttpMcpClient } from './HttpMcpClient';
 import { ext } from '../extensionVariables';
 
 export class McpClientManager implements vscode.Disposable {
@@ -22,8 +23,12 @@ export class McpClientManager implements vscode.Disposable {
 
     if (config.mode === 'stdio') {
       this.client = new StdioMcpClient();
+    } else if (config.mode === 'http') {
+      this.client = new HttpMcpClient();
     } else {
-      throw new Error(`Connection mode "${config.mode}" not yet supported`);
+      // Exhaustive check — TypeScript ensures all ConnectionConfig variants are handled
+      const _exhaustive: never = config;
+      throw new Error(`Unsupported connection config: ${JSON.stringify(_exhaustive)}`);
     }
 
     this.client.onStatusChange((status) => {
@@ -163,7 +168,7 @@ export class McpClientManager implements vscode.Disposable {
 }
 
 /** Expand ~ to $HOME in each arg (Node spawn doesn't do shell expansion). */
-function expandTildeInArgs(args: string[]): string[] {
+export function expandTildeInArgs(args: string[]): string[] {
   const home = process.env.HOME || process.env.USERPROFILE || '';
   return args.map(a => a.startsWith('~/') ? home + a.slice(1) : a);
 }

@@ -10,7 +10,7 @@ import { contextTools, handleUpdateActiveContext } from './ContextTools.js';
 import { decisionTools, handleLogDecision } from './DecisionTools.js';
 import { modeTools, handleSwitchMode, handleGetCurrentMode, handleProcessUmbCommand, handleCompleteUmb } from './ModeTools.js';
 import { graphTools, handleGraphUpsertEntity, handleGraphAddObservation, handleGraphLinkEntities, handleGraphUnlinkEntities, handleGraphSearch, handleGraphOpenNodes, handleGraphRebuild, handleGraphDeleteEntity, handleGraphDeleteObservation, handleGraphCompact } from './GraphTools.js';
-import { storeToolDefinitions, handleListStores, handleSelectStore } from './StoreTools.js';
+import { storeToolDefinitions, handleListStores, handleSelectStore, handleRegisterStore, handleUnregisterStore } from './StoreTools.js';
 
 /**
  * Sets up all tool handlers for the MCP server
@@ -411,100 +411,108 @@ export function setupToolHandlers(
 
         // Graph tools
         case 'graph_upsert_entity': {
-          const { name, entityType, attrs } = request.params.arguments as {
+          const { name, entityType, attrs, storeId } = request.params.arguments as {
             name: string;
             entityType: string;
             attrs?: Record<string, unknown>;
+            storeId?: string;
           };
           if (!name || !entityType) {
             throw new McpError(ErrorCode.InvalidParams, 'name and entityType are required');
           }
-          return handleGraphUpsertEntity(memoryBankManager, name, entityType, attrs);
+          return handleGraphUpsertEntity(memoryBankManager, name, entityType, attrs, storeId);
         }
 
         case 'graph_add_observation': {
-          const { entity, text, source, timestamp } = request.params.arguments as {
+          const { entity, text, source, timestamp, storeId } = request.params.arguments as {
             entity: string;
             text: string;
             source?: string;
             timestamp?: string;
+            storeId?: string;
           };
           if (!entity || !text) {
             throw new McpError(ErrorCode.InvalidParams, 'entity and text are required');
           }
-          return handleGraphAddObservation(memoryBankManager, entity, text, source, timestamp);
+          return handleGraphAddObservation(memoryBankManager, entity, text, source, timestamp, storeId);
         }
 
         case 'graph_link_entities': {
-          const { from, relationType, to } = request.params.arguments as {
+          const { from, relationType, to, storeId } = request.params.arguments as {
             from: string;
             relationType: string;
             to: string;
+            storeId?: string;
           };
           if (!from || !relationType || !to) {
             throw new McpError(ErrorCode.InvalidParams, 'from, relationType, and to are required');
           }
-          return handleGraphLinkEntities(memoryBankManager, from, relationType, to);
+          return handleGraphLinkEntities(memoryBankManager, from, relationType, to, storeId);
         }
 
         case 'graph_unlink_entities': {
-          const { from, relationType, to } = request.params.arguments as {
+          const { from, relationType, to, storeId } = request.params.arguments as {
             from: string;
             relationType: string;
             to: string;
+            storeId?: string;
           };
           if (!from || !relationType || !to) {
             throw new McpError(ErrorCode.InvalidParams, 'from, relationType, and to are required');
           }
-          return handleGraphUnlinkEntities(memoryBankManager, from, relationType, to);
+          return handleGraphUnlinkEntities(memoryBankManager, from, relationType, to, storeId);
         }
 
         case 'graph_search': {
-          const { query, limit, includeNeighborhood, neighborhoodDepth } = request.params.arguments as {
+          const { query, limit, includeNeighborhood, neighborhoodDepth, storeId } = request.params.arguments as {
             query: string;
             limit?: number;
             includeNeighborhood?: boolean;
             neighborhoodDepth?: 1 | 2;
+            storeId?: string;
           };
           if (!query) {
             throw new McpError(ErrorCode.InvalidParams, 'query is required');
           }
-          return handleGraphSearch(memoryBankManager, query, limit, includeNeighborhood, neighborhoodDepth);
+          return handleGraphSearch(memoryBankManager, query, limit, includeNeighborhood, neighborhoodDepth, storeId);
         }
 
         case 'graph_open_nodes': {
-          const { nodes, depth } = request.params.arguments as {
+          const { nodes, depth, storeId } = request.params.arguments as {
             nodes: string[];
             depth?: 1 | 2;
+            storeId?: string;
           };
           if (!nodes || nodes.length === 0) {
             throw new McpError(ErrorCode.InvalidParams, 'nodes array is required');
           }
-          return handleGraphOpenNodes(memoryBankManager, nodes, depth);
+          return handleGraphOpenNodes(memoryBankManager, nodes, depth, storeId);
         }
 
         case 'graph_rebuild': {
-          return handleGraphRebuild(memoryBankManager);
+          const { storeId } = (request.params.arguments as { storeId?: string }) ?? {};
+          return handleGraphRebuild(memoryBankManager, storeId);
         }
 
         case 'graph_delete_entity': {
-          const { entity } = request.params.arguments as { entity: string };
+          const { entity, storeId } = request.params.arguments as { entity: string; storeId?: string };
           if (!entity) {
             throw new McpError(ErrorCode.InvalidParams, 'entity is required');
           }
-          return handleGraphDeleteEntity(memoryBankManager, entity);
+          return handleGraphDeleteEntity(memoryBankManager, entity, storeId);
         }
 
         case 'graph_delete_observation': {
-          const { observationId } = request.params.arguments as { observationId: string };
+          const { observationId, storeId } = request.params.arguments as { observationId: string; storeId?: string };
           if (!observationId) {
             throw new McpError(ErrorCode.InvalidParams, 'observationId is required');
           }
-          return handleGraphDeleteObservation(memoryBankManager, observationId);
+          return handleGraphDeleteObservation(memoryBankManager, observationId, storeId);
         }
 
         case 'graph_compact': {
-          return handleGraphCompact(memoryBankManager);
+          const { storeId } = (request.params.arguments as { storeId?: string }) ?? {};
+          return handleGraphCompact(memoryBankManager, storeId);
         }
 
         // Store tools
@@ -513,11 +521,31 @@ export function setupToolHandlers(
         }
 
         case 'select_store': {
-          const { path: storePath } = request.params.arguments as { path: string };
-          if (!storePath) {
-            throw new McpError(ErrorCode.InvalidParams, 'path is required');
+          const { path: storePath, storeId } = request.params.arguments as { path?: string; storeId?: string };
+          if (!storePath && !storeId) {
+            throw new McpError(ErrorCode.InvalidParams, 'Either path or storeId is required');
           }
-          return handleSelectStore(memoryBankManager, storePath);
+          return handleSelectStore(memoryBankManager, storePath, storeId);
+        }
+
+        case 'register_store': {
+          const { storeId, path: storePath, kind } = request.params.arguments as {
+            storeId: string;
+            path: string;
+            kind?: 'local' | 'remote';
+          };
+          if (!storeId || !storePath) {
+            throw new McpError(ErrorCode.InvalidParams, 'storeId and path are required');
+          }
+          return handleRegisterStore(storeId, storePath, kind);
+        }
+
+        case 'unregister_store': {
+          const { storeId } = request.params.arguments as { storeId: string };
+          if (!storeId) {
+            throw new McpError(ErrorCode.InvalidParams, 'storeId is required');
+          }
+          return handleUnregisterStore(storeId);
         }
 
         // Unknown tool
