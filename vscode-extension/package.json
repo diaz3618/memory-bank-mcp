@@ -5,6 +5,10 @@
   "version": "2.0.0",
   "publisher": "diaz3618",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/diaz3618/memory-bank-mcp.git"
+  },
   "engines": {
     "vscode": "^1.93.0"
   },
@@ -176,6 +180,12 @@
         "title": "Search Graph",
         "category": "Memory Bank",
         "icon": "$(search)"
+      },
+      {
+        "command": "memoryBank.graph.upsertEntity",
+        "title": "Create/Update Entity",
+        "category": "Memory Bank",
+        "icon": "$(symbol-class)"
       }
     ],
     "menus": {
@@ -227,6 +237,11 @@
         },
         {
           "command": "memoryBank.graph.linkEntities",
+          "when": "view == memoryBank.views.graph",
+          "group": "1_actions"
+        },
+        {
+          "command": "memoryBank.graph.upsertEntity",
           "when": "view == memoryBank.views.graph",
           "group": "1_actions"
         }
@@ -281,18 +296,15 @@
         },
         "memoryBank.stdio.command": {
           "type": "string",
-          "default": "npx",
-          "description": "Command to start the MCP server in stdio mode."
+          "default": "",
+          "description": "Command to start the MCP server in stdio mode. Leave empty to use .vscode/mcp.json or npx fallback."
         },
         "memoryBank.stdio.args": {
           "type": "array",
           "items": {
             "type": "string"
           },
-          "default": [
-            "-y",
-            "@diazstg/memory-bank-mcp"
-          ],
+          "default": [],
           "description": "Arguments for the MCP server command."
         },
         "memoryBank.http.baseUrl": {

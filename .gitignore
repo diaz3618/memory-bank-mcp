@@ -62,3 +62,8 @@ backup
 
 # Temporary ignore until they’re updated
 docs
+
+scripts
+.venv
+backup-icons
+*.vsix

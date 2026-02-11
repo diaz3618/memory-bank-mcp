@@ -173,14 +173,28 @@ export function registerCommands(
   });
 
   register('memoryBank.updateContext', async () => {
-    const content = await vscode.window.showInputBox({
-      prompt: 'Active context update',
-      placeHolder: 'e.g. Working on authentication feature',
-    });
-    if (!content) { return; }
+    const field = await vscode.window.showQuickPick(
+      [
+        { label: 'Tasks', description: 'Update ongoing tasks', detail: 'tasks' },
+        { label: 'Issues', description: 'Update known issues', detail: 'issues' },
+        { label: 'Next Steps', description: 'Update next steps', detail: 'nextSteps' },
+      ],
+      { placeHolder: 'What to update?' },
+    );
+    if (!field) { return; }
 
-    await ext.memoryBankService.updateActiveContext(content);
-    vscode.window.showInformationMessage('Active context updated.');
+    const input = await vscode.window.showInputBox({
+      prompt: `Enter ${field.label.toLowerCase()} (comma-separated for multiple)`,
+      placeHolder: 'e.g. Working on authentication feature, Fixing login bug',
+    });
+    if (!input) { return; }
+
+    const items = input.split(',').map(s => s.trim()).filter(Boolean);
+    const params: { tasks?: string[]; issues?: string[]; nextSteps?: string[] } = {};
+    params[field.detail as 'tasks' | 'issues' | 'nextSteps'] = items;
+
+    await ext.memoryBankService.updateActiveContext(params);
+    vscode.window.showInformationMessage(`Active context updated: ${items.length} ${field.label.toLowerCase()}.`);
     trees.files.refresh();
   });
 
@@ -209,22 +223,111 @@ export function registerCommands(
     await configureMcpServer();
   });
 
-  // ---------- Graph (placeholders) ----------
+  // ---------- Graph ----------
 
   register('memoryBank.graph.refresh', async () => {
     trees.graph.refresh();
   });
 
   register('memoryBank.graph.addObservation', async () => {
-    vscode.window.showInformationMessage('Graph features coming in Phase 2.');
+    const entity = await vscode.window.showInputBox({
+      prompt: 'Entity name or ID',
+      placeHolder: 'e.g. MyService, Authentication Module',
+    });
+    if (!entity) { return; }
+
+    const text = await vscode.window.showInputBox({
+      prompt: 'Observation text',
+      placeHolder: 'e.g. Refactored to use dependency injection',
+    });
+    if (!text) { return; }
+
+    const client = await ext.mcpClientManager.getClient();
+    await client.graphAddObservation({ entity, text });
+    vscode.window.showInformationMessage(`Observation added to ${entity}.`);
+    trees.graph.refresh();
   });
 
   register('memoryBank.graph.linkEntities', async () => {
-    vscode.window.showInformationMessage('Graph features coming in Phase 2.');
+    const from = await vscode.window.showInputBox({
+      prompt: 'Source entity name',
+      placeHolder: 'e.g. UserService',
+    });
+    if (!from) { return; }
+
+    const to = await vscode.window.showInputBox({
+      prompt: 'Target entity name',
+      placeHolder: 'e.g. Database',
+    });
+    if (!to) { return; }
+
+    const relationType = await vscode.window.showInputBox({
+      prompt: 'Relation type',
+      placeHolder: 'e.g. depends_on, uses, extends',
+    });
+    if (!relationType) { return; }
+
+    const client = await ext.mcpClientManager.getClient();
+    await client.graphLinkEntities({ from, to, relationType });
+    vscode.window.showInformationMessage(`Linked ${from} --${relationType}--> ${to}.`);
+    trees.graph.refresh();
   });
 
   register('memoryBank.graph.search', async () => {
-    vscode.window.showInformationMessage('Graph features coming in Phase 2.');
+    const query = await vscode.window.showInputBox({
+      prompt: 'Search knowledge graph',
+      placeHolder: 'e.g. authentication, UserService',
+    });
+    if (!query) { return; }
+
+    const client = await ext.mcpClientManager.getClient();
+    const result = await client.graphSearch({ query });
+
+    if (!result.entities?.length && !result.relations?.length) {
+      vscode.window.showInformationMessage('No results found.');
+      return;
+    }
+
+    // Show results in quick pick
+    const items: vscode.QuickPickItem[] = [];
+    for (const e of result.entities || []) {
+      items.push({
+        label: `$(symbol-class) ${e.name}`,
+        description: e.entityType,
+        detail: e.observations?.map(o => o.text).join('; ') || 'No observations',
+      });
+    }
+    for (const r of result.relations || []) {
+      items.push({
+        label: `$(arrow-right) ${r.from} → ${r.to}`,
+        description: r.relationType,
+      });
+    }
+
+    await vscode.window.showQuickPick(items, {
+      placeHolder: `Found ${result.entities?.length || 0} entities, ${result.relations?.length || 0} relations`,
+    });
+  });
+
+  // ---------- Graph: Upsert Entity ----------
+
+  register('memoryBank.graph.upsertEntity', async () => {
+    const name = await vscode.window.showInputBox({
+      prompt: 'Entity name',
+      placeHolder: 'e.g. AuthenticationModule',
+    });
+    if (!name) { return; }
+
+    const entityType = await vscode.window.showInputBox({
+      prompt: 'Entity type',
+      placeHolder: 'e.g. module, service, concept, person',
+    });
+    if (!entityType) { return; }
+
+    const client = await ext.mcpClientManager.getClient();
+    await client.graphUpsertEntity({ name, entityType });
+    vscode.window.showInformationMessage(`Entity "${name}" created/updated.`);
+    trees.graph.refresh();
   });
 }
 

@@ -1,63 +1,144 @@
 /**
- * Graph Tree - Knowledge Graph entities (placeholder for Phase 2)
- * 
- * Template for future graph visualization. Currently shows placeholder items.
- * Will be populated when graph tools (graph_search, graph_open_nodes) are used.
+ * Graph Tree - Knowledge Graph visualization
+ *
+ * Displays entities, relations, and observations from the knowledge graph
+ * by calling graph_search via MCP.
  */
 
 import * as vscode from 'vscode';
+import { ext } from '../extensionVariables';
 
-export class GraphTreeProvider implements vscode.TreeDataProvider<GraphItem> {
-  private _onDidChangeTreeData = new vscode.EventEmitter<GraphItem | undefined>();
+type GraphNode = CategoryItem | EntityItem | RelationItem | InfoItem;
+
+export class GraphTreeProvider implements vscode.TreeDataProvider<GraphNode> {
+  private _onDidChangeTreeData = new vscode.EventEmitter<GraphNode | undefined>();
   readonly onDidChangeTreeData = this._onDidChangeTreeData.event;
 
   refresh(): void {
     this._onDidChangeTreeData.fire(undefined);
   }
 
-  getTreeItem(element: GraphItem): vscode.TreeItem {
+  getTreeItem(element: GraphNode): vscode.TreeItem {
     return element;
   }
 
-  async getChildren(element?: GraphItem): Promise<GraphItem[]> {
+  async getChildren(element?: GraphNode): Promise<GraphNode[]> {
+    if (!ext.mcpClientManager?.isConnected()) {
+      return [new InfoItem('Connect to server first', 'plug')];
+    }
+
     if (!element) {
-      // Root level
+      // Root level: categories
       return [
-        new GraphItem('Entities', 'Knowledge graph entities', 'symbol-class',
-          vscode.TreeItemCollapsibleState.Collapsed, 'graphCategory'),
-        new GraphItem('Relations', 'Entity relationships', 'link',
-          vscode.TreeItemCollapsibleState.Collapsed, 'graphCategory'),
-        new GraphItem('Recent Observations', 'Latest observations', 'comment',
-          vscode.TreeItemCollapsibleState.Collapsed, 'graphCategory'),
+        new CategoryItem('Entities', 'Knowledge graph entities', 'symbol-class', 'entities'),
+        new CategoryItem('Relations', 'Entity relationships', 'link', 'relations'),
       ];
     }
 
-    // Children of categories
-    return [
-      new GraphItem(
-        'Graph features coming in Phase 2',
-        'Knowledge graph tools will be available in a future release',
-        'info',
-        vscode.TreeItemCollapsibleState.None,
-        'graphPlaceholder',
-      ),
-    ];
+    if (element instanceof CategoryItem) {
+      return this.getCategoryChildren(element.categoryId);
+    }
+
+    if (element instanceof EntityItem && element.observations.length > 0) {
+      return element.observations.map(obs =>
+        new InfoItem(`${obs.text}`, 'comment', obs.timestamp),
+      );
+    }
+
+    return [];
+  }
+
+  private async getCategoryChildren(categoryId: string): Promise<GraphNode[]> {
+    try {
+      const client = await ext.mcpClientManager.getClient();
+      // Search with wildcard to get everything
+      const result = await client.graphSearch({ query: '*', limit: 50 });
+
+      if (categoryId === 'entities') {
+        if (!result.entities || result.entities.length === 0) {
+          return [new InfoItem('No entities yet', 'info')];
+        }
+        return result.entities.map(e => new EntityItem(
+          e.name,
+          e.entityType,
+          e.id,
+          e.observations || [],
+        ));
+      }
+
+      if (categoryId === 'relations') {
+        if (!result.relations || result.relations.length === 0) {
+          return [new InfoItem('No relations yet', 'info')];
+        }
+        return result.relations.map(r => new RelationItem(
+          r.from,
+          r.to,
+          r.relationType,
+        ));
+      }
+
+      return [];
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : String(error);
+      if (msg.includes('not initialized') || msg.includes('Unknown tool')) {
+        return [new InfoItem('Graph not available', 'info')];
+      }
+      return [new InfoItem(`Error: ${msg}`, 'error')];
+    }
   }
 }
 
-class GraphItem extends vscode.TreeItem {
+class CategoryItem extends vscode.TreeItem {
   constructor(
     label: string,
     tooltip: string,
     iconId: string,
-    collapsibleState: vscode.TreeItemCollapsibleState,
-    contextValue?: string,
+    public readonly categoryId: string,
   ) {
-    super(label, collapsibleState);
+    super(label, vscode.TreeItemCollapsibleState.Collapsed);
     this.tooltip = tooltip;
     this.iconPath = new vscode.ThemeIcon(iconId);
-    if (contextValue) {
-      this.contextValue = contextValue;
+    this.contextValue = 'graphCategory';
+  }
+}
+
+class EntityItem extends vscode.TreeItem {
+  constructor(
+    public readonly name: string,
+    public readonly entityType: string,
+    public readonly entityId: string,
+    public readonly observations: Array<{ text: string; timestamp: string }>,
+  ) {
+    super(
+      name,
+      observations.length > 0
+        ? vscode.TreeItemCollapsibleState.Collapsed
+        : vscode.TreeItemCollapsibleState.None,
+    );
+    this.description = entityType;
+    this.tooltip = `${name} [${entityType}] — ${observations.length} observations`;
+    this.iconPath = new vscode.ThemeIcon('symbol-class');
+    this.contextValue = 'graphEntity';
+  }
+}
+
+class RelationItem extends vscode.TreeItem {
+  constructor(from: string, to: string, relationType: string) {
+    super(`${from} → ${to}`, vscode.TreeItemCollapsibleState.None);
+    this.description = relationType;
+    this.tooltip = `${from} --${relationType}--> ${to}`;
+    this.iconPath = new vscode.ThemeIcon('arrow-right');
+    this.contextValue = 'graphRelation';
+  }
+}
+
+class InfoItem extends vscode.TreeItem {
+  constructor(label: string, iconId: string, description?: string) {
+    super(label, vscode.TreeItemCollapsibleState.None);
+    this.iconPath = new vscode.ThemeIcon(iconId);
+    if (description) {
+      this.description = description;
     }
+    this.contextValue = 'graphInfo';
   }
 }

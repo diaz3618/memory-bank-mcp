@@ -115,9 +115,9 @@ export class MemoryBankService implements vscode.Disposable {
     this._onDidRefresh.fire();
   }
 
-  async updateActiveContext(content: string): Promise<void> {
+  async updateActiveContext(params: { tasks?: string[]; issues?: string[]; nextSteps?: string[] }): Promise<void> {
     const client = await ext.mcpClientManager.getClient();
-    await client.updateActiveContext({ content });
+    await client.updateActiveContext(params);
     this._onDidRefresh.fire();
   }
 

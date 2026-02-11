@@ -68,26 +68,40 @@ export class McpClientManager implements vscode.Disposable {
     const mode = config.get<string>('connectionMode', 'stdio');
 
     if (mode === 'stdio') {
-      // Check if user has explicit settings first
-      const userCommand = config.get<string>('stdio.command');
-      const userArgs = config.get<string[]>('stdio.args');
-
-      if (userCommand) {
-        return {
-          mode: 'stdio',
-          command: userCommand,
-          args: expandTildeInArgs(userArgs || []),
-          cwd: vscode.workspace.workspaceFolders?.[0]?.uri.fsPath,
-        };
-      }
-
-      // Try reading from .vscode/mcp.json
+      // Priority 1: .vscode/mcp.json (shared with Copilot / VS Code MCP)
       const mcpJsonConfig = this.readMcpJsonConfig();
       if (mcpJsonConfig) {
         return mcpJsonConfig;
       }
 
-      // Fallback defaults
+      // Priority 2: User-explicit settings (workspace or global, NOT defaults)
+      const inspection = config.inspect<string>('stdio.command');
+      const hasExplicitCommand =
+        inspection?.workspaceValue !== undefined ||
+        inspection?.workspaceFolderValue !== undefined ||
+        inspection?.globalValue !== undefined;
+
+      if (hasExplicitCommand && inspection) {
+        const command = inspection.workspaceFolderValue
+          ?? inspection.workspaceValue
+          ?? inspection.globalValue
+          ?? '';
+        const userArgs = config.get<string[]>('stdio.args') || [];
+        ext.outputChannel.appendLine(
+          `Using explicit memoryBank.stdio settings: ${command} ${userArgs.join(' ')}`
+        );
+        return {
+          mode: 'stdio',
+          command,
+          args: expandTildeInArgs(userArgs),
+          cwd: vscode.workspace.workspaceFolders?.[0]?.uri.fsPath,
+        };
+      }
+
+      // Priority 3: Fallback defaults (npx)
+      ext.outputChannel.appendLine(
+        'No .vscode/mcp.json or explicit settings found. Using npx fallback.'
+      );
       return {
         mode: 'stdio',
         command: 'npx',

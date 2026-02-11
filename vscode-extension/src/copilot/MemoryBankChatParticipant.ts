@@ -98,7 +98,7 @@ async function handleUpdate(
     return { metadata: { command: 'update' } };
   }
 
-  await ext.memoryBankService.updateActiveContext(content);
+  await ext.memoryBankService.updateActiveContext({ tasks: [content] });
   stream.markdown(`Active context updated: *${content}*`);
   return { metadata: { command: 'update' } };
 }

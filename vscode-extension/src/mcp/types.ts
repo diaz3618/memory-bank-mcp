@@ -113,7 +113,48 @@ export interface LogDecisionParams {
 }
 
 export interface UpdateActiveContextParams {
-  content: string;
+  tasks?: string[];
+  issues?: string[];
+  nextSteps?: string[];
+}
+
+// Graph tool types
+export interface GraphSearchParams {
+  query: string;
+  limit?: number;
+}
+
+export interface GraphSearchResult {
+  entities: Array<{
+    id: string;
+    name: string;
+    entityType: string;
+    attrs?: Record<string, unknown>;
+    observations?: Array<{ text: string; timestamp: string }>;
+  }>;
+  relations: Array<{
+    from: string;
+    to: string;
+    relationType: string;
+  }>;
+}
+
+export interface GraphUpsertEntityParams {
+  name: string;
+  entityType: string;
+  attrs?: Record<string, unknown>;
+}
+
+export interface GraphAddObservationParams {
+  entity: string;
+  text: string;
+  source?: string;
+}
+
+export interface GraphLinkEntitiesParams {
+  from: string;
+  to: string;
+  relationType: string;
 }
 
 // MCP Client Interface
@@ -140,4 +181,11 @@ export interface IMcpClient {
   readMemoryBankFile(filename: string): Promise<string>;
   writeMemoryBankFile(filename: string, content: string): Promise<void>;
   listMemoryBankFiles(): Promise<string[]>;
+
+  // Knowledge Graph operations
+  graphSearch(params: GraphSearchParams): Promise<GraphSearchResult>;
+  graphOpenNodes(names: string[]): Promise<GraphSearchResult>;
+  graphUpsertEntity(params: GraphUpsertEntityParams): Promise<unknown>;
+  graphAddObservation(params: GraphAddObservationParams): Promise<unknown>;
+  graphLinkEntities(params: GraphLinkEntitiesParams): Promise<unknown>;
 }

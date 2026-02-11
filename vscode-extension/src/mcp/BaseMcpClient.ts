@@ -1,17 +1,24 @@
 /**
  * Abstract Base MCP Client
- * 
- * Matched to memory-bank-mcp server v0.5.0:
+ *
+ * Matched to memory-bank-mcp server v0.5.0+:
  * - get_memory_bank_status returns flat JSON
  * - list_memory_bank_files returns plain text
  * - get_current_mode returns multi-line text "Current mode: <mode>\n..."
  * - initialize_memory_bank requires {path}
- * - Some tools need random_string dummy param
+ * - update_active_context accepts {tasks?, issues?, nextSteps?}
+ * - Graph tools available: graph_search, graph_open_nodes, graph_upsert_entity,
+ *   graph_add_observation, graph_link_entities
  */
 
 import {
   ConnectionConfig,
   ConnectionStatus,
+  GraphAddObservationParams,
+  GraphLinkEntitiesParams,
+  GraphSearchParams,
+  GraphSearchResult,
+  GraphUpsertEntityParams,
   IMcpClient,
   LogDecisionParams,
   McpResource,
@@ -48,9 +55,7 @@ export abstract class BaseMcpClient implements IMcpClient {
   }
 
   async getMemoryBankStatus(): Promise<MemoryBankStatus> {
-    return await this.callTool<MemoryBankStatus>('get_memory_bank_status', {
-      random_string: 'status',
-    });
+    return await this.callTool<MemoryBankStatus>('get_memory_bank_status', {});
   }
 
   async initializeMemoryBank(path: string): Promise<string> {
@@ -64,9 +69,7 @@ export abstract class BaseMcpClient implements IMcpClient {
    */
   async getCurrentMode(): Promise<string> {
     try {
-      const result = await this.callTool<string>('get_current_mode', {
-        random_string: 'mode',
-      });
+      const result = await this.callTool<string>('get_current_mode', {});
       const text = typeof result === 'string' ? result : String(result);
       const match = text.match(/^Current mode:\s*(\w+)/i);
       if (match) {
@@ -105,7 +108,11 @@ export abstract class BaseMcpClient implements IMcpClient {
   }
 
   async updateActiveContext(params: UpdateActiveContextParams): Promise<void> {
-    await this.callTool('update_active_context', { content: params.content });
+    await this.callTool('update_active_context', {
+      tasks: params.tasks,
+      issues: params.issues,
+      nextSteps: params.nextSteps,
+    });
   }
 
   async readMemoryBankFile(filename: string): Promise<string> {
@@ -122,14 +129,53 @@ export abstract class BaseMcpClient implements IMcpClient {
    * Parse into array, filtering out directories (entries with no extension).
    */
   async listMemoryBankFiles(): Promise<string[]> {
-    const result = await this.callTool<string>('list_memory_bank_files', {
-      random_string: 'list',
-    });
+    const result = await this.callTool<string>('list_memory_bank_files', {});
     const text = typeof result === 'string' ? result : String(result);
     const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
     const headerIndex = lines.findIndex(l => l.toLowerCase().includes('files in memory bank'));
     const fileLines = headerIndex >= 0 ? lines.slice(headerIndex + 1) : lines;
     // Filter out directories (no extension = likely a folder like "docs")
     return fileLines.filter(f => f.includes('.'));
+  }
+
+  // ---------- Knowledge Graph Operations ----------
+
+  async graphSearch(params: GraphSearchParams): Promise<GraphSearchResult> {
+    const result = await this.callTool<GraphSearchResult>('graph_search', {
+      query: params.query,
+      limit: params.limit,
+    });
+    return result ?? { entities: [], relations: [] };
+  }
+
+  async graphOpenNodes(names: string[]): Promise<GraphSearchResult> {
+    const result = await this.callTool<GraphSearchResult>('graph_open_nodes', {
+      nodes: names,
+    });
+    return result ?? { entities: [], relations: [] };
+  }
+
+  async graphUpsertEntity(params: GraphUpsertEntityParams): Promise<unknown> {
+    return await this.callTool('graph_upsert_entity', {
+      name: params.name,
+      entityType: params.entityType,
+      attrs: params.attrs,
+    });
+  }
+
+  async graphAddObservation(params: GraphAddObservationParams): Promise<unknown> {
+    return await this.callTool('graph_add_observation', {
+      entity: params.entity,
+      text: params.text,
+      source: params.source,
+    });
+  }
+
+  async graphLinkEntities(params: GraphLinkEntitiesParams): Promise<unknown> {
+    return await this.callTool('graph_link_entities', {
+      from: params.from,
+      to: params.to,
+      relationType: params.relationType,
+    });
   }
 }

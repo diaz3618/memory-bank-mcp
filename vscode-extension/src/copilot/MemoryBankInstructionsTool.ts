@@ -82,6 +82,7 @@ class MemoryBankInstructionsTool implements vscode.LanguageModelTool<ToolInput> 
     }
 
     parts.push('## Available MCP Tools\n');
+    parts.push('### Core');
     parts.push('- `initialize_memory_bank` — Initialize at a path');
     parts.push('- `read_memory_bank_file` — Read a file');
     parts.push('- `write_memory_bank_file` — Write a file');
@@ -89,9 +90,21 @@ class MemoryBankInstructionsTool implements vscode.LanguageModelTool<ToolInput> 
     parts.push('- `get_memory_bank_status` — Get status');
     parts.push('- `track_progress` — Log progress');
     parts.push('- `log_decision` — Log a decision');
-    parts.push('- `update_active_context` — Update active context');
+    parts.push('- `update_active_context` — Update active context (tasks, issues, nextSteps)');
     parts.push('- `switch_mode` — Switch operating mode');
     parts.push('- `get_current_mode` — Get current mode');
+    parts.push('- `get_context_bundle` — Read all core files at once');
+    parts.push('- `get_context_digest` — Compact summary for context-limited situations');
+    parts.push('- `add_session_note` — Add a timestamped note to active context');
+    parts.push('- `search_memory_bank` — Full-text search across all files');
+    parts.push('### Knowledge Graph');
+    parts.push('- `graph_upsert_entity` — Create or update an entity');
+    parts.push('- `graph_add_observation` — Add observation to an entity');
+    parts.push('- `graph_link_entities` — Link two entities with a relation');
+    parts.push('- `graph_unlink_entities` — Remove a relation');
+    parts.push('- `graph_search` — Search entities and relations');
+    parts.push('- `graph_open_nodes` — Get subgraph by entity names');
+    parts.push('- `graph_rebuild` — Rebuild snapshot from event log');
 
     return new vscode.LanguageModelToolResult([
       new vscode.LanguageModelTextPart(parts.join('\n')),

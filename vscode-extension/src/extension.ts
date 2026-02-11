@@ -108,7 +108,33 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     }),
   );
 
-  // 9. Monitor connection status for status bar
+  // 9. Status bar item
+  const statusBarEnabled = vscode.workspace.getConfiguration('memoryBank').get<boolean>('statusBar.enabled', true);
+  if (statusBarEnabled) {
+    const statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 0);
+    statusBarItem.command = 'memoryBank.showLogs';
+    context.subscriptions.push(statusBarItem);
+
+    const updateStatusBar = (connected: boolean) => {
+      if (connected) {
+        statusBarItem.text = '$(check) Memory Bank';
+        statusBarItem.tooltip = 'Memory Bank: Connected';
+        statusBarItem.backgroundColor = undefined;
+      } else {
+        statusBarItem.text = '$(error) Memory Bank';
+        statusBarItem.tooltip = 'Memory Bank: Disconnected — click to view logs';
+        statusBarItem.backgroundColor = new vscode.ThemeColor('statusBarItem.errorBackground');
+      }
+      statusBarItem.show();
+    };
+
+    updateStatusBar(ext.mcpClientManager.isConnected());
+    ext.mcpClientManager.onStatusChange((status) => {
+      updateStatusBar(status.connected);
+    });
+  }
+
+  // 10. Monitor connection status for tree updates
   ext.mcpClientManager.onStatusChange((status) => {
     ext.outputChannel.appendLine(`Connection status: ${status.connected ? 'connected' : 'disconnected'}`);
     trees.status.refresh();
