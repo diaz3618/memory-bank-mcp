@@ -35,6 +35,6 @@
     ],
     "commitUrlFormat": "https://github.com/diaz3618/memory-bank-mcp/commit/{{hash}}",
     "compareUrlFormat": "https://github.com/diaz3618/memory-bank-mcp/compare/{{previousTag}}...{{currentTag}}",
-    "releaseCommitMessageFormat": "chore(release): {{currentTag}} [skip ci]",
+    "releaseCommitMessageFormat": "chore(release): {{currentTag}}",
     "header": "# Changelog\n\nAll notable changes to this project will be documented in this file.\n"
 }
