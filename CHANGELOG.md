@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.2.0](https://github.com/diaz3618/memory-bank-mcp/compare/v1.1.5...v1.2.0) (2026-02-11)
+
+
+### Features
+
+* implement remaining knowledge graph features ([17143b8](https://github.com/diaz3618/memory-bank-mcp/commit/17143b8bde4141ce94390203058ae34b5fd3665e))
+
+
+### Bug Fixes
+
+* **extension:** overhaul 8 major issues in VS Code extension ([e066716](https://github.com/diaz3618/memory-bank-mcp/commit/e066716297b085d821b83b4f6f7b1f48c4655825))
+* resolve 10 graph tool bugs preventing MCP operations ([c26d82f](https://github.com/diaz3618/memory-bank-mcp/commit/c26d82f1089035e28ef28dd998fbac5a8c5804c1))
+
 ### 1.1.5 (2026-02-10)
 
 
