@@ -22,6 +22,7 @@ import type {
   RelationAddEvent,
   RelationRemoveEvent,
   EntityDeleteEvent,
+  ObservationDeleteEvent,
   SnapshotWrittenEvent,
   GraphStats,
   GraphIndex,
@@ -192,6 +193,16 @@ export function isEntityDeleteEvent(value: unknown): value is EntityDeleteEvent 
   );
 }
 
+export function isObservationDeleteEvent(value: unknown): value is ObservationDeleteEvent {
+  if (!isObject(value)) return false;
+  return (
+    value['type'] === 'observation_delete' &&
+    isEntityId(value['entityId']) &&
+    isObservationId(value['observationId']) &&
+    isISODateString(value['ts'])
+  );
+}
+
 export function isSnapshotWrittenEvent(value: unknown): value is SnapshotWrittenEvent {
   if (!isObject(value)) return false;
   return (
@@ -210,6 +221,7 @@ export function isGraphEvent(value: unknown): value is GraphEvent {
     isRelationAddEvent(value) ||
     isRelationRemoveEvent(value) ||
     isEntityDeleteEvent(value) ||
+    isObservationDeleteEvent(value) ||
     isSnapshotWrittenEvent(value)
   );
 }

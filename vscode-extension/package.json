@@ -192,6 +192,30 @@
         "title": "Create/Update Entity",
         "category": "Memory Bank",
         "icon": "$(symbol-class)"
+      },
+      {
+        "command": "memoryBank.graph.deleteEntity",
+        "title": "Delete Entity",
+        "category": "Memory Bank",
+        "icon": "$(trash)"
+      },
+      {
+        "command": "memoryBank.graph.deleteObservation",
+        "title": "Delete Observation",
+        "category": "Memory Bank",
+        "icon": "$(trash)"
+      },
+      {
+        "command": "memoryBank.graph.compact",
+        "title": "Compact Graph",
+        "category": "Memory Bank",
+        "icon": "$(fold)"
+      },
+      {
+        "command": "memoryBank.digest",
+        "title": "Show Context Digest",
+        "category": "Memory Bank",
+        "icon": "$(preview)"
       }
     ],
     "menus": {
@@ -252,6 +276,11 @@
           "group": "1_actions"
         },
         {
+          "command": "memoryBank.graph.compact",
+          "when": "view == memoryBank.views.graph",
+          "group": "2_maintenance"
+        },
+        {
           "command": "memoryBank.remote.refresh",
           "when": "view == memoryBank.views.remote",
           "group": "navigation"
@@ -272,6 +301,21 @@
           "command": "memoryBank.switchMode",
           "when": "view == memoryBank.views.mode && viewItem =~ /^mode-/",
           "group": "inline"
+        },
+        {
+          "command": "memoryBank.graph.addObservation",
+          "when": "view == memoryBank.views.graph && viewItem == graphEntity",
+          "group": "1_actions"
+        },
+        {
+          "command": "memoryBank.graph.deleteEntity",
+          "when": "view == memoryBank.views.graph && viewItem == graphEntity",
+          "group": "2_destructive"
+        },
+        {
+          "command": "memoryBank.graph.linkEntities",
+          "when": "view == memoryBank.views.graph && viewItem == graphEntity",
+          "group": "1_actions"
         }
       ],
       "commandPalette": [

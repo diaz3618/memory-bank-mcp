@@ -23,19 +23,22 @@ Memory Bank MCP (`@diazstg/memory-bank-mcp`) is a production-ready MCP server pr
 
 ## Ongoing Tasks
 
-- VS Code extension production-ready (Claude Code)
-- MCP server graph bugs fixed (Claude Code)
+- Knowledge graph plans implementation — all actionable items complete
 ## Known Issues
 
 - Old double-nested memory-bank/memory-bank/graph/ directory still exists from pre-fix — can be safely removed or migrated
 - Extension .vsix has WARNING about missing repository field in package.json
 ## Next Steps
 
-- Install extension .vsix in VS Code and test end-to-end
-- Add repository field to vscode-extension/package.json
-- Consider migrating old graph data from memory-bank/memory-bank/graph/ to memory-bank/graph/
-- Publish extension to VS Code marketplace
+- Consider adding tests for new graph tools (delete, compact, staleness)
+- Graph webview visualization (future enhancement)
+- stores.json persistent registry when multi-store is needed
+- HTTP MCP client implementation
 ## Session Notes
+
+- [8:07 AM] 📋 Resuming knowledge-graph-plans.md completion. Starting with entity/observation deletion tools, then digest integration, compaction, staleness, extension features.
+
+- [8:02 AM] 📋 Starting knowledge-graph-plans.md completion — implementing all remaining ⏳ items across Phase 2-4. Items: stores.json registry, storeId threading, graph digest integration, compaction tool, staleness check, context menus, digest preview command, entity/observation deletion.
 
 - [4:41 PM] 👀 [Claude Code] Created extension build guide documentation at docs/internal/extension-build-guide.md. Covers: compile, watch mode, type-check, packaging (.vsix), local installation (3 methods), development workflow (F5 debugging), linting, VS Code Marketplace publishing (PAT setup, vsce login, publish commands, CI/CD), alternative distribution via GitHub Releases, quick reference table, and troubleshooting section.
 
@@ -48,4 +51,24 @@ Memory Bank MCP (`@diazstg/memory-bank-mcp`) is a production-ready MCP server pr
 
 ## Current Session Notes
 
+- [14:46:57] [Unknown User] Implemented remaining knowledge graph features: Completed all actionable items from knowledge-graph-plans.md:
+
+**Server-side (src/):**
+- Added `ObservationDeleteEvent` type, schema validator, and reducer case
+- Added `GraphStore.deleteObservation()` method
+- Added `GraphStore.compact()` method — rewrites JSONL with minimal events
+- Added staleness check via `tryLoadCachedSnapshot()` — reads graph.index.json on cold start
+- Added 3 new MCP tools: `graph_delete_entity`, `graph_delete_observation`, `graph_compact`
+- Wired `renderGraphSummary()` into `handleGetContextDigest` — digest now includes graph data
+- All 100 tests pass, build clean
+
+**Extension (vscode-extension/):**
+- Added client methods: `graphDeleteEntity`, `graphDeleteObservation`, `graphCompact`, `getContextDigest`
+- Added extension commands: `memoryBank.graph.deleteEntity`, `memoryBank.graph.deleteObservation`, `memoryBank.graph.compact`, `memoryBank.digest`
+- Added context menus on graph entity tree items (Add Observation, Delete Entity, Link Entities)
+- Context menu commands pre-fill entity name from the TreeItem
+- Digest preview renders full markdown in a virtual document
+- Extension compiles clean
+
+**Deferred items** (stores.json, storeId threading, graph webview, HTTP client) documented as deferred with rationale.
 - [21:22:45] [Unknown User] Decision Made: VS Code Extension: .vscode/mcp.json priority for connection config (Claude Code)

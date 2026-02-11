@@ -14,7 +14,10 @@
 import {
   ConnectionConfig,
   ConnectionStatus,
+  ContextDigestResult,
   GraphAddObservationParams,
+  GraphDeleteEntityParams,
+  GraphDeleteObservationParams,
   GraphLinkEntitiesParams,
   GraphSearchParams,
   GraphSearchResult,
@@ -178,6 +181,36 @@ export abstract class BaseMcpClient implements IMcpClient {
       to: params.to,
       relationType: params.relationType,
     });
+  }
+
+  async graphDeleteEntity(params: GraphDeleteEntityParams): Promise<unknown> {
+    return await this.callTool('graph_delete_entity', {
+      entity: params.entity,
+    });
+  }
+
+  async graphDeleteObservation(params: GraphDeleteObservationParams): Promise<unknown> {
+    return await this.callTool('graph_delete_observation', {
+      observationId: params.observationId,
+    });
+  }
+
+  async graphCompact(): Promise<unknown> {
+    return await this.callTool('graph_compact', {});
+  }
+
+  // ---------- Digest ----------
+
+  async getContextDigest(): Promise<ContextDigestResult> {
+    const result = await this.callTool<ContextDigestResult>('get_context_digest', {});
+    return result ?? {
+      digest: {
+        currentContext: { tasks: [], issues: [], nextSteps: [] },
+        recentProgress: [],
+        recentDecisions: [],
+      },
+      metadata: { timestamp: new Date().toISOString(), memoryBankDir: '' },
+    };
   }
 
   // ---------- Store Operations ----------

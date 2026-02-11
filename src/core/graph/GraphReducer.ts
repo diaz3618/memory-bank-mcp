@@ -91,6 +91,11 @@ function applyEvent(state: MutableGraphState, event: DataEvent): MutableGraphSta
       return state;
     }
 
+    case 'observation_delete': {
+      state.observations.delete(event.observationId);
+      return state;
+    }
+
     default: {
       // Unknown event type — skip silently for forward compatibility
       // This handles cases where parsed JSON has an unrecognized type

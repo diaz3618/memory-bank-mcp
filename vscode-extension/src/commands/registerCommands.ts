@@ -285,10 +285,17 @@ export function registerCommands(
     vscode.window.showInformationMessage(`Remote server "${name}" added.`);
   });
 
-  register('memoryBank.graph.addObservation', async () => {
+  register('memoryBank.graph.addObservation', async (treeItem?: unknown) => {
+    // Pre-fill entity name from context menu TreeItem
+    let defaultEntity: string | undefined;
+    if (treeItem && typeof treeItem === 'object' && 'name' in (treeItem as Record<string, unknown>)) {
+      defaultEntity = (treeItem as { name: string }).name;
+    }
+
     const entity = await vscode.window.showInputBox({
       prompt: 'Entity name or ID',
       placeHolder: 'e.g. MyService, Authentication Module',
+      value: defaultEntity,
     });
     if (!entity) { return; }
 
@@ -304,10 +311,17 @@ export function registerCommands(
     trees.graph.refresh();
   });
 
-  register('memoryBank.graph.linkEntities', async () => {
+  register('memoryBank.graph.linkEntities', async (treeItem?: unknown) => {
+    // Pre-fill source entity from context menu TreeItem
+    let defaultFrom: string | undefined;
+    if (treeItem && typeof treeItem === 'object' && 'name' in (treeItem as Record<string, unknown>)) {
+      defaultFrom = (treeItem as { name: string }).name;
+    }
+
     const from = await vscode.window.showInputBox({
       prompt: 'Source entity name',
       placeHolder: 'e.g. UserService',
+      value: defaultFrom,
     });
     if (!from) { return; }
 
@@ -384,6 +398,121 @@ export function registerCommands(
     await client.graphUpsertEntity({ name, entityType });
     vscode.window.showInformationMessage(`Entity "${name}" created/updated.`);
     trees.graph.refresh();
+  });
+
+  // ---------- Graph: Delete Entity ----------
+
+  register('memoryBank.graph.deleteEntity', async (treeItemOrName?: unknown) => {
+    // When invoked from context menu, treeItemOrName is a TreeItem with a `name` property.
+    // When invoked from palette, it's undefined.
+    let entity: string | undefined;
+
+    if (treeItemOrName && typeof treeItemOrName === 'object' && 'name' in (treeItemOrName as Record<string, unknown>)) {
+      entity = (treeItemOrName as { name: string }).name;
+    } else if (typeof treeItemOrName === 'string') {
+      entity = treeItemOrName;
+    }
+
+    if (!entity) {
+      entity = await vscode.window.showInputBox({
+        prompt: 'Entity name or ID to delete',
+        placeHolder: 'e.g. AuthModule, ent_abc123',
+      });
+    }
+    if (!entity) { return; }
+
+    const confirm = await vscode.window.showWarningMessage(
+      `Delete entity "${entity}" and all its observations and relations?`,
+      { modal: true },
+      'Delete',
+    );
+    if (confirm !== 'Delete') { return; }
+
+    const client = await ext.mcpClientManager.getClient();
+    await client.graphDeleteEntity({ entity });
+    vscode.window.showInformationMessage(`Entity "${entity}" deleted.`);
+    trees.graph.refresh();
+  });
+
+  // ---------- Graph: Delete Observation ----------
+
+  register('memoryBank.graph.deleteObservation', async () => {
+    const observationId = await vscode.window.showInputBox({
+      prompt: 'Observation ID to delete',
+      placeHolder: 'e.g. obs_abc123',
+    });
+    if (!observationId) { return; }
+
+    const client = await ext.mcpClientManager.getClient();
+    await client.graphDeleteObservation({ observationId });
+    vscode.window.showInformationMessage(`Observation deleted.`);
+    trees.graph.refresh();
+  });
+
+  // ---------- Graph: Compact ----------
+
+  register('memoryBank.graph.compact', async () => {
+    const client = await ext.mcpClientManager.getClient();
+    await client.graphCompact();
+    vscode.window.showInformationMessage('Graph event log compacted.');
+    trees.graph.refresh();
+  });
+
+  // ---------- Digest Preview ----------
+
+  register('memoryBank.digest', async () => {
+    const client = await ext.mcpClientManager.getClient();
+    const result = await client.getContextDigest();
+    const digest = result.digest;
+
+    // Build readable markdown
+    const lines: string[] = ['# Memory Bank Context Digest', ''];
+
+    if (digest.projectState) {
+      lines.push(`**Project State:** ${digest.projectState}`, '');
+    }
+
+    if (digest.currentContext.tasks.length > 0) {
+      lines.push('## Current Tasks', '');
+      for (const task of digest.currentContext.tasks) {
+        lines.push(`- ${task}`);
+      }
+      lines.push('');
+    }
+
+    if (digest.currentContext.issues.length > 0) {
+      lines.push('## Known Issues', '');
+      for (const issue of digest.currentContext.issues) {
+        lines.push(`- ${issue}`);
+      }
+      lines.push('');
+    }
+
+    if (digest.recentProgress.length > 0) {
+      lines.push('## Recent Progress', '');
+      for (const entry of digest.recentProgress) {
+        lines.push(`- ${entry}`);
+      }
+      lines.push('');
+    }
+
+    if (digest.recentDecisions.length > 0) {
+      lines.push('## Recent Decisions', '');
+      for (const d of digest.recentDecisions) {
+        lines.push(`### ${d.title}${d.date ? ` (${d.date})` : ''}`);
+        lines.push(d.summary, '');
+      }
+    }
+
+    if (digest.graphSummary) {
+      lines.push(digest.graphSummary);
+    }
+
+    const doc = await vscode.workspace.openTextDocument({
+      content: lines.join('\n'),
+      language: 'markdown',
+    });
+    await vscode.window.showTextDocument(doc, { preview: true });
   });
 }
 

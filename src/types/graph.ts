@@ -180,6 +180,16 @@ export interface EntityDeleteEvent {
 }
 
 /**
+ * Observation delete event - remove a specific observation from an entity
+ */
+export interface ObservationDeleteEvent {
+  readonly type: 'observation_delete';
+  readonly entityId: EntityId;
+  readonly observationId: ObservationId;
+  readonly ts: string;
+}
+
+/**
  * Snapshot written event (used during compaction)
  */
 export interface SnapshotWrittenEvent {
@@ -199,6 +209,7 @@ export type GraphEvent =
   | RelationAddEvent
   | RelationRemoveEvent
   | EntityDeleteEvent
+  | ObservationDeleteEvent
   | SnapshotWrittenEvent;
 
 /**
@@ -209,7 +220,8 @@ export type DataEvent =
   | ObservationAddEvent
   | RelationAddEvent
   | RelationRemoveEvent
-  | EntityDeleteEvent;
+  | EntityDeleteEvent
+  | ObservationDeleteEvent;
 
 // ============================================================================
 // Input Types (for creating new data)

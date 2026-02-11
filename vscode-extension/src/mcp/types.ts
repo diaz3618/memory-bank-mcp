@@ -157,6 +157,29 @@ export interface GraphLinkEntitiesParams {
   relationType: string;
 }
 
+export interface GraphDeleteEntityParams {
+  entity: string;
+}
+
+export interface GraphDeleteObservationParams {
+  observationId: string;
+}
+
+export interface ContextDigestResult {
+  digest: {
+    projectState?: string;
+    currentContext: { tasks: string[]; issues: string[]; nextSteps: string[] };
+    recentProgress: string[];
+    recentDecisions: Array<{ title: string; date?: string; summary: string }>;
+    systemPatterns?: string;
+    graphSummary?: string;
+  };
+  metadata: {
+    timestamp: string;
+    memoryBankDir: string;
+  };
+}
+
 // Store types
 export interface StoreInfo {
   id: string;
@@ -204,6 +227,12 @@ export interface IMcpClient {
   graphUpsertEntity(params: GraphUpsertEntityParams): Promise<unknown>;
   graphAddObservation(params: GraphAddObservationParams): Promise<unknown>;
   graphLinkEntities(params: GraphLinkEntitiesParams): Promise<unknown>;
+  graphDeleteEntity(params: GraphDeleteEntityParams): Promise<unknown>;
+  graphDeleteObservation(params: GraphDeleteObservationParams): Promise<unknown>;
+  graphCompact(): Promise<unknown>;
+
+  // Digest
+  getContextDigest(): Promise<ContextDigestResult>;
 
   // Store operations
   listStores(): Promise<ListStoresResult>;

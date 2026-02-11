@@ -119,6 +119,26 @@ Architecture: append-only JSONL event log as source of truth, JSON snapshot for 
 
 ## Update History
 
+- [2026-02-11 14:46:57] [Unknown User] - Implemented remaining knowledge graph features: Completed all actionable items from knowledge-graph-plans.md:
+
+**Server-side (src/):**
+- Added `ObservationDeleteEvent` type, schema validator, and reducer case
+- Added `GraphStore.deleteObservation()` method
+- Added `GraphStore.compact()` method — rewrites JSONL with minimal events
+- Added staleness check via `tryLoadCachedSnapshot()` — reads graph.index.json on cold start
+- Added 3 new MCP tools: `graph_delete_entity`, `graph_delete_observation`, `graph_compact`
+- Wired `renderGraphSummary()` into `handleGetContextDigest` — digest now includes graph data
+- All 100 tests pass, build clean
+
+**Extension (vscode-extension/):**
+- Added client methods: `graphDeleteEntity`, `graphDeleteObservation`, `graphCompact`, `getContextDigest`
+- Added extension commands: `memoryBank.graph.deleteEntity`, `memoryBank.graph.deleteObservation`, `memoryBank.graph.compact`, `memoryBank.digest`
+- Added context menus on graph entity tree items (Add Observation, Delete Entity, Link Entities)
+- Context menu commands pre-fill entity name from the TreeItem
+- Digest preview renders full markdown in a virtual document
+- Extension compiles clean
+
+**Deferred items** (stores.json, storeId threading, graph webview, HTTP client) documented as deferred with rationale.
 - [2026-02-10 21:22:45] [Unknown User] - Decision Made: VS Code Extension: .vscode/mcp.json priority for connection config (Claude Code)
 ### [Feb 10, 2026, 4:16 PM] milestone: VS Code Extension Fixed & Production-Ready (Claude Code)
 <!-- ID: p_2026-02-10_mlh3pu17 -->

@@ -9,7 +9,7 @@ import { progressTools, handleTrackProgress } from './ProgressTools.js';
 import { contextTools, handleUpdateActiveContext } from './ContextTools.js';
 import { decisionTools, handleLogDecision } from './DecisionTools.js';
 import { modeTools, handleSwitchMode, handleGetCurrentMode, handleProcessUmbCommand, handleCompleteUmb } from './ModeTools.js';
-import { graphTools, handleGraphUpsertEntity, handleGraphAddObservation, handleGraphLinkEntities, handleGraphUnlinkEntities, handleGraphSearch, handleGraphOpenNodes, handleGraphRebuild } from './GraphTools.js';
+import { graphTools, handleGraphUpsertEntity, handleGraphAddObservation, handleGraphLinkEntities, handleGraphUnlinkEntities, handleGraphSearch, handleGraphOpenNodes, handleGraphRebuild, handleGraphDeleteEntity, handleGraphDeleteObservation, handleGraphCompact } from './GraphTools.js';
 import { storeToolDefinitions, handleListStores, handleSelectStore } from './StoreTools.js';
 
 /**
@@ -485,6 +485,26 @@ export function setupToolHandlers(
 
         case 'graph_rebuild': {
           return handleGraphRebuild(memoryBankManager);
+        }
+
+        case 'graph_delete_entity': {
+          const { entity } = request.params.arguments as { entity: string };
+          if (!entity) {
+            throw new McpError(ErrorCode.InvalidParams, 'entity is required');
+          }
+          return handleGraphDeleteEntity(memoryBankManager, entity);
+        }
+
+        case 'graph_delete_observation': {
+          const { observationId } = request.params.arguments as { observationId: string };
+          if (!observationId) {
+            throw new McpError(ErrorCode.InvalidParams, 'observationId is required');
+          }
+          return handleGraphDeleteObservation(memoryBankManager, observationId);
+        }
+
+        case 'graph_compact': {
+          return handleGraphCompact(memoryBankManager);
         }
 
         // Store tools

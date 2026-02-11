@@ -187,6 +187,46 @@ export const graphTools = [
       required: [],
     },
   },
+  {
+    name: 'graph_delete_entity',
+    description:
+      'Delete an entity and its associated observations and relations from the knowledge graph.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        entity: {
+          type: 'string',
+          description: 'Entity name or ID to delete',
+        },
+      },
+      required: ['entity'],
+    },
+  },
+  {
+    name: 'graph_delete_observation',
+    description:
+      'Delete a specific observation from the knowledge graph by its ID.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        observationId: {
+          type: 'string',
+          description: 'The observation ID (starts with obs_)',
+        },
+      },
+      required: ['observationId'],
+    },
+  },
+  {
+    name: 'graph_compact',
+    description:
+      'Compact the graph event log by replacing the full history with a minimal representation of the current state. Reduces file size without losing data.',
+    inputSchema: {
+      type: 'object',
+      properties: {},
+      required: [],
+    },
+  },
 ];
 
 // ============================================================================
@@ -836,6 +876,117 @@ export async function handleGraphRebuild(memoryBankManager: MemoryBankManager) {
           },
           null,
           2
+        ),
+      },
+    ],
+  };
+}
+
+/**
+ * Handler for graph_delete_entity
+ */
+export async function handleGraphDeleteEntity(
+  memoryBankManager: MemoryBankManager,
+  entity: string
+) {
+  const store = await getGraphStore(memoryBankManager);
+  if (!store) {
+    return {
+      content: [{ type: 'text', text: 'Memory Bank not initialized. Use initialize_memory_bank first.' }],
+      isError: true,
+    };
+  }
+
+  const result = await store.deleteEntity(entity);
+  if (!result.success) {
+    return {
+      content: [{ type: 'text', text: `Failed to delete entity: ${result.error}` }],
+      isError: true,
+    };
+  }
+
+  // Rebuild to update snapshot + markdown
+  await store.rebuildSnapshot();
+
+  return {
+    content: [
+      {
+        type: 'text',
+        text: JSON.stringify({ success: true, message: `Entity "${entity}" deleted.` }, null, 2),
+      },
+    ],
+  };
+}
+
+/**
+ * Handler for graph_delete_observation
+ */
+export async function handleGraphDeleteObservation(
+  memoryBankManager: MemoryBankManager,
+  observationId: string
+) {
+  const store = await getGraphStore(memoryBankManager);
+  if (!store) {
+    return {
+      content: [{ type: 'text', text: 'Memory Bank not initialized. Use initialize_memory_bank first.' }],
+      isError: true,
+    };
+  }
+
+  const result = await store.deleteObservation(observationId);
+  if (!result.success) {
+    return {
+      content: [{ type: 'text', text: `Failed to delete observation: ${result.error}` }],
+      isError: true,
+    };
+  }
+
+  // Rebuild to update snapshot + markdown
+  await store.rebuildSnapshot();
+
+  return {
+    content: [
+      {
+        type: 'text',
+        text: JSON.stringify({ success: true, message: `Observation "${observationId}" deleted.` }, null, 2),
+      },
+    ],
+  };
+}
+
+/**
+ * Handler for graph_compact
+ */
+export async function handleGraphCompact(memoryBankManager: MemoryBankManager) {
+  const store = await getGraphStore(memoryBankManager);
+  if (!store) {
+    return {
+      content: [{ type: 'text', text: 'Memory Bank not initialized. Use initialize_memory_bank first.' }],
+      isError: true,
+    };
+  }
+
+  const result = await store.compact();
+  if (!result.success) {
+    return {
+      content: [{ type: 'text', text: `Compaction failed: ${result.error}` }],
+      isError: true,
+    };
+  }
+
+  return {
+    content: [
+      {
+        type: 'text',
+        text: JSON.stringify(
+          {
+            success: true,
+            message: 'Graph event log compacted.',
+            before: result.data.before,
+            after: result.data.after,
+          },
+          null,
+          2,
         ),
       },
     ],

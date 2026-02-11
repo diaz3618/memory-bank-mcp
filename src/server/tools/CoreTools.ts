@@ -3,6 +3,9 @@ import { MemoryBankManager } from '../../core/MemoryBankManager.js';
 import { MigrationUtils } from '../../utils/MigrationUtils.js';
 import { FileUtils } from '../../utils/FileUtils.js';
 import { ETagUtils } from '../../utils/ETagUtils.js';
+import { GraphStore } from '../../core/graph/GraphStore.js';
+import { renderGraphSummary } from '../../core/graph/GraphRenderer.js';
+import { LocalFileSystem } from '../../utils/storage/LocalFileSystem.js';
 import os from 'os';
 
 /**
@@ -1086,6 +1089,7 @@ export async function handleGetContextDigest(
       recentProgress: string[];
       recentDecisions: Array<{ title: string; date?: string; summary: string }>;
       systemPatterns?: string;
+      graphSummary?: string;
     } = {
       currentContext: { tasks: [], issues: [], nextSteps: [] },
       recentProgress: [],
@@ -1134,6 +1138,26 @@ export async function handleGetContextDigest(
       } catch (error) {
         console.error('Error loading system-patterns.md:', error);
       }
+    }
+
+    // Load knowledge graph summary if the graph exists
+    try {
+      const graphJsonlPath = path.join(memoryBankDir, 'graph', 'graph.jsonl');
+      const graphExists = await FileUtils.fileExists(graphJsonlPath);
+      if (graphExists) {
+        const fs = new LocalFileSystem(memoryBankDir);
+        const storeId = path.basename(memoryBankDir);
+        const graphStore = new GraphStore(fs, '', storeId);
+        const initResult = await graphStore.initialize();
+        if (initResult.success) {
+          const snapshotResult = await graphStore.getSnapshot();
+          if (snapshotResult.success) {
+            digest.graphSummary = renderGraphSummary(snapshotResult.data);
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error loading graph summary:', error);
     }
 
     return {
