@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.4.0](https://github.com/diaz3618/memory-bank-mcp/compare/v1.3.0...v1.4.0) (2026-02-11)
+
+
+### Features
+
+* **ext:** graph webview, mode-sync fixes, copilot agent improvements ([bdec29c](https://github.com/diaz3618/memory-bank-mcp/commit/bdec29c17572e5f3dcd38ee85abbf991c32f93b4))
+
 ## [1.3.0](https://github.com/diaz3618/memory-bank-mcp/compare/v1.1.4...v1.3.0) (2026-02-11)
 
 
