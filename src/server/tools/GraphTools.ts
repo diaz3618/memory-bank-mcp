@@ -17,14 +17,11 @@ import { searchGraph, expandNeighborhood, findEntity, getEntityObservations } fr
 import type {
   EntityInput,
   ObservationInput,
+  ObservationSource,
   RelationInput,
-  GraphSnapshot,
   Entity,
-  Observation,
-  Relation,
   EntityId,
 } from '../../types/graph.js';
-import { normalizeName, createEntityId } from '../../core/graph/GraphIds.js';
 import { LocalFileSystem } from '../../utils/storage/LocalFileSystem.js';
 import path from 'path';
 
@@ -214,10 +211,11 @@ async function getGraphStore(memoryBankManager: MemoryBankManager): Promise<Grap
     return cached;
   }
 
-  // Create new store
+  // Create new store — LocalFileSystem already has memoryBankDir as root,
+  // so storeRoot must be empty to avoid double-path (memory-bank/memory-bank/graph/)
   const fs = new LocalFileSystem(memoryBankDir);
   const storeId = path.basename(memoryBankDir);
-  const store = new GraphStore(fs, storeId);
+  const store = new GraphStore(fs, '', storeId);
 
   // Initialize
   const initResult = await store.initialize();
@@ -350,10 +348,17 @@ export async function handleGraphAddObservation(
     entityId = found.id;
   }
 
+  // Convert string source to ObservationSource object
+  // MCP tool sends source as a plain string (e.g., "manual", "tool", "agent")
+  // but ObservationInput expects { kind: string, ref?: string }
+  const observationSource = source
+    ? { kind: source as 'manual' | 'tool' | 'import' | 'agent', ref: undefined }
+    : undefined;
+
   const input: ObservationInput = {
-    entityId,
+    entityRef: entityId,
     text,
-    source,
+    source: observationSource,
     timestamp,
   };
 
@@ -460,8 +465,8 @@ export async function handleGraphLinkEntities(
   }
 
   const input: RelationInput = {
-    fromId,
-    toId,
+    from: fromId,
+    to: toId,
     relationType,
   };
 
@@ -567,7 +572,7 @@ export async function handleGraphUnlinkEntities(
     };
   }
 
-  const result = await store.unlinkEntities(fromId, toId, relationType);
+  const result = await store.unlinkEntities(fromId, relationType, toId);
 
   if (!result.success) {
     return {
@@ -588,7 +593,7 @@ export async function handleGraphUnlinkEntities(
         text: JSON.stringify(
           {
             success: true,
-            removed: result.data.removed,
+            message: `Unlinked ${from} --${relationType}--> ${to}`,
           },
           null,
           2
@@ -634,29 +639,13 @@ export async function handleGraphSearch(
     };
   }
 
-  // Perform search
-  const searchResults = searchGraph(snapshot.data, query, limit ?? 10);
-
-  // Optionally expand neighborhood
-  let relations: Relation[] = [];
-  let expandedEntities: Entity[] = [];
-  let expandedObservations: Observation[] = [];
-
-  if (includeNeighborhood && searchResults.entities.length > 0) {
-    const entityIds = searchResults.entities.map((e: Entity) => e.id);
-    const neighborhood = expandNeighborhood(snapshot.data, entityIds, neighborhoodDepth ?? 1);
-
-    // Get unique entities not already in results
-    const resultEntityIds = new Set(searchResults.entities.map((e: Entity) => e.id));
-    expandedEntities = neighborhood.entities.filter((e: Entity) => !resultEntityIds.has(e.id));
-
-    // Get observations for expanded entities
-    expandedObservations = neighborhood.entities.flatMap((e: Entity) =>
-      getEntityObservations(snapshot.data, e.id)
-    );
-
-    relations = neighborhood.relations;
-  }
+  // Perform search using the options-object signature
+  const searchResults = searchGraph(snapshot.data, {
+    query,
+    limit: limit ?? 10,
+    includeNeighborhood: includeNeighborhood ?? false,
+    neighborhoodDepth: neighborhoodDepth ?? 1,
+  });
 
   return {
     content: [
@@ -667,9 +656,7 @@ export async function handleGraphSearch(
             query,
             entities: searchResults.entities,
             observations: searchResults.observations,
-            expandedEntities,
-            expandedObservations,
-            relations,
+            relations: searchResults.relations,
           },
           null,
           2

@@ -159,7 +159,13 @@ export class GraphStore {
         return { success: false, error: 'JSONL file is empty', code: 'MARKER_MISMATCH' };
       }
 
-      const parsed = JSON.parse(firstLine);
+      let parsed: unknown;
+      try {
+        parsed = JSON.parse(firstLine);
+      } catch {
+        return { success: false, error: 'JSONL file first line is not valid JSON', code: 'MARKER_MISMATCH' };
+      }
+
       if (!isMarkerEvent(parsed)) {
         return {
           success: false,
@@ -205,7 +211,13 @@ export class GraphStore {
 
       // Validate marker still present
       const firstLine = currentContent.split('\n')[0];
-      if (!firstLine || !isMarkerEvent(JSON.parse(firstLine))) {
+      let markerValid = false;
+      try {
+        markerValid = !!firstLine && isMarkerEvent(JSON.parse(firstLine));
+      } catch {
+        // JSON.parse failed — marker is corrupted
+      }
+      if (!markerValid) {
         return { success: false, error: 'JSONL file marker missing or invalid', code: 'MARKER_MISMATCH' };
       }
 
@@ -530,7 +542,7 @@ export class GraphStore {
       const result = reduceJsonlToSnapshot(jsonlContent, this.storeId);
 
       if (!result.success) {
-        return { success: false, error: result.error, code: 'PARSE_ERROR' };
+        return { success: false, error: result.error, code: 'VALIDATION_ERROR' };
       }
 
       this.cachedSnapshot = result.snapshot;

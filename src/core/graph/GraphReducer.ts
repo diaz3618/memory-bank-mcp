@@ -90,6 +90,12 @@ function applyEvent(state: MutableGraphState, event: DataEvent): MutableGraphSta
       }
       return state;
     }
+
+    default: {
+      // Unknown event type — skip silently for forward compatibility
+      // This handles cases where parsed JSON has an unrecognized type
+      return state;
+    }
   }
 }
 
@@ -171,6 +177,11 @@ export function reduceJsonlToSnapshot(
   for (let i = 0; i < lines.length; i++) {
     try {
       const event = JSON.parse(lines[i]);
+      // Validate parsed value is a non-null object with a type field
+      if (event === null || typeof event !== 'object' || typeof event.type !== 'string') {
+        parseErrors.push(`Line ${i + 1}: Invalid event — expected object with 'type' field`);
+        continue;
+      }
       events.push(event);
     } catch (err) {
       parseErrors.push(`Line ${i + 1}: ${err instanceof Error ? err.message : String(err)}`);

@@ -22,11 +22,6 @@ export function setupToolHandlers(
   memoryBankManager: MemoryBankManager,
   getProgressTracker: () => ProgressTracker | null
 ) {
-  // Initialize the mode manager
-  memoryBankManager.initializeModeManager().catch(error => {
-    console.error('Error initializing mode manager:', error);
-  });
-
   // Register tools for listing
   server.setRequestHandler(ListToolsRequestSchema, async () => ({
     tools: [

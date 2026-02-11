@@ -716,11 +716,20 @@ export class MemoryBankManager {
 
   /**
    * Gets the Memory Bank directory
-   * 
+   *
    * @returns Memory Bank directory or null if not set
    */
   getMemoryBankDir(): string | null {
     return this.memoryBankDir;
+  }
+
+  /**
+   * Gets the Memory Bank folder name
+   *
+   * @returns The folder name (default: 'memory-bank')
+   */
+  getFolderName(): string {
+    return this.folderName;
   }
 
   /**
@@ -1004,21 +1013,30 @@ export class MemoryBankManager {
         logger.warn('MemoryBankManager', 'Project path not set, cannot initialize ModeManager');
         return;
       }
-      
+
+      // Idempotency: skip if already initialized (unless a specific mode is requested)
+      if (this.modeManager && !initialMode) {
+        // Just update memory bank status if needed
+        if (this.memoryBankDir) {
+          this.modeManager.setMemoryBankStatus('ACTIVE');
+        }
+        return;
+      }
+
       // Create the ExternalRulesLoader for the project
       this.rulesLoader = new ExternalRulesLoader(this.projectPath);
-      
+
       // Create the ModeManager with the rules loader
       this.modeManager = new ModeManager(this.rulesLoader);
-      
+
       // Initialize with the specified mode or default
       await this.modeManager.initialize(initialMode || 'code');
-      
+
       // Set memory bank status if memory bank is initialized
       if (this.memoryBankDir) {
         this.modeManager.setMemoryBankStatus('ACTIVE');
       }
-      
+
       logger.info('MemoryBankManager', `Mode manager initialized with mode: ${this.modeManager.getCurrentModeState().name}`);
     } catch (error) {
       logger.error('MemoryBankManager', `Error initializing mode manager: ${error}`);
