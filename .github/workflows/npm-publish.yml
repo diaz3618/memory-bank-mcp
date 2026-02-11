@@ -1,21 +1,11 @@
 name: Publish to NPM
 
+# Trigger only on version tag pushes (created by `npm run release`)
+# Regular commits to main will NOT trigger this workflow
 on:
   push:
-    branches:
-      - main
-  workflow_dispatch:
-    inputs:
-      version_bump:
-        description: 'Version bump type'
-        required: false
-        default: 'auto'
-        type: choice
-        options:
-          - auto
-          - patch
-          - minor
-          - major
+    tags:
+      - 'v*'
 
 permissions:
   contents: write
@@ -23,27 +13,12 @@ permissions:
   id-token: write
 
 jobs:
-  build:
-    runs-on: ubuntu-latest
-    # Skip CI on release commits made by standard-version
-    if: "!contains(github.event.head_commit.message, '[skip ci]')"
-    steps:
-      - uses: actions/checkout@v4
-      - uses: oven-sh/setup-bun@v1
-        with:
-          bun-version: latest
-      - run: bun install
-      - run: bun run build
-      - run: bun test
-
   publish-npm:
-    needs: build
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          token: ${{ secrets.GITHUB_TOKEN }}
       - uses: oven-sh/setup-bun@v1
         with:
           bun-version: latest
@@ -53,64 +28,28 @@ jobs:
           registry-url: 'https://registry.npmjs.org'
       - run: bun install
       - run: bun run build
-      - name: Configure Git
+      - run: bun test
+
+      - name: Extract version from tag
+        id: get_version
         run: |
-          git config --global user.name "GitHub Actions"
-          git config --global user.email "actions@github.com"
-      - name: Generate Changelog and Bump Version
-        if: github.ref == 'refs/heads/main'
+          VERSION=${GITHUB_REF#refs/tags/v}
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+          echo "Releasing version: $VERSION"
+
+      - name: Extract changelog for this version
         run: |
-          # Determine version bump type
-          MANUAL_BUMP="${{ github.event.inputs.version_bump || 'auto' }}"
-
-          if [[ "$MANUAL_BUMP" != "auto" ]]; then
-            echo "Manual version bump: $MANUAL_BUMP"
-            npx standard-version --release-as "$MANUAL_BUMP"
-          else
-            # Auto-detect from commit message
-            COMMIT_MSG=$(git log -1 --pretty=%B)
-
-            if [[ "$COMMIT_MSG" == *"BREAKING CHANGE"* || "$COMMIT_MSG" == *"!:"* ]]; then
-              echo "Detected breaking change, bumping major version"
-              npx standard-version --release-as major
-            elif [[ "$COMMIT_MSG" == *"feat:"* || "$COMMIT_MSG" == *"feat("* ]]; then
-              echo "Detected new feature, bumping minor version"
-              npx standard-version --release-as minor
-            else
-              echo "Bumping patch version"
-              npx standard-version --release-as patch
-            fi
-          fi
-
-          # Extract the new version number and verify it was bumped
-          NEW_VERSION=$(node -p "require('./package.json').version")
-          echo "NEW_VERSION=$NEW_VERSION" >> $GITHUB_ENV
-          echo "Detected version: $NEW_VERSION"
-
-          # Verify standard-version actually modified package.json
-          if ! git diff HEAD~1 HEAD -- package.json | grep -q '"version"'; then
-            echo "::error::standard-version did not bump package.json — check .gitignore and .versionrc.json"
-            exit 1
-          fi
-
-          # Extract the current version's changelog
-          VERSION_HEADER="## \\[$NEW_VERSION\\]"
-          RELEASE_NOTES=$(awk "/^## \\[$NEW_VERSION\\]/{p=1; print; next} /^## \\[/{if(p) exit} p{print}" CHANGELOG.md)
+          VERSION_HEADER="## \\[${{ env.VERSION }}\\]"
+          RELEASE_NOTES=$(awk "/^## \\[${{ env.VERSION }}\\]/{p=1; print; next} /^## \\[/{if(p) exit} p{print}" CHANGELOG.md)
           echo "RELEASE_NOTES<<EOF" >> $GITHUB_ENV
           echo "$RELEASE_NOTES" >> $GITHUB_ENV
           echo "EOF" >> $GITHUB_ENV
 
-          # Push changes back to the repository
-          git push --follow-tags origin main
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
-        if: github.ref == 'refs/heads/main'
         with:
-          tag_name: v${{ env.NEW_VERSION }}
-          name: Release v${{ env.NEW_VERSION }}
+          tag_name: v${{ env.VERSION }}
+          name: Release v${{ env.VERSION }}
           body: ${{ env.RELEASE_NOTES }}
           draft: false
           prerelease: false
