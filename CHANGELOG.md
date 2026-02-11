@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.6.0](https://github.com/diaz3618/memory-bank-mcp/compare/v1.5.0...v1.6.0) (2026-02-11)
+
+
+### Bug Fixes
+
+* **ci:** remove [skip ci] from release commits ([80dc0e2](https://github.com/diaz3618/memory-bank-mcp/commit/80dc0e2c96ad52bfbeae7be35a41e9ba18482446))
+
 ## [1.5.0](https://github.com/diaz3618/memory-bank-mcp/compare/v1.1.4...v1.5.0) (2026-02-11)
 
 
