@@ -13,6 +13,7 @@
     "start": "bun build/index.js",
     "dev": "bun --watch src/index.ts",
     "build:start": "bun run build && bun run start",
+    "build:ext": "cd vscode-extension && npm run compile && npm run package",
     "test": "bun test",
     "test:coverage": "bun test --coverage",
     "prepublishOnly": "bun run build",
