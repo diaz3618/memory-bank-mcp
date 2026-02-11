@@ -1,23 +1,28 @@
 name: Publish to NPM
 
-# Trigger only on version tag pushes (created by `npm run release`)
-# Regular commits to main will NOT trigger this workflow
+# Trigger on version tag pushes OR manual dispatch
 on:
   push:
     tags:
       - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag to publish (e.g., v1.3.0)'
+        required: true
+        type: string
 
 permissions:
   contents: write
   packages: write
   id-token: write
 
-jobs:
   publish-npm:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
+          ref: ${{ github.event.inputs.tag || github.ref }}
           fetch-depth: 0
       - uses: oven-sh/setup-bun@v1
         with:
@@ -33,7 +38,12 @@ jobs:
       - name: Extract version from tag
         id: get_version
         run: |
-          VERSION=${GITHUB_REF#refs/tags/v}
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            VERSION=${{ github.event.inputs.tag }}
+            VERSION=${VERSION#v}
+          else
+            VERSION=${GITHUB_REF#refs/tags/v}
+          fi
           echo "VERSION=$VERSION" >> $GITHUB_ENV
           echo "Releasing version: $VERSION"
 
