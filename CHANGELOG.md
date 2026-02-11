@@ -2,6 +2,44 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.5.0](https://github.com/diaz3618/memory-bank-mcp/compare/v1.1.4...v1.5.0) (2026-02-11)
+
+
+### ⚠ BREAKING CHANGES
+
+* **ci:** CI no longer auto-versions on every push to main.
+
+- Change trigger from 'push: branches: [main]' to 'push: tags: [v*]'
+- Remove automatic standard-version execution from CI
+- Version bumps now handled locally via 'npm run release' command
+- CI only publishes to npm when version tags are pushed
+
+This fixes push rejection issues caused by CI creating competing
+version commits. Regular commits now push normally with only tests
+running (via test.yml workflow).
+
+Release workflow:
+1. Regular commit: git push (runs tests only)
+2. Create release: npm run release:patch/minor/major (local)
+3. Publish: git push --follow-tags (triggers CI publish)
+
+Note: NPM_TOKEN secret needs to be regenerated (currently expired).
+
+### Features
+
+* **agent:** add first-time Memory Bank detection and auto-initialization ([1643b37](https://github.com/diaz3618/memory-bank-mcp/commit/1643b37236f9c0a08066db4e4311715fd20a6334))
+* complete deferred knowledge-graph tasks ([06cfee2](https://github.com/diaz3618/memory-bank-mcp/commit/06cfee2bc87d8b2766357f4f821b11d9b08d65ff))
+* **ext:** graph webview, mode-sync fixes, copilot agent improvements ([bdec29c](https://github.com/diaz3618/memory-bank-mcp/commit/bdec29c17572e5f3dcd38ee85abbf991c32f93b4))
+* implement remaining knowledge graph features ([17143b8](https://github.com/diaz3618/memory-bank-mcp/commit/17143b8bde4141ce94390203058ae34b5fd3665e))
+
+
+### Bug Fixes
+
+* **ci:** change publish workflow to only trigger on tag pushes ([b57c1eb](https://github.com/diaz3618/memory-bank-mcp/commit/b57c1eb661ea5dbf15ea1531e75ee8ec7106141a))
+* **ci:** resolve standard-version not bumping package.json ([d79b32c](https://github.com/diaz3618/memory-bank-mcp/commit/d79b32cb4c6a3517de0be7ec2a5db1cf9a34a805))
+* **extension:** overhaul 8 major issues in VS Code extension ([e066716](https://github.com/diaz3618/memory-bank-mcp/commit/e066716297b085d821b83b4f6f7b1f48c4655825))
+* resolve 10 graph tool bugs preventing MCP operations ([c26d82f](https://github.com/diaz3618/memory-bank-mcp/commit/c26d82f1089035e28ef28dd998fbac5a8c5804c1))
+
 ## [1.4.0](https://github.com/diaz3618/memory-bank-mcp/compare/v1.3.0...v1.4.0) (2026-02-11)
 
 
