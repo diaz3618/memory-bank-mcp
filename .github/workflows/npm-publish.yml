@@ -17,6 +17,7 @@ permissions:
   packages: write
   id-token: write
 
+jobs:
   publish-npm:
     runs-on: ubuntu-latest
     steps:
