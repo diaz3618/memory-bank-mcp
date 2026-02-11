@@ -211,6 +211,12 @@
         "icon": "$(fold)"
       },
       {
+        "command": "memoryBank.graph.openWebview",
+        "title": "Open Graph Visualization",
+        "category": "Memory Bank",
+        "icon": "$(type-hierarchy)"
+      },
+      {
         "command": "memoryBank.digest",
         "title": "Show Context Digest",
         "category": "Memory Bank",
@@ -273,6 +279,11 @@
           "command": "memoryBank.graph.upsertEntity",
           "when": "view == memoryBank.views.graph",
           "group": "1_actions"
+        },
+        {
+          "command": "memoryBank.graph.openWebview",
+          "when": "view == memoryBank.views.graph",
+          "group": "navigation"
         },
         {
           "command": "memoryBank.graph.compact",
@@ -434,7 +445,7 @@
         ],
         "toolReferenceName": "memoryBankInstructions",
         "displayName": "Memory Bank Instructions",
-        "modelDescription": "Retrieves Memory Bank MCP usage instructions and current project context. This tool **MUST** be called at the start of EVERY coding task, before making any changes, and after completing work. The Memory Bank MCP server maintains persistent context across AI sessions. Non-negotiable: always read memory bank context before starting work, update it during work, and save progress after completing work. The tool returns the current memory bank status, active context, and instructions for using all available MCP tools (initialize_memory_bank, track_progress, update_active_context, log_decision, switch_mode, read/write files, etc.).",
+        "modelDescription": "MANDATORY project context tool. Call this tool FIRST before any code changes, file edits, or analysis. Returns the project's Memory Bank — persistent context (active tasks, progress, decisions, knowledge graph) that MUST guide your work. After completing work, call MCP tools to update context: track_progress, update_active_context, log_decision. Never skip reading context. Never skip updating context. The Memory Bank MCP server provides: get_memory_bank_status, get_context_digest, read/write_memory_bank_file, graph_search, graph_upsert_entity, and 30+ other tools for maintaining project state across sessions.",
         "userDescription": "Get Memory Bank usage instructions and current project context",
         "canBeReferencedInPrompt": true,
         "icon": "$(book)"

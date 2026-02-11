@@ -40,8 +40,14 @@ class MemoryBankInstructionsTool implements vscode.LanguageModelTool<ToolInput> 
   ): Promise<vscode.LanguageModelToolResult> {
     const parts: string[] = [];
 
-    parts.push('# Memory Bank MCP Server — Instructions\n');
-    parts.push('You MUST use the Memory Bank MCP server before, during, and after every task. This is non-negotiable.\n');
+    // ── CRITICAL: Front-load the rules so no model can miss them ───
+    parts.push('# MANDATORY: Read this ENTIRE section before proceeding\n');
+    parts.push('## Rules (violation = broken workflow)');
+    parts.push('1. BEFORE any code change → read context (done — you are reading it now)');
+    parts.push('2. DURING work → call `track_progress` after each milestone, `log_decision` for choices');
+    parts.push('3. AFTER work → call `update_active_context` with tasks/issues/nextSteps, then `track_progress` with session summary');
+    parts.push('4. If active-context.md or progress.md contain placeholder text like `[Task 1]` → stop and initialize (see below)');
+    parts.push('5. Never skip steps 1-3. Ever.\n');
 
     // ── Live status ────────────────────────────────────────────────
     let isConnected = false;
@@ -51,15 +57,12 @@ class MemoryBankInstructionsTool implements vscode.LanguageModelTool<ToolInput> 
       const status = await ext.memoryBankService.getStatus();
       if (status) {
         isConnected = true;
-        parts.push('## Current Status\n');
-        parts.push(`- Path: ${status.path || 'Not set'}`);
-        parts.push(`- Complete: ${status.isComplete ? 'Yes' : 'No'}`);
-        parts.push(`- Files: ${status.files?.length ?? 'unknown'}\n`);
+        parts.push(`## Project Status`);
+        parts.push(`Path: ${status.path || 'Not set'} | Files: ${status.files?.length ?? '?'} | Complete: ${status.isComplete ? 'Yes' : 'No'}`);
 
         const mode = await ext.memoryBankService.getCurrentMode();
-        if (mode) {
-          parts.push(`- Active Mode: ${mode}\n`);
-        }
+        if (mode) { parts.push(`Mode: ${mode}`); }
+        parts.push('');
 
         // Read core files and detect placeholders
         let activeCtx: string | undefined;
@@ -70,105 +73,60 @@ class MemoryBankInstructionsTool implements vscode.LanguageModelTool<ToolInput> 
         try { progress = await ext.memoryBankService.readFile('progress.md'); } catch { /* */ }
         try { productCtx = await ext.memoryBankService.readFile('product-context.md'); } catch { /* */ }
 
-        // Check whether any core file still has placeholder content
         isFresh = [activeCtx, progress, productCtx].some(
           (c) => c !== undefined && this.hasPlaceholders(c),
         );
 
         if (isFresh) {
-          parts.push('## ⚠ FRESH MEMORY BANK DETECTED — Initialization Required\n');
-          parts.push('The core files still contain default placeholder text.');
-          parts.push('You MUST populate them with real project data **before doing anything else**.\n');
+          parts.push('## ⚠ STOP — Memory Bank needs initialization\n');
+          parts.push('Files contain placeholder text. You MUST populate them before any other work:');
+          parts.push('1. Scan workspace (package.json, README, source tree, configs)');
+          parts.push('2. `write_memory_bank_file` for: product-context.md, active-context.md, progress.md, decision-log.md, system-patterns.md');
+          parts.push('3. `graph_upsert_entity` + `graph_link_entities` for major components');
+          parts.push('4. `add_session_note` → "Memory Bank initialized from workspace analysis."\n');
         }
 
-        if (activeCtx) {
+        if (activeCtx && !this.hasPlaceholders(activeCtx)) {
           parts.push('## Active Context\n');
           parts.push(activeCtx);
           parts.push('');
         }
 
-        if (progress) {
-          parts.push('## Progress\n');
-          parts.push(progress);
+        if (progress && !this.hasPlaceholders(progress)) {
+          // Show only last ~30 lines to keep output manageable
+          const lines = progress.split('\n');
+          const trimmed = lines.length > 40 ? lines.slice(-30) : lines;
+          parts.push('## Recent Progress\n');
+          if (lines.length > 40) { parts.push('*(showing last 30 lines)*\n'); }
+          parts.push(trimmed.join('\n'));
           parts.push('');
         }
       } else {
-        parts.push('## Status: Not Connected\n');
-        parts.push('The Memory Bank server is not currently connected. Ask the user to connect via the Memory Bank sidebar.\n');
+        parts.push('## Status: NOT CONNECTED');
+        parts.push('Use the Memory Bank sidebar to connect the MCP server.\n');
       }
     } catch {
       parts.push('## Status: Error reading Memory Bank\n');
-      parts.push('Could not read Memory Bank status. The server may not be connected.\n');
     }
 
-    // ── First-time initialization instructions ─────────────────────
-    if (isConnected && isFresh) {
-      parts.push('## First-Time Initialization Procedure\n');
-      parts.push('Complete ALL of the following steps before proceeding with any other work:\n');
-      parts.push('1. **Analyze the project** — Scan the workspace:');
-      parts.push('   - Read `package.json`, `README.md`, config files, source directory structure');
-      parts.push('   - Identify language, framework, purpose, dependencies, and patterns\n');
-      parts.push('2. **Fill `product-context.md`** via `write_memory_bank_file`:');
-      parts.push('   - Real project description, objectives, technologies, architecture, structure\n');
-      parts.push('3. **Fill `active-context.md`** — Current tasks, known issues, next steps from codebase\n');
-      parts.push('4. **Fill `progress.md`** — Observable milestones, today\'s date, pending work\n');
-      parts.push('5. **Fill `decision-log.md`** — Visible tech decisions (language, build tool, patterns)\n');
-      parts.push('6. **Fill `system-patterns.md`** — Architecture, code, documentation, and testing patterns\n');
-      parts.push('7. **Populate knowledge graph** — `graph_upsert_entity`, `graph_add_observation`, `graph_link_entities` for major components\n');
-      parts.push('8. **Confirm** — Call `add_session_note` with: "Memory Bank initialized with project data from workspace analysis."\n');
-      parts.push('After initialization is complete, follow the Normal Workflow below.\n');
+    // ── Workflow (compact) ─────────────────────────────────────────
+    if (isConnected && !isFresh) {
+      parts.push('## Workflow Reminder');
+      parts.push('**Before:** Context loaded (above). Review it. Use `graph_search` if you need entity details.');
+      parts.push('**During:** `track_progress` after milestones · `log_decision` for choices · `add_session_note` for blockers/observations');
+      parts.push('**After:** `update_active_context` (tasks, issues, nextSteps) · final `track_progress` summary · update graph entities\n');
     }
 
-    // ── Normal workflow ────────────────────────────────────────────
-    parts.push('## Normal Workflow\n');
-    parts.push('### Before Starting Any Task');
-    parts.push('1. Call `get_context_bundle` or `get_context_digest` to load context');
-    parts.push('2. Read `active-context.md` and `progress.md` to understand current state');
-    parts.push('3. Review the knowledge graph with `graph_search` for relevant entities\n');
-    parts.push('### During Work');
-    parts.push('- `track_progress` — log milestones and progress');
-    parts.push('- `log_decision` — record architectural / design decisions');
-    parts.push('- `add_session_note` — observations, blockers, questions');
-    parts.push('- `update_active_context` — keep tasks and issues current');
-    parts.push('- Update knowledge graph entities and relationships as the project evolves\n');
-    parts.push('### After Completing Work');
-    parts.push('- Update `active-context.md` with what was done and next steps');
-    parts.push('- Track final progress entry summarizing the session');
-    parts.push('- Ensure all decisions are logged');
-    parts.push('- Update knowledge graph entities with any new observations\n');
-
-    // ── Tool catalogue ─────────────────────────────────────────────
-    parts.push('## Available MCP Tools\n');
-    parts.push('### Core');
-    parts.push('- `initialize_memory_bank` — Initialize at a path');
-    parts.push('- `get_memory_bank_status` — Check current status');
-    parts.push('- `read_memory_bank_file` / `write_memory_bank_file` — Read/write individual files');
-    parts.push('- `batch_read_files` / `batch_write_files` — Read/write multiple files at once');
-    parts.push('- `list_memory_bank_files` — List all files');
-    parts.push('- `get_context_bundle` — Read all core files at once');
-    parts.push('- `get_context_digest` — Compact summary (includes graph summary)');
-    parts.push('- `search_memory_bank` — Full-text search across all files');
-    parts.push('- `track_progress` — Log progress');
-    parts.push('- `add_progress_entry` — Structured entry (feature/fix/refactor/docs/test/chore)');
-    parts.push('- `log_decision` — Record decisions with rationale and alternatives');
-    parts.push('- `update_active_context` — Update tasks, issues, next steps');
-    parts.push('- `update_tasks` — Add, remove, or replace tasks');
-    parts.push('- `add_session_note` — Timestamped note (observation/blocker/question/decision/todo)');
-    parts.push('- `switch_mode` / `get_current_mode` — Mode management');
-    parts.push('- `create_backup` / `list_backups` / `restore_backup` — Backup management');
-    parts.push('### Knowledge Graph');
-    parts.push('- `graph_upsert_entity` — Create or update entities');
-    parts.push('- `graph_add_observation` — Add observations to entities');
-    parts.push('- `graph_link_entities` / `graph_unlink_entities` — Manage relationships');
-    parts.push('- `graph_delete_entity` — Delete an entity and its relations');
-    parts.push('- `graph_delete_observation` — Delete a specific observation');
-    parts.push('- `graph_search` — Search entities, observations, and relations');
-    parts.push('- `graph_open_nodes` — Get subgraph by entity names');
-    parts.push('- `graph_rebuild` — Rebuild snapshot from event log');
-    parts.push('- `graph_compact` — Compact event log (reduces file size)');
-    parts.push('### Stores');
-    parts.push('- `list_stores` — List available stores');
-    parts.push('- `select_store` — Switch active store');
+    // ── Tool reference (compact table) ─────────────────────────────
+    parts.push('## MCP Tool Reference');
+    parts.push('**Context:** get_context_digest, get_context_bundle, get_memory_bank_status, read/write_memory_bank_file, batch_read/write_files, search_memory_bank');
+    parts.push('**Progress:** track_progress, add_progress_entry, update_active_context, update_tasks, add_session_note, log_decision');
+    parts.push('**Graph:** graph_search, graph_open_nodes, graph_upsert_entity, graph_add_observation, graph_link/unlink_entities, graph_delete_entity, graph_compact');
+    parts.push('**Other:** switch_mode, get_current_mode, list_stores, select_store, initialize_memory_bank, create/restore_backup');
+    parts.push('');
+    parts.push('## Valid Modes');
+    parts.push('Only 5 modes exist: **architect**, **code**, **ask**, **debug**, **test**.');
+    parts.push('There is NO "full" mode. All tools work in every mode — modes control behavioral guidelines, not tool access.');
 
     return new vscode.LanguageModelToolResult([
       new vscode.LanguageModelTextPart(parts.join('\n')),

@@ -1,0 +1,189 @@
+/* Graph Webview — Styles
+ *
+ * Uses VS Code CSS custom properties so it follows the active color theme.
+ */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  height: 100%;
+  overflow: hidden;
+  font-family: var(--vscode-font-family, sans-serif);
+  font-size: var(--vscode-font-size, 13px);
+  color: var(--vscode-foreground);
+  background: var(--vscode-editor-background);
+}
+
+/* ── Toolbar ─────────────────────────────────────────────────── */
+
+#toolbar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  background: var(--vscode-sideBar-background, var(--vscode-editor-background));
+  border-bottom: 1px solid var(--vscode-panel-border, #333);
+}
+
+#search-input {
+  flex: 1;
+  max-width: 300px;
+  padding: 4px 8px;
+  border: 1px solid var(--vscode-input-border, #3c3c3c);
+  border-radius: 4px;
+  background: var(--vscode-input-background, #1e1e1e);
+  color: var(--vscode-input-foreground, #ccc);
+  outline: none;
+}
+
+#search-input:focus {
+  border-color: var(--vscode-focusBorder, #007acc);
+}
+
+#toolbar button {
+  padding: 4px 10px;
+  border: 1px solid var(--vscode-button-border, transparent);
+  border-radius: 4px;
+  background: var(--vscode-button-secondaryBackground, #3a3d41);
+  color: var(--vscode-button-secondaryForeground, #ccc);
+  cursor: pointer;
+  font-size: 13px;
+}
+
+#toolbar button:hover {
+  background: var(--vscode-button-secondaryHoverBackground, #45494e);
+}
+
+#loading-indicator {
+  margin-left: auto;
+  font-size: 12px;
+  color: var(--vscode-descriptionForeground, #888);
+}
+
+.hidden { display: none !important; }
+
+/* ── Main layout ─────────────────────────────────────────────── */
+
+#main {
+  display: flex;
+  height: calc(100% - 38px);
+}
+
+#cy-container {
+  flex: 1;
+  min-width: 0;
+}
+
+/* ── Inspector panel ─────────────────────────────────────────── */
+
+#inspector {
+  width: 280px;
+  min-width: 200px;
+  padding: 12px;
+  overflow-y: auto;
+  border-left: 1px solid var(--vscode-panel-border, #333);
+  background: var(--vscode-sideBar-background, var(--vscode-editor-background));
+}
+
+#inspector h3 {
+  font-size: 15px;
+  margin-bottom: 4px;
+  word-break: break-word;
+}
+
+#inspector h4 {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--vscode-descriptionForeground, #888);
+  margin-top: 12px;
+  margin-bottom: 4px;
+}
+
+#inspector .muted {
+  font-size: 12px;
+  color: var(--vscode-descriptionForeground, #888);
+  margin-bottom: 8px;
+}
+
+#inspector ul {
+  list-style: none;
+  padding: 0;
+}
+
+#inspector li {
+  padding: 3px 0;
+  font-size: 12px;
+  border-bottom: 1px solid var(--vscode-panel-border, #2a2a2a);
+  word-break: break-word;
+}
+
+#inspector li .obs-time {
+  display: block;
+  font-size: 10px;
+  color: var(--vscode-descriptionForeground, #666);
+}
+
+#inspector li .rel-arrow {
+  color: var(--vscode-descriptionForeground, #888);
+}
+
+/* ── Inspector actions ───────────────────────────────────────── */
+
+#insp-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 12px;
+}
+
+#insp-actions button {
+  padding: 3px 8px;
+  font-size: 11px;
+  border: 1px solid var(--vscode-button-border, transparent);
+  border-radius: 3px;
+  background: var(--vscode-button-secondaryBackground, #3a3d41);
+  color: var(--vscode-button-secondaryForeground, #ccc);
+  cursor: pointer;
+}
+
+#insp-actions button:hover {
+  background: var(--vscode-button-secondaryHoverBackground, #45494e);
+}
+
+#insp-actions button.danger {
+  background: var(--vscode-inputValidation-errorBackground, #5a1d1d);
+  color: var(--vscode-errorForeground, #f48771);
+}
+
+#insp-actions button.danger:hover {
+  opacity: 0.85;
+}
+
+/* ── Attrs table ─────────────────────────────────────────────── */
+
+#insp-attrs {
+  font-size: 12px;
+}
+
+#insp-attrs table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+#insp-attrs td {
+  padding: 2px 4px;
+  border-bottom: 1px solid var(--vscode-panel-border, #2a2a2a);
+}
+
+#insp-attrs td:first-child {
+  font-weight: 600;
+  width: 40%;
+  color: var(--vscode-descriptionForeground, #888);
+}
