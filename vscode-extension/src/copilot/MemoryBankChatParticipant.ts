@@ -11,6 +11,13 @@ import { ext } from '../extensionVariables';
 
 const PARTICIPANT_ID = 'memoryBank.agent';
 
+/**
+ * Regex matching default template placeholders from CoreTemplates.ts.
+ * If any core file matches, the Memory Bank is still uninitialized.
+ */
+const PLACEHOLDER_RE =
+  /\[(?:Project description|Objective \d|Task \d|Technology \d|Architecture description|Issue \d|Milestone \d|Date|Context|Decision|Alternatives|Consequences|Architecture patterns description|Code patterns description|Documentation patterns description|Next step \d|Note \d|Update)\]/;
+
 export function registerChatParticipant(context: vscode.ExtensionContext): void {
   const participant = vscode.chat.createChatParticipant(PARTICIPANT_ID, handler);
 
@@ -47,6 +54,26 @@ async function handler(
   }
 }
 
+/**
+ * Returns true when any core Memory Bank file still contains default
+ * template placeholders (i.e. the Memory Bank has never been populated
+ * with real project data).
+ */
+async function isFreshMemoryBank(): Promise<boolean> {
+  const filesToCheck = ['product-context.md', 'active-context.md', 'progress.md'];
+  for (const name of filesToCheck) {
+    try {
+      const content = await ext.memoryBankService.readFile(name);
+      if (content && PLACEHOLDER_RE.test(content)) {
+        return true;
+      }
+    } catch {
+      // File may not exist — skip
+    }
+  }
+  return false;
+}
+
 async function handleStatus(
   stream: vscode.ChatResponseStream,
   _token: vscode.CancellationToken,
@@ -55,6 +82,15 @@ async function handleStatus(
   if (!status) {
     stream.markdown('Memory Bank is **not connected**. Use the sidebar to connect and initialize.');
     return { metadata: { command: 'status' } };
+  }
+
+  // Detect fresh/placeholder content
+  const fresh = await isFreshMemoryBank();
+  if (fresh) {
+    stream.markdown('## ⚠ Fresh Memory Bank — Initialization Required\n\n');
+    stream.markdown('The core files still contain **placeholder text**. ');
+    stream.markdown('Ask Copilot to analyze the workspace and populate the Memory Bank before starting work.\n\n');
+    stream.markdown('> Example: *"Read the project and fill all Memory Bank files with real data"*\n\n');
   }
 
   stream.markdown(`## Memory Bank Status\n\n`);
@@ -148,6 +184,12 @@ async function handleDefault(
     // Always include current status
     const status = await ext.memoryBankService.getStatus();
     if (status) {
+      // Warn about fresh MB
+      const fresh = await isFreshMemoryBank();
+      if (fresh) {
+        stream.markdown('> **⚠ The Memory Bank still contains placeholder data.** Ask Copilot to analyze the workspace and populate all files before starting work.\n\n');
+      }
+
       stream.markdown(`**Current status:** ${status.isComplete ? 'Active' : 'Incomplete'} | **Path:** ${status.path || 'Not set'}\n\n`);
       
       // Include active context for the AI

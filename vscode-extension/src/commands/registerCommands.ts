@@ -655,47 +655,110 @@ const COPILOT_INSTRUCTIONS_CONTENT = `# Memory Bank MCP — Copilot Instructions
 You MUST use the Memory Bank MCP server tools at the start and end of EVERY coding task.
 This is mandatory — no exceptions. The Memory Bank maintains persistent context across sessions.
 
-## Workflow
+## First-Time Setup (Fresh Memory Bank Detection)
+
+Before any work begins, check whether the Memory Bank has been populated with real project data.
+
+### How to detect a fresh/uninitialized Memory Bank
+1. Call \`get_memory_bank_status\` to verify the Memory Bank is active.
+2. Call \`get_context_bundle\` to read all core files.
+3. If any file still contains **placeholder text** from the default templates (e.g. \`[Project description]\`, \`[Objective 1]\`, \`[Task 1]\`, \`[Technology 1]\`, \`[Architecture description]\`, \`[Issue 1]\`, \`[Milestone 1]\`, \`[Date]\`, \`[Context]\`, \`[Decision]\`, \`[Architecture patterns description]\`), the Memory Bank is uninitialized.
+
+### How to initialize with real project data
+When you detect placeholder content, you MUST populate all five core files before doing anything else:
+
+1. **Analyze the project** — Scan the workspace to understand:
+   - What the project is (language, framework, purpose)
+   - Directory structure and key files (\`package.json\`, \`README.md\`, config files, source layout)
+   - Technologies, dependencies, and patterns used
+   - Current state (any existing tests, CI, issues)
+
+2. **Fill \`product-context.md\`** — Use \`write_memory_bank_file\` to replace placeholder content with:
+   - Accurate project description
+   - Real objectives and goals
+   - Actual technologies and dependencies
+   - Architecture description based on the codebase
+   - Project structure overview
+
+3. **Fill \`active-context.md\`** — Write realistic current context:
+   - Any visible ongoing work or TODO items found in the code
+   - Known issues from the codebase (lint errors, TODOs, FIXMEs)
+   - Logical next steps based on the project state
+
+4. **Fill \`progress.md\`** — Write with what's observable:
+   - Milestones that appear already completed (e.g. "Initial project setup")
+   - Use today's date for the initialization entry
+   - List any pending milestones you can infer
+
+5. **Fill \`decision-log.md\`** — Record observable technical decisions:
+   - Language/framework choice
+   - Build tool or bundler choice
+   - Any architectural patterns visible in the code
+
+6. **Fill \`system-patterns.md\`** — Document patterns found in the codebase:
+   - Architecture patterns (e.g. MVC, event-driven, microservices)
+   - Code patterns (e.g. dependency injection, repository pattern)
+   - Documentation and testing patterns
+
+7. **Populate the knowledge graph** — Create entities for key project components:
+   - Use \`graph_upsert_entity\` for major modules, services, and concepts
+   - Use \`graph_add_observation\` for facts about each entity
+   - Use \`graph_link_entities\` for relationships (depends-on, uses, part-of)
+
+8. **Confirm completion** — Call \`add_session_note\` with: "Memory Bank initialized with project data from workspace analysis."
+
+After initialization is complete, proceed with the normal workflow below.
+
+## Normal Workflow (After Initialization)
 
 ### Before Starting Any Task
-1. Call \`memory-bank_get-instructions\` to load current context (or use #memoryBankInstructions)
+1. Call \`get_context_bundle\` or \`get_context_digest\` to load current context
 2. Read \`active-context.md\` and \`progress.md\` to understand current state
-3. Review the knowledge graph for relevant entities
+3. Review the knowledge graph with \`graph_search\` for relevant entities
 
 ### During Work
 - Use \`track_progress\` to log milestones and progress
 - Use \`log_decision\` for architectural or design decisions
 - Use \`add_session_note\` for observations, blockers, or questions
-- Use knowledge graph tools to update entities and relationships
+- Use \`update_active_context\` to keep tasks and issues current
+- Use knowledge graph tools to update entities and relationships as the project evolves
 
 ### After Completing Work
 - Update \`active-context.md\` with what was done and next steps
 - Track final progress entry summarizing the session
 - Ensure all decisions are logged
+- Update knowledge graph entities with any new observations
 
 ## Available MCP Tools
 
 ### Core Tools
 - \`initialize_memory_bank\` — Initialize at a path
 - \`get_memory_bank_status\` — Check current status
-- \`read_memory_bank_file\` / \`write_memory_bank_file\` — Read/write files
+- \`read_memory_bank_file\` / \`write_memory_bank_file\` — Read/write individual files
+- \`batch_read_files\` / \`batch_write_files\` — Read/write multiple files at once
 - \`list_memory_bank_files\` — List all files
 - \`get_context_bundle\` — Read all core files at once
-- \`get_context_digest\` — Compact summary
-- \`search_memory_bank\` — Full-text search
-- \`track_progress\` — Log progress with type, summary, details
-- \`log_decision\` — Record decisions with rationale
+- \`get_context_digest\` — Compact summary (includes knowledge graph summary)
+- \`search_memory_bank\` — Full-text search across all files
+- \`track_progress\` — Log progress with type, summary, details, tags
+- \`add_progress_entry\` — Structured progress entry (feature/fix/refactor/docs/test/chore)
+- \`log_decision\` — Record decisions with rationale and alternatives
 - \`update_active_context\` — Update tasks, issues, next steps
-- \`add_session_note\` — Add timestamped notes
+- \`update_tasks\` — Add, remove, or replace tasks
+- \`add_session_note\` — Add timestamped notes (observation/blocker/question/decision/todo)
 - \`switch_mode\` / \`get_current_mode\` — Mode management
+- \`create_backup\` / \`list_backups\` / \`restore_backup\` — Backup management
 
 ### Knowledge Graph Tools
 - \`graph_upsert_entity\` — Create or update entities
 - \`graph_add_observation\` — Add observations to entities
 - \`graph_link_entities\` / \`graph_unlink_entities\` — Manage relationships
-- \`graph_search\` — Search entities and relations (use "*" for all)
-- \`graph_open_nodes\` — Get subgraph by entity names
-- \`graph_rebuild\` — Rebuild graph snapshot
+- \`graph_delete_entity\` — Delete an entity and its observations/relations
+- \`graph_delete_observation\` — Delete a specific observation
+- \`graph_search\` — Search entities, observations, and relations
+- \`graph_open_nodes\` — Get subgraph by entity names with neighborhood
+- \`graph_rebuild\` — Rebuild graph snapshot from event log
+- \`graph_compact\` — Compact event log (reduces file size, preserves state)
 
 ### Store Tools
 - \`list_stores\` — List available Memory Bank stores
