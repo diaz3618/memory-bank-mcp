@@ -1,6 +1,6 @@
 {
   "name": "@diazstg/memory-bank-mcp",
-  "version": "1.6.0",
+  "version": "1.7.0",
   "description": "MCP Server for managing Memory Bank with remote server support",
   "type": "module",
   "main": "build/index.js",

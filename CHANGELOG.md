@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.7.0](https://github.com/diaz3618/memory-bank-mcp/compare/v1.6.0...v1.7.0) (2026-02-12)
+
+
+### Features
+
+* **ci:** add workflow_dispatch for manual release publishing ([d7a7a63](https://github.com/diaz3618/memory-bank-mcp/commit/d7a7a63e3cf5d5d906ee90eea58ae04e0aed5372))
+
+
+### Bug Fixes
+
+* **ci:** add missing jobs key in workflow file ([06b5452](https://github.com/diaz3618/memory-bank-mcp/commit/06b545275b345586d804526e51257cb39ec570fe))
+* **ci:** add scope to setup-node for organization auth ([4683d52](https://github.com/diaz3618/memory-bank-mcp/commit/4683d52deaa2fc1214b3bdc43cfa2d2e3f695a6e))
+
 ## [1.6.0](https://github.com/diaz3618/memory-bank-mcp/compare/v1.5.0...v1.6.0) (2026-02-11)
 
 
