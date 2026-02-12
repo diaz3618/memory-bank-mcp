@@ -76,7 +76,7 @@ export interface DeleteNodeMessage {
 export interface AddRelationMessage {
   type: 'addRelation';
   fromId: string;
-  toId: string;
+  toId?: string;
 }
 
 export interface LoadGraphMessage {
@@ -87,6 +87,35 @@ export interface RebuildGraphMessage {
   type: 'rebuild';
 }
 
+/** Create or update an entity */
+export interface UpsertEntityMessage {
+  type: 'upsertEntity';
+  name: string;
+  entityType: string;
+}
+
+/** Add observation to an entity */
+export interface AddObservationMessage {
+  type: 'addObservation';
+  entity: string;
+  text: string;
+}
+
+/** Link two entities */
+export interface LinkEntitiesMessage {
+  type: 'linkEntities';
+  from: string;
+  to: string;
+  relationType: string;
+}
+
+/** Duplicate an entity */
+export interface DuplicateEntityMessage {
+  type: 'duplicateEntity';
+  entityId: string;
+  newName: string;
+}
+
 export type WebviewMessage =
   | SearchMessage
   | NodeSelectedMessage
@@ -94,6 +123,10 @@ export type WebviewMessage =
   | DeleteNodeMessage
   | AddRelationMessage
   | LoadGraphMessage
-  | RebuildGraphMessage;
+  | RebuildGraphMessage
+  | UpsertEntityMessage
+  | AddObservationMessage
+  | LinkEntitiesMessage
+  | DuplicateEntityMessage;
 
 export type ExtensionMessage = GraphDataMessage;

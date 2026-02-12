@@ -21,7 +21,11 @@ type WebviewMessage =
   | { type: 'expandNode'; nodeId: string }
   | { type: 'deleteNode'; nodeId: string }
   | { type: 'addRelation'; fromId: string; toId?: string }
-  | { type: 'rebuild' };
+  | { type: 'rebuild' }
+  | { type: 'upsertEntity'; name: string; entityType: string }
+  | { type: 'addObservation'; entity: string; text: string }
+  | { type: 'linkEntities'; from: string; to: string; relationType: string }
+  | { type: 'duplicateEntity'; entityId: string; newName: string };
 
 /** Entity node data for React Flow */
 interface EntityNodeData {
@@ -151,11 +155,25 @@ export class GraphWebviewPanel implements vscode.Disposable {
         case 'rebuild':
           await this.handleRebuild();
           break;
+        case 'upsertEntity':
+          await this.handleUpsertEntity(msg.name, msg.entityType);
+          break;
+        case 'addObservation':
+          await this.handleAddObservation(msg.entity, msg.text);
+          break;
+        case 'linkEntities':
+          await this.handleLinkEntitiesFromWebview(msg.from, msg.to, msg.relationType);
+          break;
+        case 'duplicateEntity':
+          await this.handleDuplicateEntity(msg.entityId, msg.newName);
+          break;
       }
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       ext.outputChannel.appendLine(`Graph webview error: ${message}`);
       vscode.window.showErrorMessage(`Graph error: ${message}`);
+      // Reload graph to recover from error state
+      await this.loadInitialData();
     }
   }
 
@@ -230,6 +248,57 @@ export class GraphWebviewPanel implements vscode.Disposable {
     // Reload graph after rebuild
     await this.loadInitialData();
     vscode.window.showInformationMessage('Graph rebuilt successfully');
+  }
+
+  private async handleUpsertEntity(name: string, entityType: string): Promise<void> {
+    const client = await ext.mcpClientManager.getClient();
+    await client.graphUpsertEntity({ name, entityType });
+    await this.loadInitialData();
+    vscode.window.showInformationMessage(`Entity "${name}" created/updated.`);
+  }
+
+  private async handleAddObservation(entity: string, text: string): Promise<void> {
+    const client = await ext.mcpClientManager.getClient();
+    await client.graphAddObservation({ entity, text });
+    vscode.window.showInformationMessage(`Observation added to "${entity}".`);
+  }
+
+  private async handleLinkEntitiesFromWebview(from: string, to: string, relationType: string): Promise<void> {
+    const client = await ext.mcpClientManager.getClient();
+    await client.graphLinkEntities({ from, to, relationType });
+    await this.loadInitialData();
+    vscode.window.showInformationMessage(`Linked "${from}" → "${to}" (${relationType})`);
+  }
+
+  private async handleDuplicateEntity(entityId: string, newName: string): Promise<void> {
+    const client = await ext.mcpClientManager.getClient();
+    
+    // Get the original entity data
+    const searchResult = await client.graphSearch({ query: entityId, limit: 1 });
+    const originalEntity = searchResult.entities?.find(e => e.name === entityId);
+    
+    if (!originalEntity) {
+      throw new Error(`Entity "${entityId}" not found`);
+    }
+
+    // Create new entity with same type
+    await client.graphUpsertEntity({
+      name: newName,
+      entityType: originalEntity.entityType,
+    });
+
+    // Copy observations if any
+    if (originalEntity.observations && originalEntity.observations.length > 0) {
+      for (const obs of originalEntity.observations) {
+        await client.graphAddObservation({
+          entity: newName,
+          text: obs.text,
+        });
+      }
+    }
+
+    await this.loadInitialData();
+    vscode.window.showInformationMessage(`Entity "${newName}" created as copy of "${entityId}".`);
   }
 
   // ── Data transformation ──────────────────────────────────────────
