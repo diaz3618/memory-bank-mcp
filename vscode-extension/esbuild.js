@@ -5,7 +5,8 @@ const production = process.argv.includes('--production');
 const watch = process.argv.includes('--watch');
 
 async function main() {
-  const ctx = await esbuild.context({
+  // Extension bundle (Node.js)
+  const extensionCtx = await esbuild.context({
     entryPoints: ['src/extension.ts'],
     bundle: true,
     format: 'cjs',
@@ -18,12 +19,40 @@ async function main() {
     logLevel: 'info',
   });
 
+  // Webview bundle (Browser/React)
+  const webviewCtx = await esbuild.context({
+    entryPoints: ['src/webview/graph/index.tsx'],
+    bundle: true,
+    format: 'iife',
+    minify: production,
+    sourcemap: !production,
+    sourcesContent: false,
+    platform: 'browser',
+    outfile: 'dist/webview/graph.js',
+    loader: {
+      '.tsx': 'tsx',
+      '.ts': 'ts',
+      '.jsx': 'jsx',
+      '.js': 'js',
+    },
+    logLevel: 'info',
+  });
+
   if (watch) {
-    await ctx.watch();
+    await Promise.all([
+      extensionCtx.watch(),
+      webviewCtx.watch(),
+    ]);
     console.log('[watch] build started');
   } else {
-    await ctx.rebuild();
-    await ctx.dispose();
+    await Promise.all([
+      extensionCtx.rebuild(),
+      webviewCtx.rebuild(),
+    ]);
+    await Promise.all([
+      extensionCtx.dispose(),
+      webviewCtx.dispose(),
+    ]);
   }
 }
 
