@@ -100,17 +100,18 @@ function KnowledgeGraphInner() {
     [nodes, edges, setNodes, setEdges, fitView]
   );
 
-  // Auto layout - re-apply current layout
+  // Auto layout - apply LR layout for best organization
   const handleAutoLayout = useCallback(() => {
-    const { nodes: relayoutedNodes, edges: relayoutedEdges } = relayout(
+    setLayoutDirection('LR');
+    const { nodes: relayoutedNodes, edges: relayoutedEdges } = getLayoutedElements(
       nodes,
       edges,
-      layoutDirection
+      { direction: 'LR' }
     );
     setNodes(relayoutedNodes);
     setEdges(relayoutedEdges);
     setTimeout(() => fitView({ padding: 0.4, duration: 400 }), 100);
-  }, [nodes, edges, layoutDirection, setNodes, setEdges, fitView]);
+  }, [nodes, edges, setNodes, setEdges, fitView]);
 
   // Handle edge connections
   const onConnect: OnConnect = useCallback(
