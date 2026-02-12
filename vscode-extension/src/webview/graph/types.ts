@@ -27,11 +27,17 @@ export type EntityNode = Node<EntityNodeData, 'entity'>;
 export type AppNode = EntityNode;
 
 /**
+ * Edge style type options
+ */
+export type EdgeStyleType = 'smoothstep' | 'bezier' | 'straight';
+
+/**
  * Relation edge data structure
  */
 export interface RelationEdgeData extends Record<string, unknown> {
   relationType: string;
   label?: string;
+  edgeType?: EdgeStyleType;
 }
 
 /**
@@ -116,6 +122,41 @@ export interface DuplicateEntityMessage {
   newName: string;
 }
 
+// Request types - prompt user via native VSCode dialogs
+export interface RequestCreateEntityMessage {
+  type: 'requestCreateEntity';
+}
+
+export interface RequestAddObservationMessage {
+  type: 'requestAddObservation';
+  entity?: string;
+}
+
+export interface RequestLinkEntitiesMessage {
+  type: 'requestLinkEntities';
+  from?: string;
+}
+
+export interface RequestDuplicateEntityMessage {
+  type: 'requestDuplicateEntity';
+  entityId: string;
+}
+
+export interface RequestDeleteEntityMessage {
+  type: 'requestDeleteEntity';
+  entityId: string;
+}
+
+export interface RequestRenameEntityMessage {
+  type: 'requestRenameEntity';
+  entityId: string;
+}
+
+export interface ShowErrorMessage {
+  type: 'showError';
+  message: string;
+}
+
 export type WebviewMessage =
   | SearchMessage
   | NodeSelectedMessage
@@ -127,6 +168,13 @@ export type WebviewMessage =
   | UpsertEntityMessage
   | AddObservationMessage
   | LinkEntitiesMessage
-  | DuplicateEntityMessage;
+  | DuplicateEntityMessage
+  | RequestCreateEntityMessage
+  | RequestAddObservationMessage
+  | RequestLinkEntitiesMessage
+  | RequestDuplicateEntityMessage
+  | RequestDeleteEntityMessage
+  | RequestRenameEntityMessage
+  | ShowErrorMessage;
 
 export type ExtensionMessage = GraphDataMessage;

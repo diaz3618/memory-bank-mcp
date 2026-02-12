@@ -25,7 +25,15 @@ type WebviewMessage =
   | { type: 'upsertEntity'; name: string; entityType: string }
   | { type: 'addObservation'; entity: string; text: string }
   | { type: 'linkEntities'; from: string; to: string; relationType: string }
-  | { type: 'duplicateEntity'; entityId: string; newName: string };
+  | { type: 'duplicateEntity'; entityId: string; newName: string }
+  // Request types - prompt user via native VSCode dialogs
+  | { type: 'requestCreateEntity' }
+  | { type: 'requestAddObservation'; entity?: string }
+  | { type: 'requestLinkEntities'; from?: string }
+  | { type: 'requestDuplicateEntity'; entityId: string }
+  | { type: 'requestDeleteEntity'; entityId: string }
+  | { type: 'requestRenameEntity'; entityId: string }
+  | { type: 'showError'; message: string };
 
 /** Entity node data for React Flow */
 interface EntityNodeData {
@@ -167,6 +175,28 @@ export class GraphWebviewPanel implements vscode.Disposable {
         case 'duplicateEntity':
           await this.handleDuplicateEntity(msg.entityId, msg.newName);
           break;
+        // Request handlers - prompt user via native VSCode dialogs
+        case 'requestCreateEntity':
+          await this.handleRequestCreateEntity();
+          break;
+        case 'requestAddObservation':
+          await this.handleRequestAddObservation(msg.entity);
+          break;
+        case 'requestLinkEntities':
+          await this.handleRequestLinkEntities(msg.from);
+          break;
+        case 'requestDuplicateEntity':
+          await this.handleRequestDuplicateEntity(msg.entityId);
+          break;
+        case 'requestDeleteEntity':
+          await this.handleRequestDeleteEntity(msg.entityId);
+          break;
+        case 'requestRenameEntity':
+          await this.handleRequestRenameEntity(msg.entityId);
+          break;
+        case 'showError':
+          vscode.window.showErrorMessage(msg.message);
+          break;
       }
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
@@ -299,6 +329,131 @@ export class GraphWebviewPanel implements vscode.Disposable {
 
     await this.loadInitialData();
     vscode.window.showInformationMessage(`Entity "${newName}" created as copy of "${entityId}".`);
+  }
+
+  // ── Request handlers (prompt user via VSCode native dialogs) ─────
+
+  private async handleRequestCreateEntity(): Promise<void> {
+    const name = await vscode.window.showInputBox({
+      prompt: 'Entity name',
+      placeHolder: 'e.g., MyComponent',
+    });
+    if (!name) return;
+
+    const entityType = await vscode.window.showInputBox({
+      prompt: 'Entity type',
+      placeHolder: 'e.g., component, service, module',
+      value: 'concept',
+    });
+    if (!entityType) return;
+
+    await this.handleUpsertEntity(name, entityType);
+  }
+
+  private async handleRequestAddObservation(entity?: string): Promise<void> {
+    const targetEntity = entity ?? await vscode.window.showInputBox({
+      prompt: 'Add observation to which entity?',
+      placeHolder: 'Entity name',
+    });
+    if (!targetEntity) return;
+
+    const text = await vscode.window.showInputBox({
+      prompt: `Observation text for "${targetEntity}"`,
+      placeHolder: 'Enter observation...',
+    });
+    if (!text) return;
+
+    await this.handleAddObservation(targetEntity, text);
+    await this.loadInitialData();
+  }
+
+  private async handleRequestLinkEntities(from?: string): Promise<void> {
+    const fromEntity = from ?? await vscode.window.showInputBox({
+      prompt: 'Link from which entity?',
+      placeHolder: 'Source entity name',
+    });
+    if (!fromEntity) return;
+
+    const to = await vscode.window.showInputBox({
+      prompt: `Link "${fromEntity}" to which entity?`,
+      placeHolder: 'Target entity name',
+    });
+    if (!to) return;
+
+    const relationType = await vscode.window.showInputBox({
+      prompt: 'Relation type',
+      placeHolder: 'e.g., depends_on, uses, implements',
+      value: 'related_to',
+    });
+    if (!relationType) return;
+
+    await this.handleLinkEntitiesFromWebview(fromEntity, to, relationType);
+  }
+
+  private async handleRequestDuplicateEntity(entityId: string): Promise<void> {
+    const newName = await vscode.window.showInputBox({
+      prompt: `Duplicate "${entityId}" as`,
+      placeHolder: 'New entity name',
+      value: `${entityId}_copy`,
+    });
+    if (!newName) return;
+
+    await this.handleDuplicateEntity(entityId, newName);
+  }
+
+  private async handleRequestDeleteEntity(entityId: string): Promise<void> {
+    const confirm = await vscode.window.showWarningMessage(
+      `Delete entity "${entityId}" and all its observations/relations?`,
+      { modal: true },
+      'Delete',
+    );
+    if (confirm !== 'Delete') return;
+
+    const client = await ext.mcpClientManager.getClient();
+    await client.graphDeleteEntity({ entity: entityId });
+    await this.loadInitialData();
+    vscode.window.showInformationMessage(`Entity "${entityId}" deleted.`);
+  }
+
+  private async handleRequestRenameEntity(entityId: string): Promise<void> {
+    const newName = await vscode.window.showInputBox({
+      prompt: `Rename "${entityId}" to`,
+      placeHolder: 'New entity name',
+      value: entityId,
+    });
+    if (!newName || newName === entityId) return;
+
+    const client = await ext.mcpClientManager.getClient();
+    
+    // Get the original entity data first
+    const searchResult = await client.graphSearch({ query: entityId, limit: 1 });
+    const originalEntity = searchResult.entities?.find(e => e.name === entityId);
+    
+    if (!originalEntity) {
+      throw new Error(`Entity "${entityId}" not found`);
+    }
+
+    // Create new entity with same type
+    await client.graphUpsertEntity({
+      name: newName,
+      entityType: originalEntity.entityType,
+    });
+
+    // Copy observations if any
+    if (originalEntity.observations && originalEntity.observations.length > 0) {
+      for (const obs of originalEntity.observations) {
+        await client.graphAddObservation({
+          entity: newName,
+          text: obs.text,
+        });
+      }
+    }
+
+    // Delete the old entity
+    await client.graphDeleteEntity({ entity: entityId });
+
+    await this.loadInitialData();
+    vscode.window.showInformationMessage(`Entity renamed from "${entityId}" to "${newName}".`);
   }
 
   // ── Data transformation ──────────────────────────────────────────

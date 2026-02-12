@@ -24,12 +24,10 @@ import '@xyflow/react/dist/style.css';
 
 import { EntityNodeComponent } from './EntityNode';
 import { FloatingEdge } from './FloatingEdge';
-import { getLayoutedElements, getElkLayoutedElements, relayout, type LayoutDirection, type LayoutAlgorithm } from './layout';
-import type { EntityNode, RelationEdge, ExtensionMessage } from './types';
+import { FloatingConnectionLine } from './FloatingConnectionLine';
+import { getLayoutedElements, type LayoutDirection } from './layout';
+import type { EntityNode, RelationEdge, ExtensionMessage, EdgeStyleType } from './types';
 import { vscode } from './vscode';
-
-// Edge type options
-export type EdgeStyleType = 'smoothstep' | 'bezier' | 'straight' | 'step';
 
 // Settings storage key
 const SETTINGS_KEY = 'knowledge-graph-settings';
@@ -40,7 +38,6 @@ interface GraphSettings {
   edgeType: EdgeStyleType;
   floatingEdges: boolean;
   animatedEdges: boolean;
-  layoutAlgorithm: LayoutAlgorithm;
 }
 
 const defaultSettings: GraphSettings = {
@@ -48,7 +45,6 @@ const defaultSettings: GraphSettings = {
   edgeType: 'smoothstep',
   floatingEdges: false,
   animatedEdges: true,
-  layoutAlgorithm: 'dagre',
 };
 
 // Load settings from localStorage
@@ -94,7 +90,6 @@ function KnowledgeGraphInner() {
   const [nodes, setNodes, onNodesChange] = useNodesState<EntityNode>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<RelationEdge>([]);
   const [layoutDirection, setLayoutDirection] = useState<LayoutDirection>('TB');
-  const [layoutAlgorithm, setLayoutAlgorithm] = useState<LayoutAlgorithm>(initialSettings.layoutAlgorithm);
   const [searchQuery, setSearchQuery] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [showSettings, setShowSettings] = useState(false);
@@ -103,48 +98,44 @@ function KnowledgeGraphInner() {
   const [edgeType, setEdgeType] = useState<EdgeStyleType>(initialSettings.edgeType);
   const [floatingEdges, setFloatingEdges] = useState(initialSettings.floatingEdges);
   const [animatedEdges, setAnimatedEdges] = useState(initialSettings.animatedEdges);
-  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; nodeId: string } | null>(null);
+  const [contextMenu, setContextMenu] = useState<{
+    nodeId: string;
+    top?: number | false;
+    left?: number | false;
+    right?: number | false;
+    bottom?: number | false;
+  } | null>(null);
   const { fitView } = useReactFlow();
   const layoutDirectionRef = useRef<LayoutDirection>('TB');
-  const layoutAlgorithmRef = useRef<LayoutAlgorithm>(initialSettings.layoutAlgorithm);
 
   // Keep refs in sync with state
   useEffect(() => {
     layoutDirectionRef.current = layoutDirection;
-    layoutAlgorithmRef.current = layoutAlgorithm;
-  }, [layoutDirection, layoutAlgorithm]);
+  }, [layoutDirection]);
 
-  // Layout helper - uses ELK or dagre based on algorithm setting
-  const applyLayout = useCallback(async (
+  // Layout helper - uses Dagre
+  const applyLayout = useCallback((
     rawNodes: EntityNode[],
     rawEdges: RelationEdge[],
-    direction: LayoutDirection,
-    algorithm: LayoutAlgorithm
+    direction: LayoutDirection
   ) => {
-    if (algorithm === 'elk-layered' || algorithm === 'elk-mrtree') {
-      const result = await getElkLayoutedElements(rawNodes, rawEdges, { direction, algorithm });
-      setNodes(result.nodes);
-      setEdges(result.edges);
-    } else {
-      const result = getLayoutedElements(rawNodes, rawEdges, { direction });
-      setNodes(result.nodes);
-      setEdges(result.edges);
-    }
+    const result = getLayoutedElements(rawNodes, rawEdges, { direction });
+    setNodes(result.nodes);
+    setEdges(result.edges);
     setTimeout(() => fitView({ padding: 0.4, duration: 400 }), 100);
   }, [setNodes, setEdges, fitView]);
 
   // Message handler - separate from initial load
   useEffect(() => {
-    const handleMessage = async (event: MessageEvent<ExtensionMessage>) => {
+    const handleMessage = (event: MessageEvent<ExtensionMessage>) => {
       const message = event.data;
 
       switch (message.type) {
         case 'graphData': {
-          await applyLayout(
+          applyLayout(
             message.nodes,
             message.edges,
-            layoutDirectionRef.current,
-            layoutAlgorithmRef.current
+            layoutDirectionRef.current
           );
           setIsLoading(false);
           break;
@@ -163,21 +154,11 @@ function KnowledgeGraphInner() {
 
   // Handle layout direction change
   const handleLayoutChange = useCallback(
-    async (direction: LayoutDirection) => {
+    (direction: LayoutDirection) => {
       setLayoutDirection(direction);
-      await applyLayout(nodes, edges, direction, layoutAlgorithm);
+      applyLayout(nodes, edges, direction);
     },
-    [nodes, edges, layoutAlgorithm, applyLayout]
-  );
-
-  // Handle layout algorithm change (persisted)
-  const handleAlgorithmChange = useCallback(
-    async (algorithm: LayoutAlgorithm) => {
-      setLayoutAlgorithm(algorithm);
-      saveSettings({ layoutAlgorithm: algorithm });
-      await applyLayout(nodes, edges, layoutDirection, algorithm);
-    },
-    [nodes, edges, layoutDirection, applyLayout]
+    [nodes, edges, applyLayout]
   );
 
   // UI Settings handlers (all persisted)
@@ -189,36 +170,59 @@ function KnowledgeGraphInner() {
   const handleEdgeTypeChange = useCallback((type: EdgeStyleType) => {
     setEdgeType(type);
     saveSettings({ edgeType: type });
-  }, []);
+    // Update ALL existing edges with new type and pass edgeType in data for floating edges
+    setEdges((eds) => eds.map((edge) => ({
+      ...edge,
+      type: floatingEdges ? 'floating' : type,
+      data: { ...edge.data, relationType: edge.data?.relationType ?? 'related_to', edgeType: type },
+    })));
+  }, [setEdges, floatingEdges]);
 
   const handleFloatingEdgesChange = useCallback((enabled: boolean) => {
     setFloatingEdges(enabled);
     saveSettings({ floatingEdges: enabled });
-  }, []);
+    // Update ALL existing edges with floating or normal type
+    setEdges((eds) => eds.map((edge) => ({
+      ...edge,
+      type: enabled ? 'floating' : edgeType,
+      data: { ...edge.data, relationType: edge.data?.relationType ?? 'related_to', edgeType },
+    })));
+  }, [setEdges, edgeType]);
 
   const handleAnimatedEdgesChange = useCallback((enabled: boolean) => {
     setAnimatedEdges(enabled);
     saveSettings({ animatedEdges: enabled });
-  }, []);
+    // Update ALL existing edges with animation
+    setEdges((eds) => eds.map((edge) => ({
+      ...edge,
+      animated: enabled,
+      style: {
+        ...edge.style,
+        strokeDasharray: enabled ? '5,5' : undefined,
+      },
+    })));
+  }, [setEdges]);
 
-  // Auto layout - apply LR layout with current algorithm
-  const handleAutoLayout = useCallback(async () => {
+  // Auto layout - apply LR layout
+  const handleAutoLayout = useCallback(() => {
     setLayoutDirection('LR');
-    await applyLayout(nodes, edges, 'LR', layoutAlgorithm);
-  }, [nodes, edges, layoutAlgorithm, applyLayout]);
+    applyLayout(nodes, edges, 'LR');
+  }, [nodes, edges, applyLayout]);
 
   // Connection validation - prevent self-loops and duplicate edges
   const isValidConnection = useCallback(
-    (connection: Connection) => {
+    (edgeOrConnection: RelationEdge | Connection) => {
+      const source = 'source' in edgeOrConnection ? edgeOrConnection.source : undefined;
+      const target = 'target' in edgeOrConnection ? edgeOrConnection.target : undefined;
       // Prevent self-connections
-      if (connection.source === connection.target) {
+      if (source === target) {
         return false;
       }
       // Prevent duplicate edges
       const isDuplicate = edges.some(
         (edge) =>
-          (edge.source === connection.source && edge.target === connection.target) ||
-          (edge.source === connection.target && edge.target === connection.source)
+          (edge.source === source && edge.target === target) ||
+          (edge.source === target && edge.target === source)
       );
       return !isDuplicate;
     },
@@ -233,7 +237,7 @@ function KnowledgeGraphInner() {
         type: floatingEdges ? 'floating' : edgeType,
         animated: animatedEdges,
         style: animatedEdges ? { strokeDasharray: '5,5' } : undefined,
-        data: { edgeType },
+        data: { relationType: 'related_to', edgeType },
       }, eds));
     },
     [setEdges, floatingEdges, edgeType, animatedEdges]
@@ -249,26 +253,51 @@ function KnowledgeGraphInner() {
     []
   );
 
-  // Handle right-click context menu
+  // Handle right-click context menu with bounds-aware positioning
   const onNodeContextMenu = useCallback(
     (event: React.MouseEvent, node: EntityNode) => {
       event.preventDefault();
+      event.stopPropagation(); // Prevent event bubbling that might close menu
       setSelectedNodeId(node.id);
-      setContextMenu({ x: event.clientX, y: event.clientY, nodeId: node.id });
+      
+      // Calculate position to prevent menu going off-screen
+      // Using viewport dimensions since context-menu has position:fixed
+      const menuWidth = 200;
+      const menuHeight = 250;
+      const viewportWidth = window.innerWidth;
+      const viewportHeight = window.innerHeight;
+      
+      setContextMenu({
+        nodeId: node.id,
+        top: event.clientY + menuHeight < viewportHeight ? event.clientY : false,
+        left: event.clientX + menuWidth < viewportWidth ? event.clientX : false,
+        right: event.clientX + menuWidth >= viewportWidth ? viewportWidth - event.clientX : false,
+        bottom: event.clientY + menuHeight >= viewportHeight ? viewportHeight - event.clientY : false,
+      });
     },
     []
   );
 
-  // Close context menu on pane click
-  const onPaneClick = useCallback(() => {
+  // Handle pane context menu (right-click on background)
+  const onPaneContextMenu = useCallback((event: React.MouseEvent) => {
+    event.preventDefault();
     setContextMenu(null);
   }, []);
 
-  // Handle search
+  // Close context menu and clear selection on pane click
+  const onPaneClick = useCallback(() => {
+    setContextMenu(null);
+    setSelectedNodeId(null);
+  }, []);
+
+  // Handle search - empty query shows all nodes
   const handleSearch = useCallback(() => {
+    setIsLoading(true);
+    // If query is empty, load all nodes; otherwise search
     if (searchQuery.trim()) {
-      setIsLoading(true);
       vscode.postMessage({ type: 'search', query: searchQuery });
+    } else {
+      vscode.postMessage({ type: 'loadGraph' });
     }
   }, [searchQuery]);
 
@@ -283,61 +312,40 @@ function KnowledgeGraphInner() {
     return node.data.color;
   }, []);
 
-  // Settings panel actions
+  // Settings panel actions - send requests to extension which shows native VSCode dialogs
   const handleCreateEntity = useCallback(() => {
-    const name = prompt('Entity name:');
-    if (!name) return;
-    const entityType = prompt('Entity type (e.g., module, service, concept):');
-    if (!entityType) return;
-    vscode.postMessage({ type: 'upsertEntity', name, entityType });
+    vscode.postMessage({ type: 'requestCreateEntity' });
     setShowSettings(false);
-    setIsLoading(true);
   }, []);
 
   const handleAddObservation = useCallback(() => {
-    const entity = selectedNodeId || prompt('Entity name:');
-    if (!entity) return;
-    const text = prompt('Observation text:');
-    if (!text) return;
-    vscode.postMessage({ type: 'addObservation', entity, text });
+    vscode.postMessage({ type: 'requestAddObservation', entity: selectedNodeId ?? undefined });
     setShowSettings(false);
   }, [selectedNodeId]);
 
   const handleLinkEntities = useCallback(() => {
-    const from = selectedNodeId || prompt('Source entity:');
-    if (!from) return;
-    const to = prompt('Target entity:');
-    if (!to) return;
-    const relationType = prompt('Relation type (e.g., depends_on, uses):');
-    if (!relationType) return;
-    vscode.postMessage({ type: 'linkEntities', from, to, relationType });
+    vscode.postMessage({ type: 'requestLinkEntities', from: selectedNodeId ?? undefined });
     setShowSettings(false);
-    setIsLoading(true);
   }, [selectedNodeId]);
 
   const handleDuplicateEntity = useCallback(() => {
     if (!selectedNodeId) {
-      alert('Please select a node first');
+      vscode.postMessage({ type: 'showError', message: 'Please select a node first' });
       return;
     }
-    const newName = prompt('New entity name:', `${selectedNodeId}_copy`);
-    if (!newName) return;
-    vscode.postMessage({ type: 'duplicateEntity', entityId: selectedNodeId, newName });
+    vscode.postMessage({ type: 'requestDuplicateEntity', entityId: selectedNodeId });
     setShowSettings(false);
-    setIsLoading(true);
   }, [selectedNodeId]);
 
   const handleDeleteEntity = useCallback(() => {
     if (!selectedNodeId) {
-      alert('Please select a node first');
+      vscode.postMessage({ type: 'showError', message: 'Please select a node first' });
       return;
     }
-    if (!confirm(`Delete entity "${selectedNodeId}" and all its relations?`)) return;
     vscode.postMessage({ type: 'deleteNode', nodeId: selectedNodeId });
     setSelectedNodeId(null);
     setShowSettings(false);
     setContextMenu(null);
-    setIsLoading(true);
   }, [selectedNodeId]);
 
   // Context menu actions
@@ -351,56 +359,35 @@ function KnowledgeGraphInner() {
 
   const handleContextAddObservation = useCallback(() => {
     if (contextMenu) {
-      const text = prompt('Observation text:');
-      if (text) {
-        vscode.postMessage({ type: 'addObservation', entity: contextMenu.nodeId, text });
-      }
+      vscode.postMessage({ type: 'requestAddObservation', entity: contextMenu.nodeId });
     }
     setContextMenu(null);
   }, [contextMenu]);
 
   const handleContextLink = useCallback(() => {
     if (contextMenu) {
-      const to = prompt('Link to entity:');
-      if (to) {
-        const relationType = prompt('Relation type (e.g., depends_on):');
-        if (relationType) {
-          vscode.postMessage({ type: 'linkEntities', from: contextMenu.nodeId, to, relationType });
-          setIsLoading(true);
-        }
-      }
+      vscode.postMessage({ type: 'requestLinkEntities', from: contextMenu.nodeId });
     }
     setContextMenu(null);
   }, [contextMenu]);
 
   const handleContextDelete = useCallback(() => {
     if (contextMenu) {
-      if (confirm(`Delete entity "${contextMenu.nodeId}"?`)) {
-        vscode.postMessage({ type: 'deleteNode', nodeId: contextMenu.nodeId });
-        setIsLoading(true);
-      }
+      vscode.postMessage({ type: 'requestDeleteEntity', entityId: contextMenu.nodeId });
     }
     setContextMenu(null);
   }, [contextMenu]);
 
   const handleContextEdit = useCallback(() => {
     if (contextMenu) {
-      const newName = prompt('Rename entity to:', contextMenu.nodeId);
-      if (newName && newName !== contextMenu.nodeId) {
-        vscode.postMessage({ type: 'renameEntity', entityId: contextMenu.nodeId, newName });
-        setIsLoading(true);
-      }
+      vscode.postMessage({ type: 'requestRenameEntity', entityId: contextMenu.nodeId });
     }
     setContextMenu(null);
   }, [contextMenu]);
 
   const handleContextDuplicate = useCallback(() => {
     if (contextMenu) {
-      const newName = prompt('New entity name:', `${contextMenu.nodeId}_copy`);
-      if (newName) {
-        vscode.postMessage({ type: 'duplicateEntity', entityId: contextMenu.nodeId, newName });
-        setIsLoading(true);
-      }
+      vscode.postMessage({ type: 'requestDuplicateEntity', entityId: contextMenu.nodeId });
     }
     setContextMenu(null);
   }, [contextMenu]);
@@ -419,7 +406,12 @@ function KnowledgeGraphInner() {
       {contextMenu && (
         <div
           className="context-menu"
-          style={{ left: contextMenu.x, top: contextMenu.y }}
+          style={{
+            top: contextMenu.top !== false ? contextMenu.top : undefined,
+            left: contextMenu.left !== false ? contextMenu.left : undefined,
+            right: contextMenu.right !== false ? contextMenu.right : undefined,
+            bottom: contextMenu.bottom !== false ? contextMenu.bottom : undefined,
+          }}
         >
           <button className="context-menu-item" onClick={handleContextEdit}>
             Edit (Rename)
@@ -504,16 +496,7 @@ function KnowledgeGraphInner() {
                 />
                 Bezier
               </label>
-              <label className="settings-radio">
-                <input
-                  type="radio"
-                  name="edgeType"
-                  value="step"
-                  checked={edgeType === 'step'}
-                  onChange={() => handleEdgeTypeChange('step')}
-                />
-                Step
-              </label>
+
               <label className="settings-radio">
                 <input
                   type="radio"
@@ -527,42 +510,7 @@ function KnowledgeGraphInner() {
             </div>
           </div>
 
-          {/* Layout Algorithm Section */}
-          <div className="settings-section">
-            <div className="settings-section-title">Layout Algorithm</div>
-            <div className="settings-radio-group">
-              <label className="settings-radio">
-                <input
-                  type="radio"
-                  name="algorithm"
-                  value="dagre"
-                  checked={layoutAlgorithm === 'dagre'}
-                  onChange={() => handleAlgorithmChange('dagre')}
-                />
-                Dagre (Fast)
-              </label>
-              <label className="settings-radio">
-                <input
-                  type="radio"
-                  name="algorithm"
-                  value="elk-layered"
-                  checked={layoutAlgorithm === 'elk-layered'}
-                  onChange={() => handleAlgorithmChange('elk-layered')}
-                />
-                ELK Layered
-              </label>
-              <label className="settings-radio">
-                <input
-                  type="radio"
-                  name="algorithm"
-                  value="elk-mrtree"
-                  checked={layoutAlgorithm === 'elk-mrtree'}
-                  onChange={() => handleAlgorithmChange('elk-mrtree')}
-                />
-                ELK Tree
-              </label>
-            </div>
-          </div>
+
 
           {/* Operations Section */}
           <div className="settings-section">
@@ -607,6 +555,7 @@ function KnowledgeGraphInner() {
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
         isValidConnection={isValidConnection}
+        connectionLineComponent={floatingEdges ? FloatingConnectionLine : undefined}
         snapToGrid={snapToGrid}
         snapGrid={[15, 15]}
         fitView

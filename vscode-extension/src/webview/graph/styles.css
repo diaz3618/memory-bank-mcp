@@ -608,10 +608,12 @@ body,
   margin: 4px 8px;
 }
 
-.context-menu-item.danger {
+.context-menu-item.danger,
+.context-menu-item-danger {
   color: var(--vscode-errorForeground, #f48771);
 }
 
-.context-menu-item.danger:hover {
+.context-menu-item.danger:hover,
+.context-menu-item-danger:hover {
   background: var(--vscode-inputValidation-errorBackground, rgba(190, 17, 0, 0.2));
 }
