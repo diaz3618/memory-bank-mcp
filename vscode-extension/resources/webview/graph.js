@@ -15,21 +15,23 @@
   const vscode = acquireVsCodeApi();
 
   // ── Entity type → color/shape map ────────────────────────────────
+  // Modern, sophisticated color palette with consistent rounded shapes
 
   const TYPE_STYLES = {
-    project:  { color: '#4a9eff', shape: 'round-rectangle' },
-    person:   { color: '#4caf50', shape: 'ellipse' },
-    system:   { color: '#ff9800', shape: 'hexagon' },
-    concept:  { color: '#ab47bc', shape: 'diamond' },
-    file:     { color: '#78909c', shape: 'rectangle' },
-    module:   { color: '#26a69a', shape: 'round-rectangle' },
-    service:  { color: '#ef5350', shape: 'round-rectangle' },
-    tool:     { color: '#ffa726', shape: 'barrel' },
-    language: { color: '#42a5f5', shape: 'ellipse' },
-    pattern:  { color: '#7e57c2', shape: 'diamond' },
+    project:  { color: '#3b82f6', shape: 'round-rectangle' },  // Blue
+    person:   { color: '#10b981', shape: 'round-rectangle' },  // Emerald
+    system:   { color: '#f59e0b', shape: 'round-rectangle' },  // Amber
+    concept:  { color: '#8b5cf6', shape: 'round-rectangle' },  // Violet
+    file:     { color: '#64748b', shape: 'round-rectangle' },  // Slate
+    module:   { color: '#06b6d4', shape: 'round-rectangle' },  // Cyan
+    service:  { color: '#ef4444', shape: 'round-rectangle' },  // Red
+    tool:     { color: '#f97316', shape: 'round-rectangle' },  // Orange
+    language: { color: '#6366f1', shape: 'round-rectangle' },  // Indigo
+    pattern:  { color: '#a855f7', shape: 'round-rectangle' },  // Purple
+    default:  { color: '#71717a', shape: 'round-rectangle' },  // Neutral
   };
 
-  const DEFAULT_STYLE = { color: '#607d8b', shape: 'ellipse' };
+  const DEFAULT_STYLE = { color: '#71717a', shape: 'round-rectangle' };
 
   function styleFor(entityType) {
     return TYPE_STYLES[entityType?.toLowerCase()] || DEFAULT_STYLE;
@@ -53,50 +55,92 @@
           'label': 'data(label)',
           'text-valign': 'center',
           'text-halign': 'center',
-          'font-size': '11px',
+          'font-size': '12px',
+          'font-weight': 500,
           'font-family': 'var(--vscode-font-family, sans-serif)',
-          'color': '#fff',
-          'text-outline-color': 'data(color)',
-          'text-outline-width': 2,
+          'color': '#ffffff',
+          'text-outline-width': 0,
           'background-color': 'data(color)',
+          'background-opacity': 0.95,
           'shape': 'data(shape)',
           'width': 'label',
-          'height': 30,
-          'padding': '8px',
-          'text-max-width': '120px',
-          'text-wrap': 'ellipsis',
+          'height': 36,
+          'padding': '12px',
+          'border-width': 1.5,
+          'border-color': '#00000020',
+          'border-opacity': 0.3,
+          'text-max-width': '140px',
+          'text-wrap': 'wrap',
+          // Modern shadow for depth
+          'shadow-blur': 8,
+          'shadow-color': '#00000040',
+          'shadow-offset-x': 0,
+          'shadow-offset-y': 2,
+          'shadow-opacity': 0.25,
         },
       },
       {
         selector: 'node:selected',
         style: {
-          'border-width': 3,
-          'border-color': '#ffeb3b',
+          'border-width': 2.5,
+          'border-color': '#3b82f6',
+          'border-opacity': 1,
+          'shadow-blur': 12,
+          'shadow-color': '#3b82f680',
+          'shadow-opacity': 0.5,
+        },
+      },
+      {
+        selector: 'node:hover',
+        style: {
+          'background-opacity': 1,
+          'shadow-blur': 10,
+          'shadow-opacity': 0.35,
         },
       },
       {
         selector: 'node.faded',
-        style: { 'opacity': 0.25 },
+        style: { 
+          'opacity': 0.2,
+          'shadow-opacity': 0,
+        },
       },
       {
         selector: 'edge',
         style: {
           'label': 'data(label)',
-          'font-size': '9px',
+          'font-size': '10px',
           'color': 'var(--vscode-descriptionForeground, #888)',
           'text-rotation': 'autorotate',
-          'text-margin-y': -8,
-          'curve-style': 'bezier',
+          'text-margin-y': -10,
+          'text-background-color': 'var(--vscode-editor-background)',
+          'text-background-opacity': 0.8,
+          'text-background-padding': '3px',
+          'curve-style': 'unbundled-bezier',
+          'control-point-distances': [40],
+          'control-point-weights': [0.5],
           'target-arrow-shape': 'triangle',
-          'arrow-scale': 0.8,
-          'line-color': '#555',
-          'target-arrow-color': '#555',
-          'width': 1.5,
+          'arrow-scale': 1.2,
+          'line-color': '#ffffff15',
+          'target-arrow-color': '#ffffff20',
+          'width': 2,
+          'opacity': 0.6,
+        },
+      },
+      {
+        selector: 'edge:selected',
+        style: {
+          'line-color': '#3b82f6',
+          'target-arrow-color': '#3b82f6',
+          'opacity': 1,
+          'width': 2.5,
         },
       },
       {
         selector: 'edge.faded',
-        style: { 'opacity': 0.15 },
+        style: { 
+          'opacity': 0.1,
+        },
       },
     ],
     layout: { name: 'grid' },

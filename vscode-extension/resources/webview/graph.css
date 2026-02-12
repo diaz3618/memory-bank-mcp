@@ -78,6 +78,10 @@ html, body {
 #cy-container {
   flex: 1;
   min-width: 0;
+  /* Subtle dot pattern background for professional look */
+  background-image: radial-gradient(circle, var(--vscode-editorWidget-border, #454545) 1px, transparent 1px);
+  background-size: 20px 20px;
+  background-position: 0 0, 10px 10px;
 }
 
 /* ── Inspector panel ─────────────────────────────────────────── */

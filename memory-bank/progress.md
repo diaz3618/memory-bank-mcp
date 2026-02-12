@@ -119,6 +119,40 @@ Architecture: append-only JSONL event log as source of truth, JSON snapshot for 
 
 ## Update History
 
+### [Feb 12, 2026, 6:32 AM] ✨ Feature: Migrated graph webview to React Flow with advanced features
+<!-- ID: p_2026-02-12_mljdqjic -->
+
+Successfully migrated graph webview from Cytoscape.js to React Flow. Implemented comprehensive React Flow features: custom EntityNode component with NodeToolbar (expand/delete/link actions), MiniMap for navigation, Controls for zoom/fit, Background dot pattern, Dagre layout algorithm for automatic positioning, search functionality, layout direction controls (TB/LR/BT/RL), and clean VS Code-themed styling. All TypeScript types properly defined with generic parameters.
+
+**Affected files:**
+- `vscode-extension/src/webview/graph/index.tsx`
+- `vscode-extension/src/webview/graph/KnowledgeGraph.tsx`
+- `vscode-extension/src/webview/graph/EntityNode.tsx`
+- `vscode-extension/src/webview/graph/layout.ts`
+- `vscode-extension/src/webview/graph/types.ts`
+- `vscode-extension/src/webview/graph/styles.css`
+- `vscode-extension/src/views/GraphWebviewPanel.ts`
+- `vscode-extension/esbuild.js`
+
+**Tags:** `react-flow`, `graph-webview`, `migration`
+
+---
+
+
+### [Feb 11, 2026, 11:57 PM] ✨ Feature: Set up React build pipeline for webview
+<!-- ID: p_2026-02-12_mlizmp5x -->
+
+Installed React Flow dependencies (@xyflow/react@12.0.0, react, react-dom, @dagrejs/dagre) and updated esbuild.js to support dual bundle: extension (Node.js/CJS) and webview (Browser/IIFE with TSX/JSX support).
+
+**Affected files:**
+- `vscode-extension/esbuild.js`
+- `vscode-extension/package.json`
+
+**Tags:** `react-flow`, `build-pipeline`, `webview`
+
+---
+
+
 - [2026-02-11 14:46:57] [Unknown User] - Implemented remaining knowledge graph features: Completed all actionable items from knowledge-graph-plans.md:
 
 **Server-side (src/):**

@@ -2,7 +2,7 @@
  * Graph Webview Panel
  *
  * Manages a WebviewPanel (editor tab) that renders the knowledge graph
- * using Cytoscape.js. Communicates with the MCP server via the extension's
+ * using React Flow. Communicates with the MCP server via the extension's
  * MCP client for search, expand, and mutation operations.
  *
  * Lifecycle: singleton panel — reopened if closed, revealed if already open.
@@ -15,27 +15,49 @@ import { ext } from '../extensionVariables';
 
 /** Messages sent FROM the webview TO the extension. */
 type WebviewMessage =
-  | { type: 'ready' }
+  | { type: 'loadGraph' }
   | { type: 'search'; query: string }
-  | { type: 'openNodes'; nodes: string[]; depth: 1 | 2 }
-  | { type: 'addObservation'; entity: string; text: string }
-  | { type: 'linkEntities'; from: string; to: string; relationType: string }
-  | { type: 'deleteEntity'; entity: string }
+  | { type: 'nodeSelected'; nodeId: string | null }
+  | { type: 'expandNode'; nodeId: string }
+  | { type: 'deleteNode'; nodeId: string }
+  | { type: 'addRelation'; fromId: string; toId?: string }
   | { type: 'rebuild' };
 
-/** Messages sent FROM the extension TO the webview. */
-interface GraphPayload {
-  entities: Array<{
-    name: string;
-    entityType: string;
-    attrs?: Record<string, unknown>;
-    observations?: Array<{ text: string; source?: string; timestamp?: string }>;
-  }>;
-  relations: Array<{
-    from: string;
-    to: string;
+/** Entity node data for React Flow */
+interface EntityNodeData {
+  label: string;
+  entityType: string;
+  color: string;
+  observationCount?: number;
+  relationCount?: number;
+  attrs?: Record<string, unknown>;
+}
+
+/** Entity node for React Flow */
+interface EntityNode {
+  id: string;
+  type: 'entity';
+  position: { x: number; y: number };
+  data: EntityNodeData;
+}
+
+/** Relation edge for React Flow */
+interface RelationEdge {
+  id: string;
+  source: string;
+  target: string;
+  type?: string;
+  data?: {
     relationType: string;
-  }>;
+    label?: string;
+  };
+}
+
+/** Graph data payload sent to webview */
+interface GraphDataPayload {
+  type: 'graphData';
+  nodes: EntityNode[];
+  edges: RelationEdge[];
 }
 
 export class GraphWebviewPanel implements vscode.Disposable {
@@ -107,23 +129,24 @@ export class GraphWebviewPanel implements vscode.Disposable {
   private async handleMessage(msg: WebviewMessage): Promise<void> {
     try {
       switch (msg.type) {
-        case 'ready':
+        case 'loadGraph':
           await this.loadInitialData();
           break;
         case 'search':
           await this.handleSearch(msg.query);
           break;
-        case 'openNodes':
-          await this.handleOpenNodes(msg.nodes, msg.depth);
+        case 'nodeSelected':
+          // Could be used for Inspector panel or other actions
+          ext.outputChannel.appendLine(`Node selected: ${msg.nodeId}`);
           break;
-        case 'addObservation':
-          await this.handleAddObservation(msg.entity, msg.text);
+        case 'expandNode':
+          await this.handleExpandNode(msg.nodeId);
           break;
-        case 'linkEntities':
-          await this.handleLinkEntities(msg.from, msg.to, msg.relationType);
+        case 'deleteNode':
+          await this.handleDeleteNode(msg.nodeId);
           break;
-        case 'deleteEntity':
-          await this.handleDeleteEntity(msg.entity);
+        case 'addRelation':
+          await this.handleAddRelation(msg.fromId, msg.toId);
           break;
         case 'rebuild':
           await this.handleRebuild();
@@ -132,100 +155,159 @@ export class GraphWebviewPanel implements vscode.Disposable {
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       ext.outputChannel.appendLine(`Graph webview error: ${message}`);
-      this.postMessage({ type: 'error', message });
+      vscode.window.showErrorMessage(`Graph error: ${message}`);
     }
   }
 
   private async loadInitialData(): Promise<void> {
-    this.postMessage({ type: 'loading', active: true });
-
-    // Load all entities via empty-string search (returns everything)
     const client = await ext.mcpClientManager.getClient();
-
-    const result = await client.graphSearch({ query: '', limit: 500 });
-    this.postMessage({
-      type: 'graphData',
-      ...this.normalizeResult(result),
-      focusNode: this.focusEntity,
-    });
-    this.postMessage({ type: 'loading', active: false });
+    const result = await client.graphSearch({ query: '*', limit: 500 });
+    
+    const payload = this.transformToGraphData(result);
+    this.postMessage(payload);
   }
 
   private async handleSearch(query: string): Promise<void> {
-    this.postMessage({ type: 'loading', active: true });
     const client = await ext.mcpClientManager.getClient();
-
     const result = await client.graphSearch({ query, limit: 200 });
-    this.postMessage({
-      type: 'searchResults',
-      ...this.normalizeResult(result),
-    });
-    this.postMessage({ type: 'loading', active: false });
+    
+    const payload = this.transformToGraphData(result);
+    this.postMessage(payload);
   }
 
-  private async handleOpenNodes(nodes: string[], depth: 1 | 2): Promise<void> {
-    this.postMessage({ type: 'loading', active: true });
+  private async handleExpandNode(nodeId: string): Promise<void> {
     const client = await ext.mcpClientManager.getClient();
-
-    const result = await client.graphOpenNodes(nodes);
-    this.postMessage({
-      type: 'graphData',
-      ...this.normalizeResult(result),
-    });
-    this.postMessage({ type: 'loading', active: false });
+    const result = await client.graphOpenNodes([nodeId]);
+    
+    const payload = this.transformToGraphData(result);
+    this.postMessage(payload);
   }
 
-  private async handleAddObservation(entity: string, text: string): Promise<void> {
-    const client = await ext.mcpClientManager.getClient();
-
-    await client.graphAddObservation({ entity, text, source: 'graph-webview' });
-    // Refresh that node
-    await this.handleOpenNodes([entity], 1);
-    vscode.window.showInformationMessage(`Observation added to "${entity}".`);
-  }
-
-  private async handleLinkEntities(from: string, to: string, relationType: string): Promise<void> {
-    const client = await ext.mcpClientManager.getClient();
-
-    await client.graphLinkEntities({ from, to, relationType });
-    await this.handleOpenNodes([from, to], 1);
-    vscode.window.showInformationMessage(`Linked "${from}" → "${to}" (${relationType}).`);
-  }
-
-  private async handleDeleteEntity(entity: string): Promise<void> {
+  private async handleDeleteNode(nodeId: string): Promise<void> {
     const confirm = await vscode.window.showWarningMessage(
-      `Delete entity "${entity}" and all its observations/relations?`,
+      `Delete entity "${nodeId}" and all its observations/relations?`,
       { modal: true },
       'Delete',
     );
     if (confirm !== 'Delete') return;
 
     const client = await ext.mcpClientManager.getClient();
+    await client.graphDeleteEntity({ entity: nodeId });
+    
+    // Reload graph
+    await this.loadInitialData();
+    vscode.window.showInformationMessage(`Entity "${nodeId}" deleted.`);
+  }
 
-    await client.graphDeleteEntity({ entity });
-    this.postMessage({ type: 'removeNode', name: entity });
-    vscode.window.showInformationMessage(`Entity "${entity}" deleted.`);
+  private async handleAddRelation(fromId: string, toId?: string): Promise<void> {
+    // Show quick pick for target entity if not provided
+    const targetEntity = toId ?? await vscode.window.showInputBox({
+      prompt: `Link "${fromId}" to which entity?`,
+      placeHolder: 'Target entity name',
+    });
+    
+    if (!targetEntity) return;
+    
+    const relationType = await vscode.window.showInputBox({
+      prompt: 'Relation type',
+      placeHolder: 'e.g., depends_on, uses, implements',
+      value: 'related_to',
+    });
+    
+    if (!relationType) return;
+
+    const client = await ext.mcpClientManager.getClient();
+    await client.graphLinkEntities({ from: fromId, to: targetEntity, relationType });
+    
+    // Refresh graph
+    await this.loadInitialData();
+    vscode.window.showInformationMessage(`Linked "${fromId}" → "${targetEntity}" (${relationType})`);
   }
 
   private async handleRebuild(): Promise<void> {
-    this.postMessage({ type: 'loading', active: true });
     const client = await ext.mcpClientManager.getClient();
-
     await client.callTool('graph_rebuild', {});
+    // Reload graph after rebuild
     await this.loadInitialData();
+    vscode.window.showInformationMessage('Graph rebuilt successfully');
   }
 
-  // ── Helpers ──────────────────────────────────────────────────────
+  // ── Data transformation ──────────────────────────────────────────
 
-  private normalizeResult(result: unknown): GraphPayload {
-    const r = result as Partial<GraphPayload> | null;
+  private transformToGraphData(result: unknown): GraphDataPayload {
+    const data = result as {
+      entities?: Array<{
+        name: string;
+        entityType: string;
+        observationCount?: number;
+        relationCount?: number;
+        [key: string]: unknown;
+      }>;
+      relations?: Array<{
+        from: string;
+        to: string;
+        relationType: string;
+      }>;
+    };
+
+    const entities = data.entities ?? [];
+    const relations = data.relations ?? [];
+
+    // Convert entities to React Flow nodes
+    const nodes: EntityNode[] = entities.map((entity, index) => ({
+      id: entity.name,
+      type: 'entity' as const,
+      position: { x: 0, y: 0 }, // Layout will be computed by dagre
+      data: {
+        label: entity.name,
+        entityType: entity.entityType,
+        color: this.getEntityColor(entity.entityType),
+        observationCount: entity.observationCount,
+        relationCount: entity.relationCount,
+        attrs: Object.fromEntries(
+          Object.entries(entity).filter(
+            ([k]) => !['name', 'entityType', 'observationCount', 'relationCount'].includes(k)
+          )
+        ),
+      },
+    }));
+
+    // Convert relations to React Flow edges
+    const edges: RelationEdge[] = relations.map((rel, index) => ({
+      id: `${rel.from}-${rel.to}-${index}`,
+      source: rel.from,
+      target: rel.to,
+      type: 'default',
+      data: {
+        relationType: rel.relationType,
+        label: rel.relationType,
+      },
+    }));
+
     return {
-      entities: r?.entities ?? [],
-      relations: r?.relations ?? [],
+      type: 'graphData',
+      nodes,
+      edges,
     };
   }
 
-  private postMessage(msg: Record<string, unknown>): void {
+  private getEntityColor(entityType: string): string {
+    const colors: Record<string, string> = {
+      person: '#3b82f6',     // blue
+      project: '#10b981',    // green
+      feature: '#f59e0b',    // amber
+      bug: '#ef4444',        // red
+      task: '#8b5cf6',       // purple
+      document: '#06b6d4',   // cyan
+      code: '#ec4899',       // pink
+      api: '#14b8a6',        // teal
+      database: '#f97316',   // orange
+      service: '#84cc16',    // lime
+    };
+    return colors[entityType.toLowerCase()] ?? '#6b7280'; // default gray
+  }
+
+  private postMessage(msg: GraphDataPayload | Record<string, unknown>): void {
     this.panel?.webview.postMessage(msg);
   }
 
@@ -233,17 +315,10 @@ export class GraphWebviewPanel implements vscode.Disposable {
 
   private getHtml(webview: vscode.Webview, resourceRoot: vscode.Uri): string {
     const nonce = getNonce();
-    const cytoscapeUri = webview.asWebviewUri(
-      vscode.Uri.joinPath(resourceRoot, 'cytoscape.min.js'),
-    );
-    const fcoseUri = webview.asWebviewUri(
-      vscode.Uri.joinPath(resourceRoot, 'cytoscape-fcose.js'),
-    );
-    const cssUri = webview.asWebviewUri(
-      vscode.Uri.joinPath(resourceRoot, 'graph.css'),
-    );
-    const jsUri = webview.asWebviewUri(
-      vscode.Uri.joinPath(resourceRoot, 'graph.js'),
+    
+    // React Flow bundle script
+    const bundleUri = webview.asWebviewUri(
+      vscode.Uri.joinPath(resourceRoot, 'graph-bundle.js'),
     );
 
     return /* html */ `<!DOCTYPE html>
@@ -256,38 +331,27 @@ export class GraphWebviewPanel implements vscode.Disposable {
              style-src ${webview.cspSource} 'unsafe-inline';
              script-src 'nonce-${nonce}';
              img-src ${webview.cspSource} data:;">
-  <link rel="stylesheet" href="${cssUri}">
   <title>Knowledge Graph</title>
+  <style>
+    body, html {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      font-family: var(--vscode-font-family);
+      color: var(--vscode-foreground);
+      background: var(--vscode-editor-background);
+    }
+    #root {
+      width: 100%;
+      height: 100%;
+    }
+  </style>
 </head>
 <body>
-  <div id="toolbar">
-    <input id="search-input" type="text" placeholder="Search entities…" />
-    <button id="btn-search" title="Search">🔍</button>
-    <button id="btn-fit" title="Fit to screen">⊞</button>
-    <button id="btn-rebuild" title="Rebuild graph">↻</button>
-    <div id="loading-indicator" class="hidden">Loading…</div>
-  </div>
-  <div id="main">
-    <div id="cy-container"></div>
-    <div id="inspector" class="hidden">
-      <h3 id="insp-name"></h3>
-      <p id="insp-type" class="muted"></p>
-      <div id="insp-attrs"></div>
-      <h4>Observations</h4>
-      <ul id="insp-observations"></ul>
-      <h4>Relations</h4>
-      <ul id="insp-relations"></ul>
-      <div id="insp-actions">
-        <button id="btn-add-obs" title="Add observation">+ Observation</button>
-        <button id="btn-link" title="Link to another entity">+ Link</button>
-        <button id="btn-expand" title="Expand neighbors">Expand</button>
-        <button id="btn-delete" class="danger" title="Delete entity">Delete</button>
-      </div>
-    </div>
-  </div>
-  <script nonce="${nonce}" src="${cytoscapeUri}"></script>
-  <script nonce="${nonce}" src="${fcoseUri}"></script>
-  <script nonce="${nonce}" src="${jsUri}"></script>
+  <div id="root"></div>
+  <script nonce="${nonce}" src="${bundleUri}"></script>
 </body>
 </html>`;
   }

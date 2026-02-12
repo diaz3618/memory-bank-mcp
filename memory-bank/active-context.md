@@ -36,6 +36,12 @@ Memory Bank MCP (`@diazstg/memory-bank-mcp`) is a production-ready MCP server pr
 - HTTP MCP client implementation
 ## Session Notes
 
+- [6:33 AM] ✅ React Flow migration completed successfully! Build artifacts: graph.js (415KB) + graph.css (22KB) = 437KB total, which is 33KB smaller than Cytoscape (470KB). Implementation includes all advanced features: custom nodes with NodeToolbar, MiniMap, Controls, Background patterns, Dagre layout, search, 4-directional layout options, stats panel, and professional VS Code-themed styling.
+
+- [11:57 PM] ✅ React Flow comprehensive research completed and documented in docs/archive/react-flow-research.md. Key decisions: Use @xyflow/react with TypeScript, implement custom EntityNode components with NodeToolbar, integrate MiniMap/Controls/Background, use Dagre for automatic layout, leverage useNodesState/useEdgesState hooks for state management.
+
+- [11:54 PM] 👀 Starting React Flow migration on branch feat/react-flow-graph. Goal: Replace Cytoscape.js with React Flow implementation that leverages advanced features like custom nodes, layouts (dagre/elkjs), MiniMap, Controls, NodeToolbar, Background patterns, and proper TypeScript types.
+
 - [8:07 AM] 📋 Resuming knowledge-graph-plans.md completion. Starting with entity/observation deletion tools, then digest integration, compaction, staleness, extension features.
 
 - [8:02 AM] 📋 Starting knowledge-graph-plans.md completion — implementing all remaining ⏳ items across Phase 2-4. Items: stores.json registry, storeId threading, graph digest integration, compaction tool, staleness check, context menus, digest preview command, entity/observation deletion.
