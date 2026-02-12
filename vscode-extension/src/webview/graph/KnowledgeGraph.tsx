@@ -25,16 +25,8 @@ import '@xyflow/react/dist/style.css';
 
 import { EntityNodeComponent } from './EntityNode';
 import { getLayoutedElements, relayout, type LayoutDirection } from './layout';
-import type { EntityNode, RelationEdge, WebviewMessage, ExtensionMessage } from './types';
-
-// Declare VS Code API
-declare const acquireVsCodeApi: () => {
-  postMessage(message: WebviewMessage): void;
-  setState(state: unknown): void;
-  getState(): unknown;
-};
-
-const vscode = acquireVsCodeApi();
+import type { EntityNode, RelationEdge, ExtensionMessage } from './types';
+import { vscode } from './vscode';
 
 // Register custom node types
 const nodeTypes = {

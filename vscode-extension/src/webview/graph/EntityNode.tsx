@@ -6,12 +6,7 @@
 import React, { memo, useCallback } from 'react';
 import { Handle, Position, NodeToolbar, type NodeProps } from '@xyflow/react';
 import type { EntityNode } from './types';
-
-declare const acquireVsCodeApi: () => {
-  postMessage(message: unknown): void;
-};
-
-const vscode = acquireVsCodeApi();
+import { vscode } from './vscode';
 
 export const EntityNodeComponent = memo(({ data, id, selected }: NodeProps<EntityNode>) => {
   const handleExpand = useCallback(() => {

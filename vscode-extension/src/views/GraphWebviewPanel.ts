@@ -98,7 +98,7 @@ export class GraphWebviewPanel implements vscode.Disposable {
   // ── Panel setup ──────────────────────────────────────────────────
 
   private initPanel(): void {
-    const resourceRoot = vscode.Uri.joinPath(this.extensionUri, 'resources', 'webview');
+    const resourceRoot = vscode.Uri.joinPath(this.extensionUri, 'dist');
 
     this.panel = vscode.window.createWebviewPanel(
       'memoryBank.graphWebview',
@@ -316,9 +316,12 @@ export class GraphWebviewPanel implements vscode.Disposable {
   private getHtml(webview: vscode.Webview, resourceRoot: vscode.Uri): string {
     const nonce = getNonce();
     
-    // React Flow bundle script
-    const bundleUri = webview.asWebviewUri(
-      vscode.Uri.joinPath(resourceRoot, 'graph-bundle.js'),
+    // React Flow bundle script and styles
+    const scriptUri = webview.asWebviewUri(
+      vscode.Uri.joinPath(resourceRoot, 'webview', 'graph.js'),
+    );
+    const styleUri = webview.asWebviewUri(
+      vscode.Uri.joinPath(resourceRoot, 'webview', 'graph.css'),
     );
 
     return /* html */ `<!DOCTYPE html>
@@ -326,12 +329,14 @@ export class GraphWebviewPanel implements vscode.Disposable {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta http-equiv="Content-Security-Policy"
-    content="default-src 'none';
-             style-src ${webview.cspSource} 'unsafe-inline';
-             script-src 'nonce-${nonce}';
-             img-src ${webview.cspSource} data:;">
+  <meta http-equiv="Content-Security-Policy" 
+    content="default-src 'none'; 
+             style-src ${webview.cspSource} 'unsafe-inline'; 
+             script-src ${webview.cspSource} 'nonce-${nonce}' 'unsafe-eval'; 
+             img-src ${webview.cspSource} data:; 
+             font-src ${webview.cspSource};">
   <title>Knowledge Graph</title>
+  <link rel="stylesheet" href="${styleUri}">
   <style>
     body, html {
       margin: 0;
@@ -351,7 +356,7 @@ export class GraphWebviewPanel implements vscode.Disposable {
 </head>
 <body>
   <div id="root"></div>
-  <script nonce="${nonce}" src="${bundleUri}"></script>
+  <script nonce="${nonce}" src="${scriptUri}"></script>
 </body>
 </html>`;
   }
