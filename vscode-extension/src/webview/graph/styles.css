@@ -467,3 +467,122 @@ body,
 .settings-button-danger:hover {
   background: var(--vscode-inputValidation-errorBackground, rgba(190, 17, 0, 0.2));
 }
+
+/* === Right-Side Settings Panel === */
+
+.settings-panel-right {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 280px;
+  background: var(--vscode-sideBar-background, var(--vscode-editorWidget-background));
+  border-left: 1px solid var(--vscode-sideBar-border, var(--vscode-editorWidget-border));
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  box-shadow: -4px 0 16px rgba(0, 0, 0, 0.2);
+  animation: slideInRight 0.2s ease-out;
+}
+
+@keyframes slideInRight {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.settings-panel-right .settings-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px;
+}
+
+/* === Settings Checkbox === */
+
+.settings-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 0;
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--vscode-foreground);
+}
+
+.settings-checkbox input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--vscode-focusBorder, #007acc);
+  cursor: pointer;
+}
+
+.settings-checkbox:hover {
+  color: var(--vscode-textLink-foreground);
+}
+
+/* === Context Menu === */
+
+.context-menu {
+  position: fixed;
+  z-index: 3000;
+  background: var(--vscode-menu-background, var(--vscode-editorWidget-background));
+  border: 1px solid var(--vscode-menu-border, var(--vscode-editorWidget-border));
+  border-radius: 6px;
+  min-width: 160px;
+  padding: 4px 0;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+  animation: fadeIn 0.1s ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.context-menu-item {
+  display: block;
+  width: 100%;
+  padding: 8px 12px;
+  border: none;
+  background: transparent;
+  color: var(--vscode-menu-foreground, var(--vscode-foreground));
+  font-family: inherit;
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.1s ease;
+}
+
+.context-menu-item:hover {
+  background: var(--vscode-menu-selectionBackground, var(--vscode-list-hoverBackground));
+  color: var(--vscode-menu-selectionForeground, var(--vscode-foreground));
+}
+
+.context-menu-item:active {
+  background: var(--vscode-list-activeSelectionBackground);
+}
+
+.context-menu-separator {
+  height: 1px;
+  background: var(--vscode-menu-separatorBackground, var(--vscode-editorWidget-border));
+  margin: 4px 8px;
+}
+
+.context-menu-item.danger {
+  color: var(--vscode-errorForeground, #f48771);
+}
+
+.context-menu-item.danger:hover {
+  background: var(--vscode-inputValidation-errorBackground, rgba(190, 17, 0, 0.2));
+}

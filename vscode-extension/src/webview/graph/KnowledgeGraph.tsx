@@ -42,6 +42,8 @@ function KnowledgeGraphInner() {
   const [isLoading, setIsLoading] = useState(true);
   const [showSettings, setShowSettings] = useState(false);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+  const [snapToGrid, setSnapToGrid] = useState(true);
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; nodeId: string } | null>(null);
   const { fitView } = useReactFlow();
   const layoutDirectionRef = useRef<LayoutDirection>('TB');
 
@@ -129,10 +131,26 @@ function KnowledgeGraphInner() {
   const onNodeClick: NodeMouseHandler = useCallback(
     (_, node) => {
       setSelectedNodeId(node.id);
+      setContextMenu(null);
       vscode.postMessage({ type: 'nodeSelected', nodeId: node.id });
     },
     []
   );
+
+  // Handle right-click context menu
+  const onNodeContextMenu = useCallback(
+    (event: React.MouseEvent, node: EntityNode) => {
+      event.preventDefault();
+      setSelectedNodeId(node.id);
+      setContextMenu({ x: event.clientX, y: event.clientY, nodeId: node.id });
+    },
+    []
+  );
+
+  // Close context menu on pane click
+  const onPaneClick = useCallback(() => {
+    setContextMenu(null);
+  }, []);
 
   // Handle search
   const handleSearch = useCallback(() => {
@@ -206,8 +224,52 @@ function KnowledgeGraphInner() {
     vscode.postMessage({ type: 'deleteNode', nodeId: selectedNodeId });
     setSelectedNodeId(null);
     setShowSettings(false);
+    setContextMenu(null);
     setIsLoading(true);
   }, [selectedNodeId]);
+
+  // Context menu actions
+  const handleContextExpand = useCallback(() => {
+    if (contextMenu) {
+      vscode.postMessage({ type: 'expandNode', nodeId: contextMenu.nodeId });
+      setIsLoading(true);
+    }
+    setContextMenu(null);
+  }, [contextMenu]);
+
+  const handleContextAddObservation = useCallback(() => {
+    if (contextMenu) {
+      const text = prompt('Observation text:');
+      if (text) {
+        vscode.postMessage({ type: 'addObservation', entity: contextMenu.nodeId, text });
+      }
+    }
+    setContextMenu(null);
+  }, [contextMenu]);
+
+  const handleContextLink = useCallback(() => {
+    if (contextMenu) {
+      const to = prompt('Link to entity:');
+      if (to) {
+        const relationType = prompt('Relation type (e.g., depends_on):');
+        if (relationType) {
+          vscode.postMessage({ type: 'linkEntities', from: contextMenu.nodeId, to, relationType });
+          setIsLoading(true);
+        }
+      }
+    }
+    setContextMenu(null);
+  }, [contextMenu]);
+
+  const handleContextDelete = useCallback(() => {
+    if (contextMenu) {
+      if (confirm(`Delete entity "${contextMenu.nodeId}"?`)) {
+        vscode.postMessage({ type: 'deleteNode', nodeId: contextMenu.nodeId });
+        setIsLoading(true);
+      }
+    }
+    setContextMenu(null);
+  }, [contextMenu]);
 
   return (
     <div className="knowledge-graph-container">
@@ -219,45 +281,74 @@ function KnowledgeGraphInner() {
         </div>
       )}
 
-      {/* Settings Panel */}
-      {showSettings && (
-        <div className="settings-overlay" onClick={() => setShowSettings(false)}>
-          <div className="settings-panel" onClick={(e) => e.stopPropagation()}>
-            <div className="settings-header">
-              <span className="settings-title">Graph Operations</span>
-              <button className="settings-close" onClick={() => setShowSettings(false)}>X</button>
-            </div>
-            <div className="settings-content">
-              <div className="settings-section">
-                <div className="settings-section-title">Create</div>
-                <button className="settings-button" onClick={handleCreateEntity}>
-                  Create Entity
-                </button>
-                <button className="settings-button" onClick={handleAddObservation}>
-                  Add Observation{selectedNodeId ? ` to "${selectedNodeId}"` : ''}
-                </button>
-              </div>
-              <div className="settings-section">
-                <div className="settings-section-title">Connect</div>
-                <button className="settings-button" onClick={handleLinkEntities}>
-                  Link Entities{selectedNodeId ? ` from "${selectedNodeId}"` : ''}
-                </button>
-              </div>
-              {selectedNodeId && (
-                <div className="settings-section">
-                  <div className="settings-section-title">Selected: {selectedNodeId}</div>
-                  <button className="settings-button" onClick={handleDuplicateEntity}>
-                    Duplicate Entity
-                  </button>
-                  <button className="settings-button settings-button-danger" onClick={handleDeleteEntity}>
-                    Delete Entity
-                  </button>
-                </div>
-              )}
-            </div>
-          </div>
+      {/* Context Menu */}
+      {contextMenu && (
+        <div
+          className="context-menu"
+          style={{ left: contextMenu.x, top: contextMenu.y }}
+        >
+          <button className="context-menu-item" onClick={handleContextExpand}>
+            Expand Neighborhood
+          </button>
+          <button className="context-menu-item" onClick={handleContextAddObservation}>
+            Add Observation
+          </button>
+          <button className="context-menu-item" onClick={handleContextLink}>
+            Link to Entity
+          </button>
+          <div className="context-menu-separator" />
+          <button className="context-menu-item context-menu-item-danger" onClick={handleContextDelete}>
+            Delete Entity
+          </button>
         </div>
       )}
+
+      {/* Settings Panel - Right Side */}
+      <div className={`settings-panel-right ${showSettings ? 'open' : ''}`}>
+        <div className="settings-header">
+          <span className="settings-title">Graph Operations</span>
+          <button className="settings-close" onClick={() => setShowSettings(false)}>X</button>
+        </div>
+        <div className="settings-content">
+          <div className="settings-section">
+            <div className="settings-section-title">Options</div>
+            <label className="settings-checkbox">
+              <input
+                type="checkbox"
+                checked={snapToGrid}
+                onChange={(e) => setSnapToGrid(e.target.checked)}
+              />
+              Snap to Grid
+            </label>
+          </div>
+          <div className="settings-section">
+            <div className="settings-section-title">Create</div>
+            <button className="settings-button" onClick={handleCreateEntity}>
+              Create Entity
+            </button>
+            <button className="settings-button" onClick={handleAddObservation}>
+              Add Observation{selectedNodeId ? ` to "${selectedNodeId}"` : ''}
+            </button>
+          </div>
+          <div className="settings-section">
+            <div className="settings-section-title">Connect</div>
+            <button className="settings-button" onClick={handleLinkEntities}>
+              Link Entities{selectedNodeId ? ` from "${selectedNodeId}"` : ''}
+            </button>
+          </div>
+          {selectedNodeId && (
+            <div className="settings-section">
+              <div className="settings-section-title">Selected: {selectedNodeId}</div>
+              <button className="settings-button" onClick={handleDuplicateEntity}>
+                Duplicate Entity
+              </button>
+              <button className="settings-button settings-button-danger" onClick={handleDeleteEntity}>
+                Delete Entity
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
 
       {/* React Flow Canvas */}
       <ReactFlow<EntityNode, RelationEdge>
@@ -267,14 +358,18 @@ function KnowledgeGraphInner() {
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
         onNodeClick={onNodeClick}
+        onNodeContextMenu={onNodeContextMenu}
+        onPaneClick={onPaneClick}
         nodeTypes={nodeTypes}
+        snapToGrid={snapToGrid}
+        snapGrid={[15, 15]}
         fitView
         minZoom={0.1}
         maxZoom={2}
         defaultEdgeOptions={{
           type: 'smoothstep',
-          animated: false,
-          style: { strokeWidth: 2, stroke: 'var(--vscode-editorWidget-border)' },
+          animated: true,
+          style: { strokeWidth: 2, stroke: 'var(--vscode-editorWidget-border)', strokeDasharray: '5,5' },
         }}
         proOptions={{ hideAttribution: true }}
       >
