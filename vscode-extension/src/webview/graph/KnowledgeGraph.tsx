@@ -22,7 +22,7 @@ import {
 import '@xyflow/react/dist/style.css';
 
 import { EntityNodeComponent } from './EntityNode';
-import { getLayoutedElements, relayout, type LayoutDirection } from './layout';
+import { getLayoutedElements, getElkLayoutedElements, relayout, type LayoutDirection, type LayoutAlgorithm } from './layout';
 import type { EntityNode, RelationEdge, ExtensionMessage } from './types';
 import { vscode } from './vscode';
 
@@ -38,6 +38,7 @@ function KnowledgeGraphInner() {
   const [nodes, setNodes, onNodesChange] = useNodesState<EntityNode>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<RelationEdge>([]);
   const [layoutDirection, setLayoutDirection] = useState<LayoutDirection>('TB');
+  const [layoutAlgorithm, setLayoutAlgorithm] = useState<LayoutAlgorithm>('dagre');
   const [searchQuery, setSearchQuery] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [showSettings, setShowSettings] = useState(false);
@@ -46,32 +47,47 @@ function KnowledgeGraphInner() {
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; nodeId: string } | null>(null);
   const { fitView } = useReactFlow();
   const layoutDirectionRef = useRef<LayoutDirection>('TB');
+  const layoutAlgorithmRef = useRef<LayoutAlgorithm>('dagre');
 
-  // Keep ref in sync with state
+  // Keep refs in sync with state
   useEffect(() => {
     layoutDirectionRef.current = layoutDirection;
-  }, [layoutDirection]);
+    layoutAlgorithmRef.current = layoutAlgorithm;
+  }, [layoutDirection, layoutAlgorithm]);
+
+  // Layout helper - uses ELK or dagre based on algorithm setting
+  const applyLayout = useCallback(async (
+    rawNodes: EntityNode[],
+    rawEdges: RelationEdge[],
+    direction: LayoutDirection,
+    algorithm: LayoutAlgorithm
+  ) => {
+    if (algorithm === 'elk-layered' || algorithm === 'elk-mrtree') {
+      const result = await getElkLayoutedElements(rawNodes, rawEdges, { direction, algorithm });
+      setNodes(result.nodes);
+      setEdges(result.edges);
+    } else {
+      const result = getLayoutedElements(rawNodes, rawEdges, { direction });
+      setNodes(result.nodes);
+      setEdges(result.edges);
+    }
+    setTimeout(() => fitView({ padding: 0.4, duration: 400 }), 100);
+  }, [setNodes, setEdges, fitView]);
 
   // Message handler - separate from initial load
   useEffect(() => {
-    const handleMessage = (event: MessageEvent<ExtensionMessage>) => {
+    const handleMessage = async (event: MessageEvent<ExtensionMessage>) => {
       const message = event.data;
 
       switch (message.type) {
         case 'graphData': {
-          const { nodes: layoutedNodes, edges: layoutedEdges } = getLayoutedElements(
+          await applyLayout(
             message.nodes,
             message.edges,
-            { direction: layoutDirectionRef.current }
+            layoutDirectionRef.current,
+            layoutAlgorithmRef.current
           );
-          setNodes(layoutedNodes);
-          setEdges(layoutedEdges);
           setIsLoading(false);
-
-          // Fit view with better padding (less zoomed in)
-          setTimeout(() => {
-            fitView({ padding: 0.4, duration: 400 });
-          }, 100);
           break;
         }
       }
@@ -79,7 +95,7 @@ function KnowledgeGraphInner() {
 
     window.addEventListener('message', handleMessage);
     return () => window.removeEventListener('message', handleMessage);
-  }, [setNodes, setEdges, fitView]);
+  }, [applyLayout]);
 
   // Initial load - only runs once
   useEffect(() => {
@@ -88,32 +104,27 @@ function KnowledgeGraphInner() {
 
   // Handle layout direction change
   const handleLayoutChange = useCallback(
-    (direction: LayoutDirection) => {
+    async (direction: LayoutDirection) => {
       setLayoutDirection(direction);
-      const { nodes: relayoutedNodes, edges: relayoutedEdges } = relayout(
-        nodes,
-        edges,
-        direction
-      );
-      setNodes(relayoutedNodes);
-      setEdges(relayoutedEdges);
-      setTimeout(() => fitView({ padding: 0.4, duration: 400 }), 100);
+      await applyLayout(nodes, edges, direction, layoutAlgorithm);
     },
-    [nodes, edges, setNodes, setEdges, fitView]
+    [nodes, edges, layoutAlgorithm, applyLayout]
   );
 
-  // Auto layout - apply LR layout for best organization
-  const handleAutoLayout = useCallback(() => {
+  // Handle layout algorithm change
+  const handleAlgorithmChange = useCallback(
+    async (algorithm: LayoutAlgorithm) => {
+      setLayoutAlgorithm(algorithm);
+      await applyLayout(nodes, edges, layoutDirection, algorithm);
+    },
+    [nodes, edges, layoutDirection, applyLayout]
+  );
+
+  // Auto layout - apply LR layout with current algorithm
+  const handleAutoLayout = useCallback(async () => {
     setLayoutDirection('LR');
-    const { nodes: relayoutedNodes, edges: relayoutedEdges } = getLayoutedElements(
-      nodes,
-      edges,
-      { direction: 'LR' }
-    );
-    setNodes(relayoutedNodes);
-    setEdges(relayoutedEdges);
-    setTimeout(() => fitView({ padding: 0.4, duration: 400 }), 100);
-  }, [nodes, edges, setNodes, setEdges, fitView]);
+    await applyLayout(nodes, edges, 'LR', layoutAlgorithm);
+  }, [nodes, edges, layoutAlgorithm, applyLayout]);
 
   // Handle edge connections
   const onConnect: OnConnect = useCallback(
@@ -307,7 +318,7 @@ function KnowledgeGraphInner() {
       <div className={`settings-panel-right ${showSettings ? 'open' : ''}`}>
         <div className="settings-header">
           <span className="settings-title">Graph Operations</span>
-          <button className="settings-close" onClick={() => setShowSettings(false)}>X</button>
+          <button className="settings-close" onClick={() => setShowSettings(false)}>✕</button>
         </div>
         <div className="settings-content">
           <div className="settings-section">
@@ -320,6 +331,41 @@ function KnowledgeGraphInner() {
               />
               Snap to Grid
             </label>
+          </div>
+          <div className="settings-section">
+            <div className="settings-section-title">Layout Algorithm</div>
+            <div className="settings-radio-group">
+              <label className="settings-radio">
+                <input
+                  type="radio"
+                  name="algorithm"
+                  value="dagre"
+                  checked={layoutAlgorithm === 'dagre'}
+                  onChange={() => handleAlgorithmChange('dagre')}
+                />
+                Dagre (Fast)
+              </label>
+              <label className="settings-radio">
+                <input
+                  type="radio"
+                  name="algorithm"
+                  value="elk-layered"
+                  checked={layoutAlgorithm === 'elk-layered'}
+                  onChange={() => handleAlgorithmChange('elk-layered')}
+                />
+                ELK Layered
+              </label>
+              <label className="settings-radio">
+                <input
+                  type="radio"
+                  name="algorithm"
+                  value="elk-mrtree"
+                  checked={layoutAlgorithm === 'elk-mrtree'}
+                  onChange={() => handleAlgorithmChange('elk-mrtree')}
+                />
+                ELK Tree
+              </label>
+            </div>
           </div>
           <div className="settings-section">
             <div className="settings-section-title">Create</div>
@@ -456,8 +502,8 @@ function KnowledgeGraphInner() {
             </button>
 
             <button
-              className="toolbar-button"
-              onClick={() => setShowSettings(true)}
+              className={`toolbar-button ${showSettings ? 'active' : ''}`}
+              onClick={() => setShowSettings(!showSettings)}
               title="Graph operations"
             >
               Settings

@@ -482,18 +482,16 @@ body,
   display: flex;
   flex-direction: column;
   box-shadow: -4px 0 16px rgba(0, 0, 0, 0.2);
-  animation: slideInRight 0.2s ease-out;
+  transform: translateX(100%);
+  opacity: 0;
+  pointer-events: none;
+  transition: transform 0.2s ease-out, opacity 0.2s ease-out;
 }
 
-@keyframes slideInRight {
-  from {
-    transform: translateX(100%);
-    opacity: 0;
-  }
-  to {
-    transform: translateX(0);
-    opacity: 1;
-  }
+.settings-panel-right.open {
+  transform: translateX(0);
+  opacity: 1;
+  pointer-events: auto;
 }
 
 .settings-panel-right .settings-content {
@@ -523,6 +521,37 @@ body,
 
 .settings-checkbox:hover {
   color: var(--vscode-textLink-foreground);
+}
+
+/* === Settings Radio Group === */
+
+.settings-radio-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.settings-radio {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--vscode-foreground);
+  border-radius: 4px;
+  transition: background 0.15s ease;
+}
+
+.settings-radio input[type="radio"] {
+  width: 14px;
+  height: 14px;
+  accent-color: var(--vscode-focusBorder, #007acc);
+  cursor: pointer;
+}
+
+.settings-radio:hover {
+  background: var(--vscode-list-hoverBackground);
 }
 
 /* === Context Menu === */
