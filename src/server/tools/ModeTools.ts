@@ -56,7 +56,7 @@ export const modeTools = [
  * @param mode Mode name
  * @returns Operation result
  */
-export function handleSwitchMode(memoryBankManager: MemoryBankManager, mode: string) {
+export async function handleSwitchMode(memoryBankManager: MemoryBankManager, mode: string) {
   const validModes = ['architect', 'ask', 'code', 'debug', 'test'];
   
   if (!validModes.includes(mode)) {
@@ -71,7 +71,7 @@ export function handleSwitchMode(memoryBankManager: MemoryBankManager, mode: str
     };
   }
   
-  const success = memoryBankManager.switchMode(mode);
+  const success = await memoryBankManager.switchMode(mode);
   
   if (!success) {
     return {

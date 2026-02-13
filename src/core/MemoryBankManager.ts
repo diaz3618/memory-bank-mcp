@@ -1026,6 +1026,13 @@ export class MemoryBankManager {
       // Create the ExternalRulesLoader for the project
       this.rulesLoader = new ExternalRulesLoader(this.projectPath);
 
+      // Ensure all .clinerules-{mode} files exist before loading rules
+      const validation = await this.rulesLoader.validateRequiredFiles();
+      if (!validation.valid && validation.missingFiles.length > 0) {
+        logger.info('MemoryBankManager', `Creating missing clinerules files: ${validation.missingFiles.join(', ')}`);
+        await this.rulesLoader.createMissingClinerules(validation.missingFiles);
+      }
+
       // Create the ModeManager with the rules loader
       this.modeManager = new ModeManager(this.rulesLoader);
 
@@ -1059,13 +1066,13 @@ export class MemoryBankManager {
    * @param mode Mode name
    * @returns True if the mode was successfully switched, false otherwise
    */
-  switchMode(mode: string): boolean {
+  async switchMode(mode: string): Promise<boolean> {
     if (!this.modeManager) {
       logger.warn('MemoryBankManager', 'Mode manager not initialized, cannot switch mode');
       return false;
     }
     
-    const success = this.modeManager.switchMode(mode);
+    const success = await this.modeManager.switchMode(mode);
     if (success) {
       logger.info('MemoryBankManager', `Switched to mode: ${mode}`);
     } else {

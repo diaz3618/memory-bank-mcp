@@ -142,21 +142,21 @@ describe('Clinerules Integration Tests', () => {
     newModeManager.dispose();
   });
   
-  test('Should switch modes correctly', () => {
+  test('Should switch modes correctly', async () => {
     // Get current mode
     let state = modeManager.getCurrentModeState();
     const initialMode = state.name;
     
     // Switch to the other mode
     const targetMode = initialMode === 'code' ? 'architect' : 'code';
-    const result = modeManager.switchMode(targetMode);
+    const result = await modeManager.switchMode(targetMode);
     expect(result).toBe(true);
     
     state = modeManager.getCurrentModeState();
     expect(state.name).toBe(targetMode);
     
     // Try to switch to non-existent mode
-    const failResult = modeManager.switchMode('nonexistent');
+    const failResult = await modeManager.switchMode('nonexistent');
     expect(failResult).toBe(false);
     
     // Mode should remain unchanged
@@ -184,14 +184,14 @@ describe('Clinerules Integration Tests', () => {
     expect(modeManager.isUmbModeActive()).toBe(false);
   });
   
-  test('Should detect mode triggers', () => {
+  test('Should detect mode triggers', async () => {
     // Get current mode
     let state = modeManager.getCurrentModeState();
     const initialMode = state.name;
     
     // Ensure we're in code mode for this test
     if (initialMode !== 'code') {
-      modeManager.switchMode('code');
+      await modeManager.switchMode('code');
       state = modeManager.getCurrentModeState();
       expect(state.name).toBe('code');
     }
@@ -202,7 +202,7 @@ describe('Clinerules Integration Tests', () => {
     expect(architectTriggers.length).toBe(1);
     
     // Switch to architect mode
-    modeManager.switchMode('architect');
+    await modeManager.switchMode('architect');
     state = modeManager.getCurrentModeState();
     expect(state.name).toBe('architect');
     
@@ -230,23 +230,24 @@ describe('Clinerules Integration Tests', () => {
   });
   
   test('Should emit events on mode changes', async () => {
-    return new Promise<void>((resolve) => {
-      // Get current mode
-      const state = modeManager.getCurrentModeState();
-      const initialMode = state.name;
-      
-      // Switch to the other mode
-      const targetMode = initialMode === 'code' ? 'architect' : 'code';
-      
+    // Get current mode
+    const state = modeManager.getCurrentModeState();
+    const initialMode = state.name;
+    
+    // Switch to the other mode
+    const targetMode = initialMode === 'code' ? 'architect' : 'code';
+    
+    const eventPromise = new Promise<void>((resolve) => {
       // Listen for mode changed event
       modeManager.on(ModeManagerEvent.MODE_CHANGED, (state) => {
         expect(state.name).toBe(targetMode);
         resolve();
       });
-      
-      // Switch mode to trigger event
-      modeManager.switchMode(targetMode);
     });
+    
+    // Switch mode to trigger event
+    await modeManager.switchMode(targetMode);
+    await eventPromise;
   });
   
   test('Should emit events on UMB activation', async () => {
@@ -280,7 +281,7 @@ describe('Clinerules Integration Tests', () => {
   
   test('Should emit events on mode trigger detection', async () => {
     // Ensure we're in code mode for this test
-    modeManager.switchMode('code');
+    await modeManager.switchMode('code');
     
     return new Promise<void>((resolve) => {
       // Listen for mode trigger detected event

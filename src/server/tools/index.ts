@@ -261,7 +261,7 @@ export function setupToolHandlers(
           if (!mode) {
             throw new McpError(ErrorCode.InvalidParams, 'Mode not specified');
           }
-          return handleSwitchMode(memoryBankManager, mode);
+          return await handleSwitchMode(memoryBankManager, mode);
         }
 
         case 'get_current_mode': {

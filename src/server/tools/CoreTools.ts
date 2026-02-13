@@ -431,6 +431,9 @@ export async function handleInitializeMemoryBank(
       // Initialize the Memory Bank with createIfNotExists = true
       await memoryBankManager.initialize(true);
       
+      // Initialize mode manager (creates missing .clinerules files)
+      await memoryBankManager.initializeModeManager();
+      
       // Get the Memory Bank directory
       const memoryBankDir = memoryBankManager.getMemoryBankDir();
       

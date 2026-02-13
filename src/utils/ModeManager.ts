@@ -1,5 +1,6 @@
 import { EventEmitter } from 'events';
-import { ClineruleBase, ExternalRulesLoader } from './ExternalRulesLoader.js';
+import { ExternalRulesLoader } from './ExternalRulesLoader.js';
+import type { ClineruleBase } from '../types/rules.js';
 
 /**
  * Events emitted by ModeManager
@@ -84,9 +85,18 @@ export class ModeManager extends EventEmitter {
    * @param mode Mode name
    * @returns true if the switch was successful, false otherwise
    */
-  switchMode(mode: string): boolean {
+  async switchMode(mode: string): Promise<boolean> {
     if (!this.rulesLoader.hasModeRules(mode)) {
-      return false;
+      // Try to create the missing clinerules file before giving up
+      const filename = `.clinerules-${mode}`;
+      const created = await this.rulesLoader.createMissingClinerules([filename]);
+      if (created.length > 0) {
+        // Reload rules after creating the file
+        await this.rulesLoader.detectAndLoadRules();
+      }
+      if (!this.rulesLoader.hasModeRules(mode)) {
+        return false;
+      }
     }
     
     this.currentMode = mode;

@@ -1,45 +1,43 @@
-# Dependências
+# Dependencies
 node_modules/
 .npm/
-.cursor/mcp.json
 
-# Arquivos de build
+# Build artifacts
 build/
 dist/
 
-# Arquivos específicos do Bun
+# Bun
 bun.lockb
 
 # Logs
-logs
+logs/
 *.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
-# Arquivos do sistema operacional
+# OS files
 .DS_Store
 Thumbs.db
 
-# Arquivos de ambiente
+# Environment
 .env
 .env.local
-.env.development.local
-.env.test.local
-.env.production.local
+.env.*.local
 
 # IDE and tool config
 .idea/
 .vscode/
 *.swp
 *.swo
+.cursor/
 
-# MCP config files (may contain API keys)
+# MCP config files (may contain keys)
 .mcp.json
 .claude/
 .npmrc
 
-# Arquivos de cache
+# Cache
 .cache/
 .temp/
 
@@ -48,22 +46,21 @@ Thumbs.db
 test-*.js
 *-wrapper.js
 
-# Absolute paths
-/Users/
-
-# Runtime scripts (unless specifically needed for distribution)
+# Runtime scripts
 run-*.sh
 prepare-*.sh
-docs/internal
-docs/archive
-repos
-backup
 
-# Temporary ignore until they’re updated
-docs
+# Internal docs and archives (not published)
+docs/internal/
+docs/archive/
 
-scripts
-.venv
-backup-icons
+# Local-only directories
+repos/
+backup/
+backup-icons/
+scripts/
+.venv/
+.agents/
+
+# VS Code extension packaging
 *.vsix
-.agents
