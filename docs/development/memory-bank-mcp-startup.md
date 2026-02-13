@@ -16,13 +16,14 @@ Memory Bank MCP is started through the `memory-bank-mcp` command, which is confi
 
 The command accepts the following options:
 
-| Option               | Short form | Description                                        |
-| -------------------- | ---------- | -------------------------------------------------- |
-| `--mode`             | `-m`       | Set execution mode (code, ask, architect, etc.)    |
-| `--path`             | `-p`       | Set project path (default: current directory)      |
-| `--folder`           | `-f`       | Set Memory Bank folder name (default: memory-bank) |
-| `--githubProfileUrl` | `-g`       | Set GitHub profile URL for tracking changes        |
-| `--help`             | `-h`       | Display program help                               |
+| Option      | Short form | Description                                     |
+| ----------- | ---------- | ----------------------------------------------- |
+| `--mode`    | `-m`       | Set execution mode (code, ask, architect, etc.) |
+| `--path`    | `-p`       | Set project path (default: current directory)   |
+| `--folder`  | `-f`       | Set Memory Bank folder name (default: memory-bank) |
+| `--username`| `-u`       | Set username for progress tracking (can be name or GitHub URL) |
+| `--debug`   | `-d`       | Enable debug mode (show detailed logs)          |
+| `--help`    | `-h`       | Display program help                            |
 
 ## Step-by-Step Startup Process
 
