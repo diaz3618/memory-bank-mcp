@@ -6,24 +6,24 @@ High-level overview of the Memory Bank MCP server codebase.
 
 ```
 ┌──────────────────────────────────────────────────┐
-│                   MCP Protocol                    │
+│                   MCP Protocol                   │
 │            (JSON-RPC over stdio/SSE)             │
 ├──────────────────────────────────────────────────┤
-│                MemoryBankServer                   │
-│          src/server/MemoryBankServer.ts           │
+│                MemoryBankServer                  │
+│          src/server/MemoryBankServer.ts          │
 ├────────────┬────────────┬────────────────────────┤
 │   Tools    │ Resources  │       Prompts          │
 │  (write)   │  (read)    │                        │
 ├────────────┴────────────┴────────────────────────┤
-│              MemoryBankManager                    │
-│             src/core/MemoryBankManager.ts         │
+│              MemoryBankManager                   │
+│             src/core/MemoryBankManager.ts        │
 ├──────────┬──────────┬──────────┬─────────────────┤
-│  Graph   │ Progress │  Mode   │  Store Registry  │
-│  Store   │ Tracker  │ Manager │                  │
+│  Graph   │ Progress │  Mode    │ Store Registry  │
+│  Store   │ Tracker  │ Manager  │                 │
 ├──────────┴──────────┴──────────┴─────────────────┤
-│            FileSystem Abstraction                 │
-│  LocalFileSystem │ RemoteFileSystem (SSH)         │
-│         CachingFileSystem (decorator)             │
+│            FileSystem Abstraction                │
+│  LocalFileSystem │ RemoteFileSystem (SSH)        │
+│         CachingFileSystem (decorator)            │
 └──────────────────────────────────────────────────┘
 ```
 

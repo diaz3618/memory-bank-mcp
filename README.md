@@ -1,6 +1,7 @@
 # Memory Bank MCP
 
 [![NPM Version](https://img.shields.io/npm/v/@diazstg/memory-bank-mcp.svg)](https://www.npmjs.com/package/@diazstg/memory-bank-mcp)
+[![Semgrep CE scan](https://github.com/diaz3618/memory-bank-mcp/actions/workflows/semgrep.yml/badge.svg)](https://github.com/diaz3618/memory-bank-mcp/actions/workflows/semgrep.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 An MCP server that gives AI assistants persistent memory across sessions. It stores project context, decisions, and progress in structured markdown files — locally or on a remote server via SSH.
@@ -39,7 +40,7 @@ Add to your editor's MCP config (`.vscode/mcp.json`, Cursor, Claude Desktop, etc
 ### Common Options
 
 ```bash
-npx @diazstg/memory-bank-mcp --mode code          # Set operational mode
+npx @diazstg/memory-bank-mcp --mode code           # Set operational mode
 npx @diazstg/memory-bank-mcp --path /my/project    # Custom project path
 npx @diazstg/memory-bank-mcp --folder my-memory    # Custom folder name (default: memory-bank)
 npx @diazstg/memory-bank-mcp --help                # All options
@@ -129,4 +130,4 @@ See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## License
 
-MIT — see [LICENSE](LICENSE).
+See [LICENSE](LICENSE).

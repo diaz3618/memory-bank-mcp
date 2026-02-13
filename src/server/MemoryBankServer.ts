@@ -28,7 +28,7 @@ export class MemoryBankServer {
    * Initializes the MCP server with the necessary handlers for tools and resources.
    * @param initialMode Initial mode (optional)
    * @param projectPath Project path (optional)
-   * @param userId GitHub profile URL for tracking changes (optional)
+   * @param userId Username for progress tracking (can be name or GitHub URL)
    * @param folderName Memory Bank folder name (optional, default: 'memory-bank')
    * @param debugMode Enable debug mode (optional, default: false)
    * @param remoteConfig Remote server configuration (optional)

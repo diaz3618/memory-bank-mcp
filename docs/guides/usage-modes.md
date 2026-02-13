@@ -1,4 +1,4 @@
-\*\*\*\*# Memory Bank MCP Usage Modes
+# Memory Bank MCP Usage Modes
 
 ## Overview
 

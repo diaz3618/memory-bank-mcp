@@ -18,7 +18,7 @@ export interface ProgressDetails {
   timestamp?: Date;
   /** Optional additional metadata as key-value pairs */
   metadata?: Record<string, string | number | boolean>;
-  /** Optional GitHub profile URL of who performed the action */
+  /** Optional username or GitHub profile URL of who performed the action */
   userId?: string;
   /** 
    * Any additional properties
@@ -45,7 +45,7 @@ export interface Decision {
   date?: Date;
   /** Optional tags to categorize the decision */
   tags?: string[];
-  /** Optional GitHub profile URL of who made the decision */
+  /** Optional username or GitHub profile URL of who made the decision */
   userId?: string;
 }
 
@@ -83,7 +83,7 @@ export class ProgressTracker {
    * Creates a new ProgressTracker instance
    * 
    * @param memoryBankDir - Directory of the Memory Bank (for backwards compatibility)
-   * @param userId - GitHub profile URL for tracking changes
+   * @param userId - Username for progress tracking (can be name or GitHub URL)
    * @param fileSystem - Optional FileSystemInterface for remote support
    * @param memoryBankRelativePath - Relative path to memory bank from fileSystem baseDir
    */
@@ -155,12 +155,13 @@ export class ProgressTracker {
   }
 
   /**
-   * Formats the GitHub profile URL for display in markdown
+   * Formats the username for display in markdown
    * 
    * If the userId is a GitHub URL, it will be formatted as [@username](url)
+   * Otherwise, the username is returned as-is
    * 
-   * @param userId - The GitHub profile URL
-   * @returns Formatted GitHub profile URL string
+   * @param userId - The username or GitHub profile URL
+   * @returns Formatted username string
    * @private
    */
   private formatUserId(userId: string): string {
@@ -195,7 +196,7 @@ export class ProgressTracker {
    */
   async trackProgress(action: string, details: ProgressDetails): Promise<string> {
     try {
-      // Add GitHub profile URL to details if not already present
+      // Add username to details if not already present
       if (!details.userId) {
         details.userId = this.userId;
       }

@@ -19,15 +19,15 @@ Options:
   --mode, -m <mode>    Set execution mode (code, ask, architect, etc.)
   --path, -p <path>    Set project path (default: current directory)
   --folder, -f <folder> Set Memory Bank folder name (default: memory-bank)
-  --githubProfileUrl, -g <url>    Set GitHub profile URL for tracking changes
+  --username, -u <name> Set username for progress tracking (can be name or GitHub URL)
   --debug, -d          Enable debug mode (show detailed logs)
   --help, -h           Display this help
 
 Remote Server Options:
   --remote, -r         Enable remote server mode
   --ssh-key, -k <path> Path to SSH private key (default: ~/.ssh/your_ssh_key)
-  --remote-user, -u <user> Remote server username
-  --remote-host, -h <host> Remote server hostname or IP address
+  --remote-user <user> Remote server username
+  --remote-host <host> Remote server hostname or IP address
   --remote-path, -rp <path> Remote server base path for memory bank storage
   
 Examples:
@@ -35,9 +35,10 @@ Examples:
   memory-bank-mcp --mode code
   memory-bank-mcp --path /path/to/project
   memory-bank-mcp --folder custom-memory-bank
-  memory-bank-mcp --githubProfileUrl "https://github.com/username"
+  memory-bank-mcp --username "John Doe"
+  memory-bank-mcp --username "https://github.com/username"
   memory-bank-mcp --debug
-  memory-bank-mcp --remote --remote-user username --remote-host example.host.com --remote-path /home/username/memory-bank
+  memory-bank-mcp --remote --remote-user remoteuser --remote-host example.host.com --remote-path /home/remoteuser/memory-bank
   
 For more information, visit: https://github.com/diaz3618/memory-bank-mcp
 `);
@@ -74,7 +75,7 @@ function processArgs() {
       options.projectPath = args[++i];
     } else if (arg === '--folder' || arg === '-f') {
       options.folderName = args[++i];
-    } else if (arg === '--githubProfileUrl' || arg === '-g') {
+    } else if (arg === '--username' || arg === '-u') {
       options.userId = args[++i];
     } else if (arg === '--debug' || arg === '-d') {
       options.debug = true;
@@ -125,7 +126,7 @@ async function main() {
       logger.debug('Main', `Using Memory Bank folder name: ${options.folderName}`);
     }
     if (options.userId) {
-      logger.debug('Main', `Using GitHub profile URL: ${options.userId}`);
+      logger.debug('Main', `Using username: ${options.userId}`);
     }
     
     // Handle remote server configuration
