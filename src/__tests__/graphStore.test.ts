@@ -212,6 +212,7 @@ describe('Knowledge Graph Tests', () => {
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString(),
           },
+          ts: new Date().toISOString(),
         }),
       ];
 

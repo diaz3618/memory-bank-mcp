@@ -1,10 +1,19 @@
 import * as fs from 'fs';
-import { exec as execCallback, ExecException } from 'child_process';
+import { execFile as execFileCallback, ExecException } from 'child_process';
 import * as util from 'util';
 import { logger } from './LogManager.js';
 
 // Type for the exec callback function
 type ExecCallback = (error: ExecException | null, stdout: string, stderr: string) => void;
+
+/**
+ * Escapes a string for safe use inside single quotes in a POSIX shell.
+ * The approach: replace every `'` with `'\''` (end quote, escaped quote, start quote),
+ * then wrap the whole thing in single quotes.
+ */
+function shellEscapeSingleQuote(value: string): string {
+  return "'" + value.replace(/'/g, "'\\''") + "'";
+}
 
 /**
  * Utility class for SSH operations
@@ -45,57 +54,77 @@ export class SshUtils {
   }
 
   /**
-   * Executes an SSH command
-   * 
-   * @param command - Command to execute
+   * Executes an SSH command on the remote server.
+   *
+   * Uses `execFile` with an argv array so the local shell is never invoked,
+   * preventing command-injection via user-controlled values (key path, host,
+   * user, remote command). The *remote* command is passed as a single SSH
+   * positional argument and interpreted by the remote shell.
+   *
+   * @param command - Command to execute on the remote side
    * @returns Promise that resolves with command output
    */
   private async executeCommand(command: string): Promise<string> {
     return new Promise((resolve, reject) => {
-      // Build SSH command with options
-      const verboseFlag = this.debugMode ? '-v ' : '';
-      const hostKeyOption = this.strictHostKeyChecking 
-        ? '-o StrictHostKeyChecking=accept-new' 
-        : '-o StrictHostKeyChecking=no';
-      const sshCommand = `ssh ${verboseFlag}-i "${this.sshKeyPath}" ${hostKeyOption} -o ConnectTimeout=10 -o ServerAliveInterval=30 -o ServerAliveCountMax=3 ${this.remoteUser}@${this.remoteHost} "${command}"`;
-      logger.debug('SshUtils', `Executing SSH command: ${sshCommand}`);
-      
+      // Build SSH args as an array – no shell interpolation on the local side
+      const args: string[] = [];
+
+      if (this.debugMode) {
+        args.push('-v');
+      }
+
+      args.push('-i', this.sshKeyPath);
+
+      const hostKeyOption = this.strictHostKeyChecking
+        ? 'accept-new'
+        : 'no';
+      args.push('-o', `StrictHostKeyChecking=${hostKeyOption}`);
+      args.push('-o', 'ConnectTimeout=10');
+      args.push('-o', 'ServerAliveInterval=30');
+      args.push('-o', 'ServerAliveCountMax=3');
+      args.push(`${this.remoteUser}@${this.remoteHost}`);
+      // The remote command is a single positional arg; ssh sends it to the
+      // remote shell for interpretation.
+      args.push(command);
+
+      logger.debug('SshUtils', `Executing SSH command: ssh ${args.join(' ')}`);
+
       // Set a timeout for the command execution (30 seconds)
       const timeoutMs = 30000;
       let timeoutId: NodeJS.Timeout | null = null;
-      
-      // Execute SSH command
-      const childProcess = execCallback(sshCommand, (error, stdout, stderr) => {
+
+      // Execute SSH command via execFile (no local shell)
+      const childProcess = execFileCallback('ssh', args, (error, stdout, stderr) => {
         // Clear the timeout if it was set
         if (timeoutId) {
           clearTimeout(timeoutId);
           timeoutId = null;
         }
-        
+
         if (error) {
           logger.error('SshUtils', `SSH command error: ${error.message}`);
           logger.error('SshUtils', `SSH command stderr: ${stderr}`);
           logger.error('SshUtils', `SSH command stdout: ${stdout}`);
-          logger.error('SshUtils', `Full SSH command: ${sshCommand}`);
+          logger.error('SshUtils', `SSH args: ${JSON.stringify(args)}`);
           logger.error('SshUtils', `Error details: ${JSON.stringify(error)}`);
           reject(error);
           return;
         }
-        
+
         if (stderr) {
           logger.warn('SshUtils', `SSH command stderr: ${stderr}`);
         }
-        
+
         logger.debug('SshUtils', `SSH command stdout: ${stdout}`);
         resolve(stdout);
       });
-      
+
       // Set up the timeout
       timeoutId = setTimeout(() => {
         if (childProcess) {
           childProcess.kill();
         }
-        logger.error('SshUtils', `SSH command timed out after ${timeoutMs}ms: ${sshCommand}`);
+        logger.error('SshUtils', `SSH command timed out after ${timeoutMs}ms`);
         reject(new Error(`SSH command timed out after ${timeoutMs}ms`));
       }, timeoutMs);
     });
@@ -110,7 +139,8 @@ export class SshUtils {
   async exists(remotePath: string): Promise<boolean> {
     try {
       const fullRemotePath = `${this.remotePath}/${remotePath}`;
-      const command = `[ -e "${fullRemotePath}" ] && echo "EXISTS" || echo "NOT_EXISTS"`;
+      const escaped = shellEscapeSingleQuote(fullRemotePath);
+      const command = `[ -e ${escaped} ] && echo "EXISTS" || echo "NOT_EXISTS"`;
       const result = await this.executeCommand(command);
       return result.trim() === 'EXISTS';
     } catch (error) {
@@ -128,7 +158,8 @@ export class SshUtils {
   async directoryExists(dirPath: string): Promise<boolean> {
     try {
       const remoteDirPath = `${this.remotePath}/${dirPath}`;
-      const command = `[ -d "${remoteDirPath}" ] && echo "EXISTS" || echo "NOT_EXISTS"`;
+      const escaped = shellEscapeSingleQuote(remoteDirPath);
+      const command = `[ -d ${escaped} ] && echo "EXISTS" || echo "NOT_EXISTS"`;
       const result = await this.executeCommand(command);
       return result.trim() === 'EXISTS';
     } catch (error) {
@@ -146,7 +177,8 @@ export class SshUtils {
   async isFile(filePath: string): Promise<boolean> {
     try {
       const remoteFilePath = `${this.remotePath}/${filePath}`;
-      const command = `[ -f "${remoteFilePath}" ] && echo "IS_FILE" || echo "NOT_FILE"`;
+      const escaped = shellEscapeSingleQuote(remoteFilePath);
+      const command = `[ -f ${escaped} ] && echo "IS_FILE" || echo "NOT_FILE"`;
       const result = await this.executeCommand(command);
       return result.trim() === 'IS_FILE';
     } catch (error) {
@@ -174,7 +206,8 @@ export class SshUtils {
   async createDirectory(dirPath: string): Promise<void> {
     try {
       const remoteDirPath = `${this.remotePath}/${dirPath}`;
-      const command = `mkdir -p "${remoteDirPath}"`;
+      const escaped = shellEscapeSingleQuote(remoteDirPath);
+      const command = `mkdir -p ${escaped}`;
       await this.executeCommand(command);
     } catch (error) {
       logger.error('SshUtils', `Failed to create remote directory: ${error}`);
@@ -192,7 +225,8 @@ export class SshUtils {
   async readFile(filePath: string): Promise<string> {
     try {
       const remoteFilePath = `${this.remotePath}/${filePath}`;
-      const command = `cat "${remoteFilePath}"`;
+      const escaped = shellEscapeSingleQuote(remoteFilePath);
+      const command = `cat ${escaped}`;
       return await this.executeCommand(command);
     } catch (error) {
       logger.error('SshUtils', `Failed to read remote file: ${error}`);
@@ -218,7 +252,8 @@ export class SshUtils {
       
       // Ensure the directory exists first
       const dirPath = remoteFilePath.substring(0, remoteFilePath.lastIndexOf('/'));
-      const mkdirCommand = `mkdir -p "${dirPath}"`;
+      const escapedDir = shellEscapeSingleQuote(dirPath);
+      const mkdirCommand = `mkdir -p ${escapedDir}`;
       await this.executeCommand(mkdirCommand);
       
       // Use base64 encoding to safely transfer the content
@@ -226,12 +261,15 @@ export class SshUtils {
       const contentBuffer = Buffer.from(content);
       const base64Content = contentBuffer.toString('base64');
       
-      // Write to temp file first
-      const writeCommand = `echo "${base64Content}" | base64 -d > "${tempFilePath}"`;
+      // Write to temp file first — base64 payload is safe ASCII, so single-quote
+      // escaping the file path is sufficient.
+      const escapedTemp = shellEscapeSingleQuote(tempFilePath);
+      const escapedFinal = shellEscapeSingleQuote(remoteFilePath);
+      const writeCommand = `echo '${base64Content}' | base64 -d > ${escapedTemp}`;
       await this.executeCommand(writeCommand);
       
       // Verify temp file was written successfully
-      const checkTempCommand = `[ -f "${tempFilePath}" ] && echo "FILE_EXISTS" || echo "FILE_NOT_EXISTS"`;
+      const checkTempCommand = `[ -f ${escapedTemp} ] && echo "FILE_EXISTS" || echo "FILE_NOT_EXISTS"`;
       const checkTempResult = await this.executeCommand(checkTempCommand);
       
       if (checkTempResult.trim() !== "FILE_EXISTS") {
@@ -239,11 +277,11 @@ export class SshUtils {
       }
       
       // Atomically move temp file to final location
-      const mvCommand = `mv "${tempFilePath}" "${remoteFilePath}"`;
+      const mvCommand = `mv ${escapedTemp} ${escapedFinal}`;
       await this.executeCommand(mvCommand);
       
       // Verify final file exists
-      const checkCommand = `[ -f "${remoteFilePath}" ] && echo "FILE_EXISTS" || echo "FILE_NOT_EXISTS"`;
+      const checkCommand = `[ -f ${escapedFinal} ] && echo "FILE_EXISTS" || echo "FILE_NOT_EXISTS"`;
       const checkResult = await this.executeCommand(checkCommand);
       
       if (checkResult.trim() !== "FILE_EXISTS") {
@@ -265,7 +303,8 @@ export class SshUtils {
   async listFiles(dirPath: string): Promise<string[]> {
     try {
       const remoteDirPath = `${this.remotePath}/${dirPath}`;
-      const command = `ls -A "${remoteDirPath}" | tr '\\n' ' '`;
+      const escaped = shellEscapeSingleQuote(remoteDirPath);
+      const command = `ls -A ${escaped} | tr '\n' ' '`;
       const result = await this.executeCommand(command);
       return result ? result.split(' ').filter(Boolean) : [];
     } catch (error) {
@@ -283,7 +322,8 @@ export class SshUtils {
   async deleteFile(filePath: string): Promise<void> {
     try {
       const remoteFilePath = `${this.remotePath}/${filePath}`;
-      const command = `rm "${remoteFilePath}"`;
+      const escaped = shellEscapeSingleQuote(remoteFilePath);
+      const command = `rm ${escaped}`;
       await this.executeCommand(command);
     } catch (error) {
       logger.error('SshUtils', `Failed to delete remote file: ${error}`);
@@ -302,7 +342,9 @@ export class SshUtils {
     try {
       const remoteSourcePath = `${this.remotePath}/${sourcePath}`;
       const remoteDestPath = `${this.remotePath}/${destPath}`;
-      const command = `cp -r "${remoteSourcePath}" "${remoteDestPath}"`;
+      const escapedSource = shellEscapeSingleQuote(remoteSourcePath);
+      const escapedDest = shellEscapeSingleQuote(remoteDestPath);
+      const command = `cp -r ${escapedSource} ${escapedDest}`;
       await this.executeCommand(command);
     } catch (error) {
       logger.error('SshUtils', `Failed to copy from ${sourcePath} to ${destPath}: ${error}`);
@@ -322,48 +364,45 @@ export class SshUtils {
         const fsPromises = require('fs').promises;
         const stats = await fsPromises.stat(this.sshKeyPath);
         if (!stats.isFile()) {
-          console.error(`SSH key is not a file: ${this.sshKeyPath}`);
+          logger.error('SshUtils', `SSH key is not a file: ${this.sshKeyPath}`);
           return false;
         }
       } catch (fileError) {
-        console.error(`SSH key file does not exist or cannot be accessed: ${this.sshKeyPath}`);
-        console.error(`Error details: ${fileError}`);
+        logger.error('SshUtils', `SSH key file does not exist or cannot be accessed: ${this.sshKeyPath}`);
+        logger.error('SshUtils', `Error details: ${fileError}`);
         return false;
       }
       
       const command = 'echo "Connection successful"';
-      console.log(`Testing SSH connection to ${this.remoteUser}@${this.remoteHost} using key ${this.sshKeyPath}`);
-      console.log(`Remote path: ${this.remotePath}`);
-      
-      const sshTestCommand = `ssh -v -i "${this.sshKeyPath}" -o StrictHostKeyChecking=no ${this.remoteUser}@${this.remoteHost} "${command}"`;
-      console.log(`Direct SSH test command: ${sshTestCommand}`);
+      logger.info('SshUtils', `Testing SSH connection to ${this.remoteUser}@${this.remoteHost} using key ${this.sshKeyPath}`);
+      logger.info('SshUtils', `Remote path: ${this.remotePath}`);
       
       const result = await this.executeCommand(command);
-      console.log(`SSH test result: "${result}"`);
+      logger.info('SshUtils', `SSH test result: "${result}"`);
       
       // Check if the remote path exists
       try {
-        const pathCheckCommand = `[ -d "${this.remotePath}" ] && echo "PATH_EXISTS" || echo "PATH_NOT_EXISTS"`;
+        const escapedRemotePath = shellEscapeSingleQuote(this.remotePath);
+        const pathCheckCommand = `[ -d ${escapedRemotePath} ] && echo "PATH_EXISTS" || echo "PATH_NOT_EXISTS"`;
         const pathResult = await this.executeCommand(pathCheckCommand);
-        console.log(`Remote path check result: "${pathResult}"`);
+        logger.info('SshUtils', `Remote path check result: "${pathResult}"`);
         
         if (pathResult.trim() !== "PATH_EXISTS") {
-          console.log(`Warning: Remote path ${this.remotePath} does not exist. Attempting to create it...`);
-          const mkdirCommand = `mkdir -p "${this.remotePath}"`;
+          logger.info('SshUtils', `Warning: Remote path ${this.remotePath} does not exist. Attempting to create it...`);
+          const mkdirCommand = `mkdir -p ${escapedRemotePath}`;
           await this.executeCommand(mkdirCommand);
-          console.log(`Created remote path ${this.remotePath}`);
+          logger.info('SshUtils', `Created remote path ${this.remotePath}`);
         }
       } catch (pathError) {
-        console.error(`Error checking remote path: ${pathError}`);
+        logger.error('SshUtils', `Error checking remote path: ${pathError}`);
       }
       
       // The connection test is successful if we received any response
       return result.includes('Connection successful');
     } catch (error) {
       logger.error('SshUtils', `Failed to connect to remote server: ${error}`);
-      console.error('Connection test error details:', error);
       if (error instanceof Error) {
-        console.error('Error stack:', error.stack);
+        logger.error('SshUtils', `Error stack: ${error.stack}`);
       }
       return false;
     }

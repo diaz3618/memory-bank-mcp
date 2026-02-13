@@ -84,6 +84,16 @@ export class LocalFileSystem implements FileSystemInterface {
   }
 
   /**
+   * Appends content to a file
+   * 
+   * @param relativePath - Relative path to the file
+   * @param content - Content to append
+   */
+  async appendFile(relativePath: string, content: string): Promise<void> {
+    return FileUtils.appendFile(this.getFullPath(relativePath), content);
+  }
+
+  /**
    * Lists files in a directory
    * 
    * @param relativePath - Relative path to the directory

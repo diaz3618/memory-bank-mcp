@@ -10,6 +10,12 @@ import { progressTools } from './tools/ProgressTools.js';
 import { contextTools } from './tools/ContextTools.js';
 import { decisionTools } from './tools/DecisionTools.js';
 import { modeTools } from './tools/ModeTools.js';
+import { createRequire } from 'module';
+
+// Read the canonical version from package.json at startup so the MCP
+// handshake always reports the same version as `npm pkg get version`.
+const require = createRequire(import.meta.url);
+const PKG_VERSION: string = (require('../../package.json') as { version: string }).version;
 
 /**
  * Main MCP server class for Memory Bank
@@ -66,7 +72,7 @@ export class MemoryBankServer {
     this.server = new Server(
       {
         name: '@diazstg/memory-bank-mcp',
-        version: '0.5.0',
+        version: PKG_VERSION,
       },
       {
         capabilities: {

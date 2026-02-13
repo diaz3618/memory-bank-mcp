@@ -6,6 +6,7 @@
  */
 
 import * as vscode from 'vscode';
+import * as jsonc from 'jsonc-parser';
 import { ext } from '../extensionVariables';
 import type { TreeProviders } from '../tree/registerTrees';
 import { GraphWebviewPanel } from '../views/GraphWebviewPanel';
@@ -162,7 +163,7 @@ export function registerCommands(
       placeHolder: 'Additional details about the progress',
     });
 
-    await ext.memoryBankService.trackProgress(summary, details || undefined);
+    await ext.memoryBankService.trackProgress('other', details ? `${summary} — ${details}` : summary);
     vscode.window.showInformationMessage('Progress tracked.');
     trees.files.refresh();
   });
@@ -179,7 +180,7 @@ export function registerCommands(
       placeHolder: 'Why this decision was made',
     });
 
-    await ext.memoryBankService.logDecision(decision, rationale || undefined);
+    await ext.memoryBankService.logDecision(decision, rationale || '', decision);
     vscode.window.showInformationMessage('Decision logged.');
     trees.files.refresh();
   });
@@ -562,8 +563,7 @@ async function syncModeToMcpJson(mode: string): Promise<void> {
   }
 
   try {
-    const stripped = raw.replace(/\/\/.*$/gm, '').replace(/\/\*[\s\S]*?\*\//g, '');
-    const parsed = JSON.parse(stripped);
+    const parsed = jsonc.parse(raw);
     const server = parsed?.servers?.['memory-bank-mcp'];
     if (!server) return;
 
@@ -687,9 +687,21 @@ async function writeMcpJson(
   let existing: Record<string, unknown> = {};
   try {
     const content = await vscode.workspace.fs.readFile(mcpJsonPath);
-    existing = JSON.parse(Buffer.from(content).toString());
-  } catch {
-    // File doesn't exist yet
+    const raw = Buffer.from(content).toString('utf-8');
+    const parsed = jsonc.parse(raw);
+    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+      existing = parsed;
+    } else {
+      vscode.window.showWarningMessage('mcp.json has unexpected structure — creating fresh config.');
+    }
+  } catch (err) {
+    // Distinguish "file not found" from "parse error"
+    if (err && typeof err === 'object' && 'code' in err && (err as { code: string }).code === 'FileNotFound') {
+      // File doesn't exist yet — will create
+    } else if (err instanceof SyntaxError) {
+      vscode.window.showWarningMessage('mcp.json contains invalid JSON(C). Creating fresh config — back up your file if needed.');
+    }
+    // Fall through with empty existing
   }
 
   const servers = (existing['servers'] as Record<string, unknown>) || {};
@@ -817,6 +829,9 @@ async function createCopilotAgentInstructions(): Promise<void> {
       return;
     }
   }
+
+  // Ensure .github directory exists
+  await vscode.workspace.fs.createDirectory(githubDir);
 
   // Write the file
   const encoded = Buffer.from(COPILOT_INSTRUCTIONS_CONTENT);

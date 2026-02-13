@@ -10,7 +10,7 @@ import { MemoryBankManager } from '../core/MemoryBankManager.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-describe('Clinerules Integration Tests', () => {
+describe('McpRules Integration Tests', () => {
   const tempDir = path.join(__dirname, 'temp-test-dir');
   let rulesLoader: ExternalRulesLoader;
   let modeManager: ModeManager;
@@ -19,9 +19,9 @@ describe('Clinerules Integration Tests', () => {
     // Create temporary directory
     await fs.ensureDir(tempDir);
     
-    // Create test .clinerules files
+    // Create test .mcprules files
     await fs.writeFile(
-      path.join(tempDir, '.clinerules-code'),
+      path.join(tempDir, '.mcprules-code'),
       JSON.stringify({
         mode: 'code',
         instructions: {
@@ -49,7 +49,7 @@ describe('Clinerules Integration Tests', () => {
     );
     
     await fs.writeFile(
-      path.join(tempDir, '.clinerules-architect'),
+      path.join(tempDir, '.mcprules-architect'),
       JSON.stringify({
         mode: 'architect',
         instructions: {
@@ -91,7 +91,7 @@ describe('Clinerules Integration Tests', () => {
     await fs.remove(tempDir);
   });
   
-  test('Should detect and load .clinerules files', async () => {
+  test('Should detect and load .mcprules files', async () => {
     const rules = await rulesLoader.detectAndLoadRules();
     expect(rules.size).toBeGreaterThanOrEqual(2);
     expect(rules.has('code')).toBe(true);
@@ -315,8 +315,8 @@ describe('Clinerules Integration Tests', () => {
     await fs.ensureDir(tempDir);
     
     try {
-      // Create .clinerules files with mode_triggers that we can test
-      const modeClinerules = {
+      // Create .mcprules files with mode_triggers that we can test
+      const modeRules = {
         mode: 'code',
         instructions: {
           general: ['Test instruction'],
@@ -331,11 +331,11 @@ describe('Clinerules Integration Tests', () => {
         }
       };
       
-      // Write clinerules files for all modes
+      // Write mcprules files for all modes
       for (const mode of ['architect', 'ask', 'code', 'debug', 'test']) {
         await fs.writeFile(
-          path.join(tempDir, `.clinerules-${mode}`),
-          JSON.stringify({ ...modeClinerules, mode })
+          path.join(tempDir, `.mcprules-${mode}`),
+          JSON.stringify({ ...modeRules, mode })
         );
       }
       

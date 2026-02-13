@@ -2,18 +2,19 @@ import fs from 'fs-extra';
 import path from 'path';
 import { EventEmitter } from 'events';
 import yaml from 'js-yaml';
-import { clineruleTemplates } from './ClineruleTemplates.js';
+import { mcpRulesTemplates } from './McpRulesTemplates.js';
 import os from 'os';
 import { ValidationResult } from '../types/index.js';
-import { ClineruleBase, MemoryBankConfig } from '../types/rules.js';
+import { McpRuleBase, MemoryBankConfig } from '../types/rules.js';
 import { logger } from './LogManager.js';
 
 /**
- * Class responsible for loading and monitoring external .clinerules files
+ * Class responsible for loading and monitoring external .mcprules files
+ * (previously called .clinerules files, renamed for MCP-server independence)
  */
 export class ExternalRulesLoader extends EventEmitter {
   private projectDir: string;
-  private rules: Map<string, ClineruleBase> = new Map();
+  private rules: Map<string, McpRuleBase> = new Map();
   private watchers: fs.FSWatcher[] = [];
   
   /**
@@ -27,7 +28,7 @@ export class ExternalRulesLoader extends EventEmitter {
   }
 
   /**
-   * Gets a writable directory for storing .clinerules files
+   * Gets a writable directory for storing .mcprules files
    * Uses only the specified project directory without fallbacks
    * @returns A writable directory path
    */
@@ -45,8 +46,9 @@ export class ExternalRulesLoader extends EventEmitter {
   }
 
   /**
-   * Validates that all required .clinerules files exist.
-   * Does NOT auto-create missing files — use createMissingClinerules() explicitly.
+   * Validates that all required .mcprules files exist.
+   * Does NOT auto-create missing files — use createMissingMcpRules() explicitly.
+   * Also checks for legacy .clinerules files for backward compatibility.
    * @returns Validation result with missing and existing files
    */
   async validateRequiredFiles(): Promise<ValidationResult> {
@@ -54,7 +56,7 @@ export class ExternalRulesLoader extends EventEmitter {
     const missingFiles: string[] = [];
     const existingFiles: string[] = [];
     
-    // Get a writable directory for .clinerules files
+    // Get a writable directory for .mcprules files
     let targetDir: string;
     try {
       targetDir = await this.getWritableDirectory();
@@ -64,20 +66,27 @@ export class ExternalRulesLoader extends EventEmitter {
     }
     
     // Check for files in both project directory and fallback directory
+    // Also check for legacy .clinerules files
     for (const mode of modes) {
-      const filename = `.clinerules-${mode}`;
-      const projectFilePath = path.join(this.projectDir, filename);
-      const fallbackFilePath = path.join(targetDir, filename);
+      const mcpRulesFilename = `.mcprules-${mode}`;
+      const legacyFilename = `.clinerules-${mode}`;
+      const projectMcpRulesPath = path.join(this.projectDir, mcpRulesFilename);
+      const projectLegacyPath = path.join(this.projectDir, legacyFilename);
+      const fallbackMcpRulesPath = path.join(targetDir, mcpRulesFilename);
+      const fallbackLegacyPath = path.join(targetDir, legacyFilename);
       
-      if (await fs.pathExists(projectFilePath) || await fs.pathExists(fallbackFilePath)) {
-        existingFiles.push(filename);
+      if (await fs.pathExists(projectMcpRulesPath) || 
+          await fs.pathExists(projectLegacyPath) ||
+          await fs.pathExists(fallbackMcpRulesPath) ||
+          await fs.pathExists(fallbackLegacyPath)) {
+        existingFiles.push(mcpRulesFilename);
       } else {
-        missingFiles.push(filename);
+        missingFiles.push(mcpRulesFilename);
       }
     }
     
     if (missingFiles.length > 0) {
-      logger.debug('ExternalRulesLoader', `Missing .clinerules files (will not auto-create): ${missingFiles.join(', ')}`);
+      logger.debug('ExternalRulesLoader', `Missing .mcprules files (will not auto-create): ${missingFiles.join(', ')}`);
     }
     
     return {
@@ -88,15 +97,16 @@ export class ExternalRulesLoader extends EventEmitter {
   }
 
   /**
-   * Detects and loads all .clinerules files in the project directory
+   * Detects and loads all .mcprules files in the project directory
+   * Also supports legacy .clinerules files for backward compatibility
    */
-  async detectAndLoadRules(): Promise<Map<string, ClineruleBase>> {
+  async detectAndLoadRules(): Promise<Map<string, McpRuleBase>> {
     const modes = ['architect', 'ask', 'code', 'debug', 'test'];
     
     // Validate required files and create missing ones
     const validation = await this.validateRequiredFiles();
     if (!validation.valid) {
-      logger.debug('ExternalRulesLoader', `Some .clinerules files not found (optional): ${validation.missingFiles.join(', ')}`);
+      logger.debug('ExternalRulesLoader', `Some .mcprules files not found (optional): ${validation.missingFiles.join(', ')}`);
     }
     
     // Clear existing watchers
@@ -109,39 +119,72 @@ export class ExternalRulesLoader extends EventEmitter {
     const fallbackDir = await this.getWritableDirectory();
     
     for (const mode of modes) {
-      const filename = `.clinerules-${mode}`;
-      const projectFilePath = path.join(this.projectDir, filename);
-      const fallbackFilePath = path.join(fallbackDir, filename);
+      const mcpRulesFilename = `.mcprules-${mode}`;
+      const legacyFilename = `.clinerules-${mode}`;
+      const projectMcpRulesPath = path.join(this.projectDir, mcpRulesFilename);
+      const projectLegacyPath = path.join(this.projectDir, legacyFilename);
+      const fallbackMcpRulesPath = path.join(fallbackDir, mcpRulesFilename);
+      const fallbackLegacyPath = path.join(fallbackDir, legacyFilename);
       
       try {
-        // First try to load from project directory
-        if (await fs.pathExists(projectFilePath)) {
-          const content = await fs.readFile(projectFilePath, 'utf8');
+        // First try to load from project directory (.mcprules)
+        if (await fs.pathExists(projectMcpRulesPath)) {
+          const content = await fs.readFile(projectMcpRulesPath, 'utf8');
           const rule = this.parseRuleContent(content);
           
           if (rule && rule.mode === mode) {
             this.rules.set(mode, rule);
-            logger.debug('ExternalRulesLoader', `Loaded ${filename} rules from project directory`);
+            logger.debug('ExternalRulesLoader', `Loaded ${mcpRulesFilename} rules from project directory`);
             
             // Set up watcher for this file
-            this.watchRuleFile(projectFilePath, mode);
+            this.watchRuleFile(projectMcpRulesPath, mode);
           } else {
-            logger.warn('ExternalRulesLoader', `Invalid rule format in ${filename} (project directory)`);
+            logger.warn('ExternalRulesLoader', `Invalid rule format in ${mcpRulesFilename} (project directory)`);
           }
-        } 
-        // If not found in project directory, try fallback directory
-        else if (await fs.pathExists(fallbackFilePath)) {
-          const content = await fs.readFile(fallbackFilePath, 'utf8');
+        }
+        // Try legacy .clinerules in project directory
+        else if (await fs.pathExists(projectLegacyPath)) {
+          const content = await fs.readFile(projectLegacyPath, 'utf8');
           const rule = this.parseRuleContent(content);
           
           if (rule && rule.mode === mode) {
             this.rules.set(mode, rule);
-            logger.debug('ExternalRulesLoader', `Loaded ${filename} rules from fallback directory`);
+            logger.debug('ExternalRulesLoader', `Loaded legacy ${legacyFilename} rules (consider renaming to ${mcpRulesFilename})`);
             
             // Set up watcher for this file
-            this.watchRuleFile(fallbackFilePath, mode);
+            this.watchRuleFile(projectLegacyPath, mode);
           } else {
-            logger.warn('ExternalRulesLoader', `Invalid rule format in ${filename} (fallback directory)`);
+            logger.warn('ExternalRulesLoader', `Invalid rule format in ${legacyFilename} (project directory)`);
+          }
+        }
+        // If not found in project directory, try fallback directory (.mcprules)
+        else if (await fs.pathExists(fallbackMcpRulesPath)) {
+          const content = await fs.readFile(fallbackMcpRulesPath, 'utf8');
+          const rule = this.parseRuleContent(content);
+          
+          if (rule && rule.mode === mode) {
+            this.rules.set(mode, rule);
+            logger.debug('ExternalRulesLoader', `Loaded ${mcpRulesFilename} rules from fallback directory`);
+            
+            // Set up watcher for this file
+            this.watchRuleFile(fallbackMcpRulesPath, mode);
+          } else {
+            logger.warn('ExternalRulesLoader', `Invalid rule format in ${mcpRulesFilename} (fallback directory)`);
+          }
+        }
+        // Finally try legacy .clinerules in fallback directory
+        else if (await fs.pathExists(fallbackLegacyPath)) {
+          const content = await fs.readFile(fallbackLegacyPath, 'utf8');
+          const rule = this.parseRuleContent(content);
+          
+          if (rule && rule.mode === mode) {
+            this.rules.set(mode, rule);
+            logger.debug('ExternalRulesLoader', `Loaded legacy ${legacyFilename} from fallback (consider renaming to ${mcpRulesFilename})`);
+            
+            // Set up watcher for this file
+            this.watchRuleFile(fallbackLegacyPath, mode);
+          } else {
+            logger.warn('ExternalRulesLoader', `Invalid rule format in ${legacyFilename} (fallback directory)`);
           }
         }
       } catch (error) {
@@ -157,7 +200,7 @@ export class ExternalRulesLoader extends EventEmitter {
    * @param content File content
    * @returns Parsed rule object or null if invalid
    */
-  private parseRuleContent(content: string): ClineruleBase | null {
+  private parseRuleContent(content: string): McpRuleBase | null {
     try {
       // First try to parse as JSON
       const rule = JSON.parse(content);
@@ -171,7 +214,7 @@ export class ExternalRulesLoader extends EventEmitter {
     } catch (jsonError) {
       // If not valid JSON, try to parse as YAML
       try {
-        const rule = yaml.load(content) as ClineruleBase;
+        const rule = yaml.load(content) as McpRuleBase;
         
         // Basic validation
         if (!rule.mode || !rule.instructions || !Array.isArray(rule.instructions.general)) {
@@ -227,7 +270,7 @@ export class ExternalRulesLoader extends EventEmitter {
    * @param mode Mode name
    * @returns Rules for the specified mode or null if not found
    */
-  getRulesForMode(mode: string): ClineruleBase | null {
+  getRulesForMode(mode: string): McpRuleBase | null {
     return this.rules.get(mode) || null;
   }
   
@@ -258,19 +301,19 @@ export class ExternalRulesLoader extends EventEmitter {
   }
 
   /**
-   * Creates missing .clinerules files
+   * Creates missing .mcprules files
    * @param missingFiles Array of missing file names
    * @returns Array of created file names
    */
-  async createMissingClinerules(missingFiles: string[]): Promise<string[]> {
+  async createMissingMcpRules(missingFiles: string[]): Promise<string[]> {
     const createdFiles: string[] = [];
     
-    // Get a writable directory for .clinerules files
+    // Get a writable directory for .mcprules files
     const targetDir = await this.getWritableDirectory();
     
     for (const filename of missingFiles) {
-      const mode = filename.replace('.clinerules-', '');
-      const template = clineruleTemplates[mode];
+      const mode = filename.replace('.mcprules-', '');
+      const template = mcpRulesTemplates[mode];
       
       if (template) {
         // Use only the path received via argument, without adding a folder
@@ -289,5 +332,12 @@ export class ExternalRulesLoader extends EventEmitter {
     }
     
     return createdFiles;
+  }
+
+  /**
+   * @deprecated Use createMissingMcpRules instead
+   */
+  async createMissingClinerules(missingFiles: string[]): Promise<string[]> {
+    return this.createMissingMcpRules(missingFiles);
   }
 }

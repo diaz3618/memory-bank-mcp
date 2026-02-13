@@ -17,15 +17,15 @@ This document specifies the Model Context Protocol (MCP) implementation for Memo
 Memory Bank MCP is a **stdio-based MCP server**, not an HTTP server. Communication happens through:
 
 ```
-┌──────────────────┐      JSON-RPC over      ┌──────────────────────┐
-│  MCP Client      │      stdin/stdout       │  Memory Bank MCP     │
-│  (AI Assistant)  │◄───────────────────────►│  Server              │
-│                  │                         │                      │
-│  - Claude        │                         │  - Provides tools    │
-│  - Cursor        │                         │  - Provides resources│
-│  - Cline         │                         │  - Manages files     │
-│  - Custom        │                         │  - Tracks progress   │
-└──────────────────┘                         └──────────────────────┘
+┌──────────────────┐      JSON-RPC over      ┌───────────────────────┐
+│  MCP Client      │      stdin/stdout       │  Memory Bank MCP      │
+│  (AI Assistant)  │◄───────────────────────►│  Server               │
+│                  │                         │                       │
+│  - Claude        │                         │  - Provides tools     │
+│  - Cursor        │                         │  - Provides resources │
+│  - Cline         │                         │  - Manages files      │
+│  - Custom        │                         │  - Tracks progress    │
+└──────────────────┘                         └───────────────────────┘
 ```
 
 ## Server Initialization

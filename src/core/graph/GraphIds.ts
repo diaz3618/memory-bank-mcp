@@ -36,14 +36,16 @@ export function createEntityId(name: string, entityType: string): EntityId {
 
 /**
  * Creates a unique observation ID
- * Includes timestamp and entity info for uniqueness
+ * Includes entity, full text, and timestamp for uniqueness.
+ * Uses the complete text in the hash — truncation previously
+ * caused collisions for long observations that shared a prefix.
  */
 export function createObservationId(
   entityId: EntityId,
   text: string,
   timestamp: string
 ): ObservationId {
-  const input = `${entityId}:${text.slice(0, 100)}:${timestamp}`;
+  const input = `${entityId}:${text}:${timestamp}`;
   return `obs_${shortHash(input)}` as ObservationId;
 }
 

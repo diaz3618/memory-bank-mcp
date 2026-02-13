@@ -340,22 +340,22 @@ export class MemoryBankManager {
   }
 
   /**
-   * Validates if all required .clinerules files exist in the project root
+   * Validates if all required .mcprules files exist in the project root
    * 
    * @param projectDir - Project directory to check
    * @returns Object with validation results
    */
-  async validateClinerules(projectDir: string): Promise<{
+  async validateMcpRules(projectDir: string): Promise<{
     valid: boolean;
     missingFiles: string[];
     existingFiles: string[];
   }> {
     const requiredFiles = [
-      '.clinerules-architect',
-      '.clinerules-ask',
-      '.clinerules-code',
-      '.clinerules-debug',
-      '.clinerules-test'
+      '.mcprules-architect',
+      '.mcprules-ask',
+      '.mcprules-code',
+      '.mcprules-debug',
+      '.mcprules-test'
     ];
     
     const missingFiles: string[] = [];
@@ -1026,11 +1026,11 @@ export class MemoryBankManager {
       // Create the ExternalRulesLoader for the project
       this.rulesLoader = new ExternalRulesLoader(this.projectPath);
 
-      // Ensure all .clinerules-{mode} files exist before loading rules
+      // Ensure all .mcprules-{mode} files exist before loading rules
       const validation = await this.rulesLoader.validateRequiredFiles();
       if (!validation.valid && validation.missingFiles.length > 0) {
-        logger.info('MemoryBankManager', `Creating missing clinerules files: ${validation.missingFiles.join(', ')}`);
-        await this.rulesLoader.createMissingClinerules(validation.missingFiles);
+        logger.info('MemoryBankManager', `Creating missing mcprules files: ${validation.missingFiles.join(', ')}`);
+        await this.rulesLoader.createMissingMcpRules(validation.missingFiles);
       }
 
       // Create the ModeManager with the rules loader

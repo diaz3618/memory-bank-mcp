@@ -10,7 +10,7 @@ import { FileSystemFactory } from './utils/storage/FileSystemFactory.js';
  * Display program help
  */
 function showHelp(): never {
-  console.log(`
+  process.stderr.write(`
 Memory Bank MCP - MCP Server for managing Memory Bank
 
 Usage: memory-bank-mcp [options]
@@ -83,7 +83,7 @@ function processArgs() {
       options.remote = true;
     } else if (arg === '--ssh-key' || arg === '-k') {
       options.sshKey = args[++i];
-    } else if (arg === '--remote-user' || arg === '-u') {
+    } else if (arg === '--remote-user') {
       options.remoteUser = args[++i];
     } else if (arg === '--remote-host') {
       options.remoteHost = args[++i];
@@ -147,7 +147,7 @@ async function main() {
       
       // Validate required remote options
       if (!options.remoteUser) {
-        logger.error('Main', 'Remote user is required. Use --remote-user or -u to specify.');
+        logger.error('Main', 'Remote user is required. Use --remote-user to specify.');
         process?.exit?.(1);
         return;
       }

@@ -103,7 +103,7 @@ The AI assistant reads these files at the start of each session and updates them
 | `debug` | Troubleshooting and diagnostics |
 | `test` | Testing and quality assurance |
 
-Modes can be set via CLI (`--mode code`), tool call (`switch_mode`), or `.clinerules-[mode]` files. See [Usage Modes](docs/guides/usage-modes.md).
+Modes can be set via CLI (`--mode code`), tool call (`switch_mode`), or `.mcprules-[mode]` files. See [Usage Modes](docs/guides/usage-modes.md).
 
 ## As a Library
 

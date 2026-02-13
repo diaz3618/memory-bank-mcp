@@ -431,7 +431,7 @@ export async function handleInitializeMemoryBank(
       // Initialize the Memory Bank with createIfNotExists = true
       await memoryBankManager.initialize(true);
       
-      // Initialize mode manager (creates missing .clinerules files)
+      // Initialize mode manager (creates missing .mcprules files)
       await memoryBankManager.initializeModeManager();
       
       // Get the Memory Bank directory
@@ -446,11 +446,11 @@ export async function handleInitializeMemoryBank(
         ],
       };
     } catch (initError) {
-      // Check if the error is related to .clinerules files
+      // Check if the error is related to .mcprules files
       const errorMessage = String(initError);
-      if (errorMessage.includes('.clinerules')) {
-        console.warn('Warning: Error related to .clinerules files:', initError);
-        console.warn('Continuing with Memory Bank initialization despite .clinerules issues.');
+      if (errorMessage.includes('.mcprules')) {
+        console.warn('Warning: Error related to .mcprules files:', initError);
+        console.warn('Continuing with Memory Bank initialization despite .mcprules issues.');
         
         // Use the provided path directly as the memory bank directory
         const memoryBankDir = absolutePath;
@@ -462,7 +462,7 @@ export async function handleInitializeMemoryBank(
             content: [
               {
                 type: 'text',
-                text: `Memory Bank initialized at ${memoryBankDir} (with warnings about .clinerules files)`,
+                text: `Memory Bank initialized at ${memoryBankDir} (with warnings about .mcprules files)`,
               },
             ],
           };

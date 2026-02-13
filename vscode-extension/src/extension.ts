@@ -216,6 +216,7 @@ async function ensureCopilotInstructions(context: vscode.ExtensionContext): Prom
   }
 
   const content = COPILOT_AUTO_INSTRUCTIONS;
+  await vscode.workspace.fs.createDirectory(githubDir);
   await vscode.workspace.fs.writeFile(filePath, Buffer.from(content));
   ext.outputChannel.appendLine('Auto-created .github/copilot-instructions.md for Copilot system prompt injection.');
 }

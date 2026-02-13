@@ -1,6 +1,6 @@
 import { EventEmitter } from 'events';
 import { ExternalRulesLoader } from './ExternalRulesLoader.js';
-import type { ClineruleBase } from '../types/rules.js';
+import type { McpRuleBase } from '../types/rules.js';
 
 /**
  * Events emitted by ModeManager
@@ -17,7 +17,7 @@ export enum ModeManagerEvent {
  */
 export interface ModeState {
   name: string;
-  rules: ClineruleBase | null;
+  rules: McpRuleBase | null;
   isUmbActive: boolean;
   memoryBankStatus: 'ACTIVE' | 'INACTIVE';
 }
@@ -87,9 +87,9 @@ export class ModeManager extends EventEmitter {
    */
   async switchMode(mode: string): Promise<boolean> {
     if (!this.rulesLoader.hasModeRules(mode)) {
-      // Try to create the missing clinerules file before giving up
-      const filename = `.clinerules-${mode}`;
-      const created = await this.rulesLoader.createMissingClinerules([filename]);
+      // Try to create the missing mcprules file before giving up
+      const filename = `.mcprules-${mode}`;
+      const created = await this.rulesLoader.createMissingMcpRules([filename]);
       if (created.length > 0) {
         // Reload rules after creating the file
         await this.rulesLoader.detectAndLoadRules();

@@ -150,7 +150,7 @@ async function handleProgress(
     return { metadata: { command: 'progress' } };
   }
 
-  await ext.memoryBankService.trackProgress(summary);
+  await ext.memoryBankService.trackProgress('other', summary);
   stream.markdown(`Progress tracked: *${summary}*`);
   return { metadata: { command: 'progress' } };
 }
@@ -166,7 +166,7 @@ async function handleDecision(
     return { metadata: { command: 'decision' } };
   }
 
-  await ext.memoryBankService.logDecision(decision);
+  await ext.memoryBankService.logDecision(decision, '', decision);
   stream.markdown(`Decision logged: *${decision}*`);
   return { metadata: { command: 'decision' } };
 }

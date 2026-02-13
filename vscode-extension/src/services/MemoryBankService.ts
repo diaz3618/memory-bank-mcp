@@ -103,15 +103,15 @@ export class MemoryBankService implements vscode.Disposable {
 
   // ---------- Actions ----------
 
-  async trackProgress(summary: string, details?: string): Promise<void> {
+  async trackProgress(action: string, description: string): Promise<void> {
     const client = await ext.mcpClientManager.getClient();
-    await client.trackProgress({ type: 'other', summary, details });
+    await client.trackProgress({ action, description });
     this._onDidRefresh.fire();
   }
 
-  async logDecision(decision: string, rationale?: string): Promise<void> {
+  async logDecision(title: string, context: string, decision: string): Promise<void> {
     const client = await ext.mcpClientManager.getClient();
-    await client.logDecision({ decision, rationale });
+    await client.logDecision({ title, context, decision });
     this._onDidRefresh.fire();
   }
 

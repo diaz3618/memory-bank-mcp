@@ -556,7 +556,7 @@ export class GraphWebviewPanel implements vscode.Disposable {
   <meta http-equiv="Content-Security-Policy" 
     content="default-src 'none'; 
              style-src ${webview.cspSource} 'unsafe-inline'; 
-             script-src ${webview.cspSource} 'nonce-${nonce}' 'unsafe-eval'; 
+             script-src ${webview.cspSource} 'nonce-${nonce}'; 
              img-src ${webview.cspSource} data:; 
              font-src ${webview.cspSource};">
   <title>Knowledge Graph</title>

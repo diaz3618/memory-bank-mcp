@@ -72,8 +72,8 @@ src/
     ├── FileUtils.ts            # File I/O helpers
     ├── LogManager.ts           # Structured logging
     ├── ModeManager.ts          # Mode state machine
-    ├── ExternalRulesLoader.ts  # .clinerules-* file loading
-    ├── ClineruleTemplates.ts   # Default rules for each mode
+    ├── ExternalRulesLoader.ts  # .mcprules-* file loading
+    ├── McpRulesTemplates.ts    # Default rules for each mode
     ├── MigrationUtils.ts       # Version migration helpers
     ├── ETagUtils.ts            # Content hashing for caching
     ├── SshUtils.ts             # SSH connection helpers
@@ -107,7 +107,7 @@ An append-only JSONL event log (`graph/graph.jsonl`) that materializes into a sn
 Write operations are serialized via an async write queue to prevent race conditions.
 
 ### Modes
-Five operational modes (`architect`, `ask`, `code`, `debug`, `test`) configured via `.clinerules-{mode}` files. Each mode has:
+Five operational modes (`architect`, `ask`, `code`, `debug`, `test`) configured via `.mcprules-{mode}` files. Each mode has:
 - Custom instructions
 - File authority rules (read/write/create permissions)
 - Tool usage guidelines

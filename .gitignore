@@ -64,3 +64,6 @@ scripts/
 
 # VS Code extension packaging
 *.vsix
+
+memory-bank
+.mcprules-*

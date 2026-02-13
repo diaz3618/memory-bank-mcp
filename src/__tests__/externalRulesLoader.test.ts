@@ -29,11 +29,11 @@ describe('ExternalRulesLoader Tests', () => {
   });
   
   test('Should use provided project directory', async () => {
-    // Create all required .clinerules-* files so detectAndLoadRules can find them
+    // Create all required .mcprules-* files so detectAndLoadRules can find them
     const modes = ['architect', 'ask', 'code', 'debug', 'test'];
     for (const mode of modes) {
       const content = `mode: ${mode}\ninstructions:\n  general:\n    - "Rule for ${mode}"`;
-      await fs.writeFile(path.join(projectDir, `.clinerules-${mode}`), content);
+      await fs.writeFile(path.join(projectDir, `.mcprules-${mode}`), content);
     }
     
     // Load rules
@@ -55,11 +55,11 @@ describe('ExternalRulesLoader Tests', () => {
     // Create a new ExternalRulesLoader without a project directory
     const defaultLoader = new ExternalRulesLoader();
     
-    // Create a temporary .clinerules file in the current directory
+    // Create a temporary .mcprules file in the current directory
     const currentDir = process.cwd();
-    const tempClinerulePath = path.join(currentDir, '.temp-test-clinerules');
+    const tempMcpRulesPath = path.join(currentDir, '.temp-test-mcprules');
     
-    const clineruleContent = `
+    const mcpRulesContent = `
 mode: default-test
 instructions:
   general:
@@ -68,24 +68,24 @@ instructions:
     
     try {
       // Write temporary file
-      await fs.writeFile(tempClinerulePath, clineruleContent);
+      await fs.writeFile(tempMcpRulesPath, mcpRulesContent);
       
       // Load rules
       const rules = await defaultLoader.detectAndLoadRules();
       
       // Verify the loader is using the current directory
-      // Note: This test might be flaky if there are existing .clinerules files
+      // Note: This test might be flaky if there are existing .mcprules files
       // in the current directory, so we're just checking basic functionality
       expect(rules.size).toBeGreaterThanOrEqual(1);
       
     } finally {
       // Clean up
       defaultLoader.dispose();
-      await fs.remove(tempClinerulePath);
+      await fs.remove(tempMcpRulesPath);
     }
   });
   
-  test('Should NOT auto-create missing .clinerules files', async () => {
+  test('Should NOT auto-create missing .mcprules files', async () => {
     // Validate required files — should report missing, NOT create them
     const result = await rulesLoader.validateRequiredFiles();
     
@@ -95,26 +95,26 @@ instructions:
     expect(result.existingFiles.length).toBe(0);
     
     // Verify files were NOT created in the project directory
-    const codeRuleExists = await fs.pathExists(path.join(projectDir, '.clinerules-code'));
+    const codeRuleExists = await fs.pathExists(path.join(projectDir, '.mcprules-code'));
     expect(codeRuleExists).toBe(false);
     
-    const askRuleExists = await fs.pathExists(path.join(projectDir, '.clinerules-ask'));
+    const askRuleExists = await fs.pathExists(path.join(projectDir, '.mcprules-ask'));
     expect(askRuleExists).toBe(false);
   });
 
-  test('Should create clinerules files when explicitly asked', async () => {
+  test('Should create mcprules files when explicitly asked', async () => {
     // Explicitly create missing files
-    const created = await rulesLoader.createMissingClinerules([
-      '.clinerules-code',
-      '.clinerules-ask',
+    const created = await rulesLoader.createMissingMcpRules([
+      '.mcprules-code',
+      '.mcprules-ask',
     ]);
     
     expect(created.length).toBe(2);
     
-    const codeRuleExists = await fs.pathExists(path.join(projectDir, '.clinerules-code'));
+    const codeRuleExists = await fs.pathExists(path.join(projectDir, '.mcprules-code'));
     expect(codeRuleExists).toBe(true);
     
-    const askRuleExists = await fs.pathExists(path.join(projectDir, '.clinerules-ask'));
+    const askRuleExists = await fs.pathExists(path.join(projectDir, '.mcprules-ask'));
     expect(askRuleExists).toBe(true);
   });
 }); 

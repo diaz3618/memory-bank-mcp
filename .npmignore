@@ -26,7 +26,7 @@ memory-bank-config.json
 .agents
 .claude
 .mcp.json
-.clinerules-*
+.mcprules-*
 
 # Large directories not part of the package
 repos

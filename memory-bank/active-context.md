@@ -23,17 +23,37 @@ Memory Bank MCP (`@diazstg/memory-bank-mcp`) is a production-ready MCP server pr
 
 ## Ongoing Tasks
 
-- Knowledge graph plans implementation — all actionable items complete
+- Fix Pack 2026-02-13: Implementing 15 open GitHub issues (#1-#15)
+- Priority order: #2 (critical RCE) > #1,#3,#4,#5,#6,#8,#9,#10,#11 (high) > #7,#12,#13,#14 (medium) > #15 (low)
+- Branch: fix/issues-and-docs — commit only, do NOT push
+#1-#15)
+- Issues span MCP server (GraphSchemas, SshUtils, GraphStore, GraphReducer, GraphIds, ProgressTracker, LogManager, CLI) and VS Code extension (mcp.json, StdioMcpClient, tool schemas, CSP, copilot instructions)
+- Priority: critical (#2 RCE) > high (#1,#3,#4,#5,#6,#8,#9,#10,#11) > medium (#7,#12,#13,#14) > low (#15)
 ## Known Issues
 
-- Old double-nested memory-bank/memory-bank/graph/ directory still exists from pre-fix — can be safely removed or migrated
-- Extension .vsix has WARNING about missing repository field in package.json
+- #2 SshUtils RCE: exec -> execFile/spawn
+- #1 GraphSchemas isObject: reject Date/boxed primitives
+- #4 GraphStore: atomic append with serialization lock
+- #5 GraphReducer: full structural validation
+- #6 GraphIds: remove text truncation in observation ID
+- #7 ProgressTracker: fix regex section matching + - 15 open GitHub issues to fix: security bugs, data corruption, validation, CLI args, extension bugs
+- Branch: fix/issues-and-docs — DO NOT PUSH until approved
+ interpolation
+- #11 LogManager: console.log -> logger in SshUtils + stderr for --help
+- #12 CLI: fix -u short flag collision
+- #15 MemoryBankServer: read version from package.json
+- #3 Extension mcp.json: JSONC-aware parser
+- #8 Extension comment-stripping regex: use jsonc-parser
+- #9 Extension StdioMcpClient: streaming TextDecoder
+- #10 Extension schema mismatch: align DTOs
+- #13 Extension .github dir: mkdir before write
+- #14 Extension webview CSP: remove unsafe-eval
 ## Next Steps
 
-- Consider adding tests for new graph tools (delete, compact, staleness)
-- Graph webview visualization (future enhancement)
-- stores.json persistent registry when multi-store is needed
-- HTTP MCP client implementation
+- Implement MCP server fixes first (#1,#2,#4,#5,#6,#7,#11,#12,#15)
+- Then implement extension fixes (#3,#8,#9,#10,#13,#14)
+- Run tests after each fix group
+- Commit changes without pushing
 ## Session Notes
 
 - [6:33 AM] ✅ React Flow migration completed successfully! Build artifacts: graph.js (415KB) + graph.css (22KB) = 437KB total, which is 33KB smaller than Cytoscape (470KB). Implementation includes all advanced features: custom nodes with NodeToolbar, MiniMap, Controls, Background patterns, Dagre layout, search, 4-directional layout options, stats panel, and professional VS Code-themed styling.

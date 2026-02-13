@@ -309,8 +309,8 @@ export class ProgressTracker {
       if (context.tasks && context.tasks.length > 0) {
         const tasksSection = `## Ongoing Tasks\n\n${context.tasks.map(task => `- ${task}`).join('\n')}\n`;
         
-        if (/## Ongoing Tasks\s+([^#]*)/s.test(contextContent)) {
-          contextContent = contextContent.replace(/## Ongoing Tasks\s+([^#]*)/s, tasksSection);
+        if (/## Ongoing Tasks[\s\S]*?(?=\n## |$)/.test(contextContent)) {
+          contextContent = contextContent.replace(/## Ongoing Tasks[\s\S]*?(?=\n## |$)/, () => tasksSection);
         } else {
           // If the section doesn't exist, add it
           contextContent += `\n\n${tasksSection}`;
@@ -321,8 +321,8 @@ export class ProgressTracker {
       if (context.issues && context.issues.length > 0) {
         const issuesSection = `## Known Issues\n\n${context.issues.map(issue => `- ${issue}`).join('\n')}\n`;
         
-        if (/## Known Issues\s+([^#]*)/s.test(contextContent)) {
-          contextContent = contextContent.replace(/## Known Issues\s+([^#]*)/s, issuesSection);
+        if (/## Known Issues[\s\S]*?(?=\n## |$)/.test(contextContent)) {
+          contextContent = contextContent.replace(/## Known Issues[\s\S]*?(?=\n## |$)/, () => issuesSection);
         } else {
           // If the section doesn't exist, add it
           contextContent += `\n\n${issuesSection}`;
@@ -333,8 +333,8 @@ export class ProgressTracker {
       if (context.nextSteps && context.nextSteps.length > 0) {
         const nextStepsSection = `## Next Steps\n\n${context.nextSteps.map(step => `- ${step}`).join('\n')}\n`;
         
-        if (/## Next Steps\s+([^#]*)/s.test(contextContent)) {
-          contextContent = contextContent.replace(/## Next Steps\s+([^#]*)/s, nextStepsSection);
+        if (/## Next Steps[\s\S]*?(?=\n## |$)/.test(contextContent)) {
+          contextContent = contextContent.replace(/## Next Steps[\s\S]*?(?=\n## |$)/, () => nextStepsSection);
         } else {
           // If the section doesn't exist, add it
           contextContent += `\n\n${nextStepsSection}`;
@@ -358,11 +358,11 @@ export class ProgressTracker {
       let contextContent = await this.readFileContent('active-context.md');
       
       // Replace the current session notes with an empty section
-      const sessionNotesRegex = /## Current Session Notes\s+([^#]*)/s;
+      const sessionNotesRegex = /## Current Session Notes[\s\S]*?(?=\n## |$)/;
       if (sessionNotesRegex.test(contextContent)) {
         contextContent = contextContent.replace(
           sessionNotesRegex,
-          `## Current Session Notes\n\n`
+          () => `## Current Session Notes\n\n`
         );
         
         await this.writeFileContent('active-context.md', contextContent);

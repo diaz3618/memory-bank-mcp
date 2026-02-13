@@ -78,7 +78,7 @@ export async function handleSwitchMode(memoryBankManager: MemoryBankManager, mod
       content: [
         {
           type: 'text',
-          text: `Failed to switch to mode ${mode}. Make sure the .clinerules-${mode} file exists in the project directory.`,
+          text: `Failed to switch to mode ${mode}. Make sure the .mcprules-${mode} file exists in the project directory.`,
         },
       ],
       isError: true,

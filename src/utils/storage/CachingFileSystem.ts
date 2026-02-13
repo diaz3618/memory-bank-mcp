@@ -255,6 +255,15 @@ export class CachingFileSystem implements FileSystemInterface {
     this.cacheContent(path, content);
   }
 
+  async appendFile(path: string, content: string): Promise<void> {
+    // Delegate the append
+    await this.delegate.appendFile(path, content);
+
+    // Invalidate the cache for this path — the cached value is now stale
+    // and the full content is unknown without a read.
+    this.invalidate(path);
+  }
+
   async listFiles(path: string): Promise<string[]> {
     // Directory listings are not cached (could change frequently)
     return this.delegate.listFiles(path);
