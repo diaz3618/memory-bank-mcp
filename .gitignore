@@ -33,8 +33,6 @@ Thumbs.db
 .cursor/
 
 # MCP config files (may contain keys)
-.mcp.json
-.claude/
 .npmrc
 
 # Cache
@@ -50,19 +48,11 @@ test-*.js
 run-*.sh
 prepare-*.sh
 
-# Internal docs and archives (not published)
-docs/internal/
-docs/archive/
-
 # Local-only directories
-repos/
-backup/
-backup-icons/
-scripts/
 .venv/
-.agents/
 
 # VS Code extension packaging
 *.vsix
 
+# Memory Bank
 memory-bank

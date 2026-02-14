@@ -14,7 +14,7 @@ import os from 'os';
 export const coreTools = [
   {
     name: 'get_instructions',
-    description: 'Get comprehensive instructions for using the Memory Bank MCP server. Call this tool FIRST at the start of every session to understand the available tools and recommended workflow.',
+    description: '⚠️ CALL THIS FIRST. Get comprehensive instructions for using the Memory Bank MCP server. Call this tool FIRST at the start of every session to understand the available tools and recommended workflow.',
     inputSchema: {
       type: 'object',
       properties: {},

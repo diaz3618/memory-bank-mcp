@@ -756,7 +756,7 @@ You have access to Memory Bank MCP tools. USE THEM — they are not optional.
 ## Mandatory Workflow (every task, no exceptions)
 
 ### START of task
-1. Call \`get_instructions\` MCP tool to learn the full tool catalog and workflow (once per session)
+1. ⚠️ CALL THIS FIRST. Call \`get_instructions\` MCP tool to learn the full tool catalog and workflow (once per session)
 2. Call \`get_context_digest\` to load current project state (tasks, issues, progress, decisions)
 3. Use \`graph_search\` to find relevant knowledge graph entities
 
