@@ -44,6 +44,10 @@ export class SshUtils {
     remotePath: string,
     options?: { debugMode?: boolean; strictHostKeyChecking?: boolean }
   ) {
+    // Validate remoteUser and remoteHost to prevent SSH option injection
+    SshUtils.validateSshIdentifier(remoteUser, 'remoteUser');
+    SshUtils.validateSshIdentifier(remoteHost, 'remoteHost');
+
     this.sshKeyPath = sshKeyPath;
     this.remoteUser = remoteUser;
     this.remoteHost = remoteHost;
@@ -51,6 +55,23 @@ export class SshUtils {
     this.debugMode = options?.debugMode ?? false;
     // Default to strict host key checking for security, but allow opt-out
     this.strictHostKeyChecking = options?.strictHostKeyChecking ?? true;
+  }
+
+  /**
+   * Validates an SSH identifier (user or host) to prevent option injection.
+   * Rejects values that start with `-` or contain whitespace/control characters.
+   */
+  private static validateSshIdentifier(value: string, label: string): void {
+    if (!value || value.length === 0) {
+      throw new Error(`${label} must not be empty`);
+    }
+    if (value.startsWith('-')) {
+      throw new Error(`${label} must not start with '-' (potential SSH option injection)`);
+    }
+    // eslint-disable-next-line no-control-regex
+    if (/[\s\x00-\x1f\x7f]/.test(value)) {
+      throw new Error(`${label} must not contain whitespace or control characters`);
+    }
   }
 
   /**
@@ -82,6 +103,9 @@ export class SshUtils {
       args.push('-o', 'ConnectTimeout=10');
       args.push('-o', 'ServerAliveInterval=30');
       args.push('-o', 'ServerAliveCountMax=3');
+      // Use '--' to stop option parsing and prevent option injection via
+      // remoteUser/remoteHost values (defense in depth alongside constructor validation)
+      args.push('--');
       args.push(`${this.remoteUser}@${this.remoteHost}`);
       // The remote command is a single positional arg; ssh sends it to the
       // remote shell for interpretation.

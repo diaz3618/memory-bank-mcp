@@ -5,7 +5,7 @@
 Add Memory Bank MCP to your Claude Code configuration:
 
 ```bash
-claude mcp add memory-bank-mcp -- npx -y @diazstg/memory-bank-mcp
+claude mcp add memory-bank-mcp -- npx -y @diazstg/memory-bank-mcp --username your-github-username
 ```
 
 Or add manually to `~/.claude/claude_desktop_config.json`:
@@ -15,11 +15,13 @@ Or add manually to `~/.claude/claude_desktop_config.json`:
   "mcpServers": {
     "memory-bank-mcp": {
       "command": "npx",
-      "args": ["-y", "@diazstg/memory-bank-mcp"]
+      "args": ["-y", "@diazstg/memory-bank-mcp", "--username", "your-github-username"]
     }
   }
 }
 ```
+
+> **Note**: The `--username` parameter is highly recommended for progress tracking. You can use your GitHub username or full name.
 
 ### With Custom Path
 
@@ -28,7 +30,7 @@ Or add manually to `~/.claude/claude_desktop_config.json`:
   "mcpServers": {
     "memory-bank-mcp": {
       "command": "npx",
-      "args": ["-y", "@diazstg/memory-bank-mcp", "--path", "/your/project"]
+      "args": ["-y", "@diazstg/memory-bank-mcp", "--path", "/your/project", "--username", "your-github-username"]
     }
   }
 }

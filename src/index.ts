@@ -5,6 +5,74 @@
 import { MemoryBankServer } from './server/MemoryBankServer.js';
 import { getLogManager, logger, LogLevel } from './utils/LogManager.js';
 import { FileSystemFactory } from './utils/storage/FileSystemFactory.js';
+import { readFileSync } from 'fs';
+import { join, dirname } from 'path';
+import { fileURLToPath } from 'url';
+
+// Get directory name in ESM
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+/**
+ * Display startup banner with version information
+ */
+function displayBanner(): void {
+  try {
+    // Read version from package.json
+    // Resolve path from current directory (works in both development and production)
+    let packageJson: any;
+    let version = 'unknown';
+    
+    try {
+      // Try build/ location first (production)
+      const packageJsonPath = join(__dirname, '..', 'package.json');
+      const content = readFileSync(packageJsonPath, 'utf-8') as string;
+      packageJson = JSON.parse(content);
+      version = packageJson.version || 'unknown';
+    } catch {
+      try {
+        // If not found, try from src/ location (development)
+        const packageJsonPath = join(__dirname, '..', '..', 'package.json');
+        const content = readFileSync(packageJsonPath, 'utf-8') as string;
+        packageJson = JSON.parse(content);
+        version = packageJson.version || 'unknown';
+      } catch {
+        // If still not found, use 'unknown'
+        version = 'unknown';
+      }
+    }
+
+    const banner = `
+╭──────────────────────────────────────────────────────────────────────────────╮
+│                                                                              │
+│                                                                              │
+│                █▀▄▀█ █▀▀ █▀▄▀█ █▀█ █▀█ █▄█   █▄▄ ▄▀█ █▄ █ █▄▀                │
+│                █ ▀ █ ██▄ █ ▀ █ █▄█ █▀▄  █    █▄█ █▀█ █ ▀█ █ █                │
+│                                                                              │
+│                                █▀▄▀█ █▀▀ █▀█                                 │
+│                                █ ▀ █ █▄▄ █▀▀                                 │
+│                                                                              │
+│                                                                              │
+│                            Memory Bank MCP ${version.padEnd(5)}                             │
+│            https://www.npmjs.com/package/@diazstg/memory-bank-mcp            │
+│                                                                              │
+│                                 GitHub Repo:                                 │
+│                 https://github.com/diaz3618/memory-bank-mcp                  │
+│                                                                              │
+╰──────────────────────────────────────────────────────────────────────────────╯
+╭──────────────────────────────────────────────────────────────────────────────╮
+│                            Memory Bank MCP ${version.padEnd(5)}                             │
+│        MCP Server for managing persistent context across AI sessions         │
+╰──────────────────────────────────────────────────────────────────────────────╯
+`;
+
+    // Write to stderr so it appears in logs (stdout is for MCP protocol)
+    console.error(banner);
+  } catch (error) {
+    // Silently fail if banner cannot be displayed
+    console.error('Memory Bank MCP Server starting...');
+  }
+}
 
 /**
  * Display program help
@@ -106,6 +174,9 @@ function processArgs() {
  */
 async function main() {
   try {
+    // Display startup banner first (before any other output)
+    displayBanner();
+    
     const options = processArgs();
     
     // Configure log manager

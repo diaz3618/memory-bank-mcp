@@ -11,11 +11,37 @@ import { contextTools } from './tools/ContextTools.js';
 import { decisionTools } from './tools/DecisionTools.js';
 import { modeTools } from './tools/ModeTools.js';
 import { createRequire } from 'module';
+import { readFileSync } from 'fs';
+import { join, dirname } from 'path';
+import { fileURLToPath } from 'url';
+
+// Get directory name in ESM
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 // Read the canonical version from package.json at startup so the MCP
 // handshake always reports the same version as `npm pkg get version`.
-const require = createRequire(import.meta.url);
-const PKG_VERSION: string = (require('../../package.json') as { version: string }).version;
+function getVersion(): string {
+  try {
+    // Try using createRequire first (works in development)
+    const require = createRequire(import.meta.url);
+    const pkg = require('../../package.json') as { version: string };
+    return pkg.version;
+  } catch {
+    try {
+      // In production (build/), try reading from resolved path
+      const packageJsonPath = join(__dirname, '..', '..', 'package.json');
+      const content = readFileSync(packageJsonPath, 'utf-8') as string;
+      const pkg = JSON.parse(content) as { version: string };
+      return pkg.version;
+    } catch {
+      // Fallback to unknown if package.json cannot be found
+      return 'unknown';
+    }
+  }
+}
+
+const PKG_VERSION: string = getVersion();
 
 /**
  * Main MCP server class for Memory Bank

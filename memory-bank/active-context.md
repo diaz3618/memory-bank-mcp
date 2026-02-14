@@ -23,7 +23,9 @@ Memory Bank MCP (`@diazstg/memory-bank-mcp`) is a production-ready MCP server pr
 
 ## Ongoing Tasks
 
-- Fix Pack 2026-02-13: Implementing 15 open GitHub issues (#1-#15)
+- All 15 issues from fix-pack-2026-02-13 implemented and committed (5062df5)
+- .clinerules → .mcprules rename completed
+#1-#15)
 - Priority order: #2 (critical RCE) > #1,#3,#4,#5,#6,#8,#9,#10,#11 (high) > #7,#12,#13,#14 (medium) > #15 (low)
 - Branch: fix/issues-and-docs — commit only, do NOT push
 #1-#15)
@@ -31,7 +33,8 @@ Memory Bank MCP (`@diazstg/memory-bank-mcp`) is a production-ready MCP server pr
 - Priority: critical (#2 RCE) > high (#1,#3,#4,#5,#6,#8,#9,#10,#11) > medium (#7,#12,#13,#14) > low (#15)
 ## Known Issues
 
-- #2 SshUtils RCE: exec -> execFile/spawn
+- No known issues — all tests pass (100 MCP server + 36 extension)
+#2 SshUtils RCE: exec -> execFile/spawn
 - #1 GraphSchemas isObject: reject Date/boxed primitives
 - #4 GraphStore: atomic append with serialization lock
 - #5 GraphReducer: full structural validation
@@ -50,7 +53,11 @@ Memory Bank MCP (`@diazstg/memory-bank-mcp`) is a production-ready MCP server pr
 - #14 Extension webview CSP: remove unsafe-eval
 ## Next Steps
 
-- Implement MCP server fixes first (#1,#2,#4,#5,#6,#7,#11,#12,#15)
+- Push branch fix/issues-and-docs when user approves
+- Open PRs for upstream merge
+- Run bun run build to verify production bundle
+- Consider adding tests for new appendFile() path in integration tests
+#1,#2,#4,#5,#6,#7,#11,#12,#15)
 - Then implement extension fixes (#3,#8,#9,#10,#13,#14)
 - Run tests after each fix group
 - Commit changes without pushing
@@ -77,6 +84,27 @@ Memory Bank MCP (`@diazstg/memory-bank-mcp`) is a production-ready MCP server pr
 
 ## Current Session Notes
 
+- [16:28:36] [Unknown User] Completed fix-pack-2026-02-13 (all 15 issues): Implemented all 15 issues from the fix pack across both MCP server and VS Code extension:
+
+MCP Server (9 issues):
+- #1 isObject validation hardened (rejects Date, boxed primitives, class instances)
+- #2 SshUtils RCE: exec→execFile with argv arrays, shellEscapeSingleQuote()
+- #4 GraphStore atomic append via appendFile() on FileSystemInterface
+- #5 GraphReducer structural validation via isGraphEvent(), malformed lines skipped
+- #6 GraphIds observation text truncation removed
+- #7 ProgressTracker regex fixed for # in content, $1 injection prevention
+- #11 Stdout logging replaced with logger/stderr for MCP transport safety
+- #12 CLI -u ambiguity resolved (removed from --remote-user)
+- #15 Server version read from package.json at runtime
+
+Extension (6 issues):
+- #3/#8 JSONC parser replaces naive regex comment stripping
+- #9 UTF-8 streaming via stateful TextDecoder in StdioMcpClient
+- #10 Tool schema alignment (TrackProgressParams, LogDecisionParams)
+- #13 .github/ directory created before writing copilot-instructions.md
+- #14 unsafe-eval removed from Webview CSP
+
+All tests pass: 100 MCP server + 36 extension (0 failures). Committed on branch fix/issues-and-docs (5062df5). Not pushed per user instruction.
 - [14:46:57] [Unknown User] Implemented remaining knowledge graph features: Completed all actionable items from knowledge-graph-plans.md:
 
 **Server-side (src/):**

@@ -6,7 +6,7 @@ You have access to Memory Bank MCP tools. USE THEM — they are not optional.
 ## Mandatory Workflow (every task, no exceptions)
 
 ### START of task
-1. Call `memory-bank_get-instructions` tool (or `get_context_digest` MCP tool) to load context
+1. Call `get_context_digest` MCP tool to load context (VS Code Copilot users: `memory-bank_get-instructions` also works)
 2. Read the returned active-context.md and progress.md
 3. Use `graph_search` to find relevant knowledge graph entities
 

@@ -30,7 +30,7 @@ Memory Bank MCP uses the Model Context Protocol stdio transport:
 
 ```
 ┌─────────────────────┐      stdio (JSON-RPC)    ┌──────────────────────┐
-│   AI Assistant      │◄───────────────────────►│  Memory Bank MCP     │
+│   AI Assistant      │◄────────────────────────►│  Memory Bank MCP     │
 │                     │  stdin/stdout            │  Server              │
 │  (Claude, Cursor,   │                          │                      │
 │   Cline, etc.)      │                          │  • Tools             │

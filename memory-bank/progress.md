@@ -119,6 +119,27 @@ Architecture: append-only JSONL event log as source of truth, JSON snapshot for 
 
 ## Update History
 
+- [2026-02-13 16:28:36] [Unknown User] - Completed fix-pack-2026-02-13 (all 15 issues): Implemented all 15 issues from the fix pack across both MCP server and VS Code extension:
+
+MCP Server (9 issues):
+- #1 isObject validation hardened (rejects Date, boxed primitives, class instances)
+- #2 SshUtils RCE: exec→execFile with argv arrays, shellEscapeSingleQuote()
+- #4 GraphStore atomic append via appendFile() on FileSystemInterface
+- #5 GraphReducer structural validation via isGraphEvent(), malformed lines skipped
+- #6 GraphIds observation text truncation removed
+- #7 ProgressTracker regex fixed for # in content, $1 injection prevention
+- #11 Stdout logging replaced with logger/stderr for MCP transport safety
+- #12 CLI -u ambiguity resolved (removed from --remote-user)
+- #15 Server version read from package.json at runtime
+
+Extension (6 issues):
+- #3/#8 JSONC parser replaces naive regex comment stripping
+- #9 UTF-8 streaming via stateful TextDecoder in StdioMcpClient
+- #10 Tool schema alignment (TrackProgressParams, LogDecisionParams)
+- #13 .github/ directory created before writing copilot-instructions.md
+- #14 unsafe-eval removed from Webview CSP
+
+All tests pass: 100 MCP server + 36 extension (0 failures). Committed on branch fix/issues-and-docs (5062df5). Not pushed per user instruction.
 ### [Feb 12, 2026, 6:32 AM] ✨ Feature: Migrated graph webview to React Flow with advanced features
 <!-- ID: p_2026-02-12_mljdqjic -->
 

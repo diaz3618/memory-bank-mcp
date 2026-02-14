@@ -103,35 +103,77 @@ During shutdown:
 
 ## Sequence Diagram
 
-```
-┌─────────┐          ┌──────────────────┐          ┌───────────────────┐          ┌─────────────────┐
-│ Command │          │ MemoryBankServer │          │ MemoryBankManager │          │ ModeManager     │
-└────┬────┘          └────────┬─────────┘          └─────────┬─────────┘          └────────┬────────┘
-     │                        │                              │                             │
-     │ memory-bank-mcp        │                              │                             │
-     │───────────────────────>│                              │                             │
-     │                        │                              │                             │
-     │                        │ new MemoryBankManager()      │                             │
-     │                        │─────────────────────────────>│                             │
-     │                        │                              │                             │
-     │                        │                              │ setCustomPath()             │
-     │                        │                              │────────────────────────────>│
-     │                        │                              │                             │
-     │                        │ initializeModeManager()      │                             │
-     │                        │─────────────────────────────>│                             │
-     │                        │                              │                             │
-     │                        │                              │ new ModeManager()           │
-     │                        │                              │────────────────────────────>│
-     │                        │                              │                             │
-     │                        │ run()                        │                             │
-     │                        │◀──────────────────────────┐ │                             │
-     │                        │  Server started            │ │                             │
-     │                        │                            │ │                             │
-     │                        │◀────────────────────────────┤                             │
-     │                        │                              │                             │
-     │ Server ready           │                              │                             │
-     │◀──────────────────────│                              │                             │
-     │                        │                              │                             │
+```mermaid
+sequenceDiagram
+    participant CLI as main() / index.ts
+    participant MBS as MemoryBankServer
+    participant MCP as MCP Server (SDK)
+    participant MBM as MemoryBankManager
+    participant ERL as ExternalRulesLoader
+    participant MM as ModeManager
+
+    CLI->>CLI: processArgs()
+    opt --remote flag set
+        CLI->>CLI: FileSystemFactory.testRemoteConnection()
+    end
+
+    CLI->>MBS: new MemoryBankServer(mode, path, userId, folder, debug, remoteConfig)
+    activate MBS
+
+    MBS->>MBM: new MemoryBankManager(path, userId, folder, debug, remoteConfig)
+    activate MBM
+    MBM->>MBM: Set language to English
+    MBM->>MBM: Set projectPath (provided or cwd)
+    MBM->>MBM: Set userId, folderName
+    MBM-->>MBS: instance
+    deactivate MBM
+
+    MBS->>MBS: Combine allTools (core, progress, context, decision, mode)
+
+    MBS->>MCP: new Server({ name, version }, { capabilities })
+    MBS->>MCP: setupToolHandlers(server, manager, getProgressTracker)
+    MBS->>MCP: setupResourceHandlers(server, manager)
+
+    MBS-)MBM: initializeModeManager(initialMode) [async, fire-and-forget]
+    activate MBM
+    MBM->>ERL: new ExternalRulesLoader(projectPath)
+    MBM->>ERL: validateRequiredFiles()
+    ERL-->>MBM: { valid, missingFiles }
+    opt missingFiles.length > 0
+        MBM->>ERL: createMissingMcpRules(missingFiles)
+    end
+    MBM->>MM: new ModeManager(rulesLoader)
+    MBM->>MM: initialize(initialMode || 'code')
+    opt memoryBankDir exists
+        MBM->>MM: setMemoryBankStatus('ACTIVE')
+    end
+    deactivate MBM
+
+    MBS->>MBM: getModeManager()
+    MBS->>MM: on(MODE_CHANGED | MODE_TRIGGER_DETECTED | UMB_TRIGGERED | UMB_COMPLETED)
+    MBS->>MCP: onerror = handler
+    MBS->>CLI: Register SIGINT / SIGTERM → shutdown()
+    deactivate MBS
+
+    CLI->>MBS: run()
+    activate MBS
+    MBS->>MCP: new StdioServerTransport()
+    MBS->>MCP: server.connect(transport)
+    MBS->>MBS: isRunning = true
+    MBS-->>CLI: Server ready (stdio)
+    deactivate MBS
+
+    Note over CLI,MM: Server now listens for MCP tool requests via stdio
+
+    opt SIGINT / SIGTERM received
+        CLI->>MBS: shutdown()
+        activate MBS
+        MBS->>MM: dispose()
+        MBS->>MCP: server.close()
+        MBS->>MBS: isRunning = false
+        MBS->>CLI: process.exit(0)
+        deactivate MBS
+    end
 ```
 
 ## Important Considerations

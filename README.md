@@ -31,19 +31,22 @@ Add to your editor's MCP config (`.vscode/mcp.json`, Cursor, Claude Desktop, etc
   "servers": {
     "memory-bank-mcp": {
       "command": "npx",
-      "args": ["-y", "@diazstg/memory-bank-mcp"]
+      "args": ["-y", "@diazstg/memory-bank-mcp", "--username", "your-github-username"]
     }
   }
 }
 ```
 
+> **Tip**: Including `--username` is highly recommended for proper progress tracking.
+
 ### Common Options
 
 ```bash
-npx @diazstg/memory-bank-mcp --mode code           # Set operational mode
-npx @diazstg/memory-bank-mcp --path /my/project    # Custom project path
-npx @diazstg/memory-bank-mcp --folder my-memory    # Custom folder name (default: memory-bank)
-npx @diazstg/memory-bank-mcp --help                # All options
+npx @diazstg/memory-bank-mcp --username "github-user"   # Username for progress tracking (recommended)
+npx @diazstg/memory-bank-mcp --mode code                # Set operational mode
+npx @diazstg/memory-bank-mcp --path /my/project         # Custom project path
+npx @diazstg/memory-bank-mcp --folder my-memory         # Custom folder name (default: memory-bank)
+npx @diazstg/memory-bank-mcp --help                     # All options
 ```
 
 ### Remote Server (SSH)

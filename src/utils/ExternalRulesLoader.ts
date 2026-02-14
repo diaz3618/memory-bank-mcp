@@ -188,7 +188,7 @@ export class ExternalRulesLoader extends EventEmitter {
           }
         }
       } catch (error) {
-        logger.warn('ExternalRulesLoader', `Error loading ${filename}: ${error}`);
+        logger.warn('ExternalRulesLoader', `Error loading rules for mode '${mode}': ${error}`);
       }
     }
     

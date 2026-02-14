@@ -269,14 +269,6 @@ export class CachingFileSystem implements FileSystemInterface {
     return this.delegate.listFiles(path);
   }
 
-  /**
-   * Lists directory contents
-   * Alias for listFiles with consistent naming
-   */
-  async listDirectory(path: string): Promise<string[]> {
-    return this.listFiles(path);
-  }
-
   async delete(path: string): Promise<void> {
     await this.delegate.delete(path);
     

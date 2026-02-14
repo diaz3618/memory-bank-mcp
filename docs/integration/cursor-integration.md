@@ -48,9 +48,10 @@ Fill in the following details:
 
 - **Name**: Memory Bank MCP
 - **Command**: npx
-- **Arguments**: `@diazstg/memory-bank-mcp` followed by any optional modes
-  - Example: `@diazstg/memory-bank-mcp --mode code` for code-focused mode
-  - Example: `@diazstg/memory-bank-mcp --mode architect` for architecture-focused mode
+- **Arguments**: `@diazstg/memory-bank-mcp` followed by any optional parameters
+  - Example: `@diazstg/memory-bank-mcp --mode code --username your-github-username` (recommended)
+  - Example: `@diazstg/memory-bank-mcp --mode architect --username "Your Name"`
+  - The `--username` parameter is highly recommended for progress tracking
 
 ### 4. Save and Activate
 

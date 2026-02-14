@@ -600,14 +600,27 @@ async function installMcpServer(): Promise<void> {
   if (!choice) { return; }
 
   if (choice.detail === 'default') {
-    // Default: npx -y @diazstg/memory-bank-mcp
+    // Prompt for username (highly recommended)
+    const username = await vscode.window.showInputBox({
+      prompt: 'Enter your username (recommended for progress tracking)',
+      placeHolder: 'your-github-username or "Your Name"',
+      value: '',
+    });
+    // Note: We allow empty username, but it's recommended to provide one
+    
+    // Default: npx -y @diazstg/memory-bank-mcp --mode code --username <username>
+    const args = ['-y', '@diazstg/memory-bank-mcp', '--mode', 'code'];
+    if (username) {
+      args.push('--username', username);
+    }
+    
     const config = vscode.workspace.getConfiguration('memoryBank');
     await config.update('connectionMode', 'stdio', vscode.ConfigurationTarget.Workspace);
     await config.update('stdio.command', 'npx', vscode.ConfigurationTarget.Workspace);
-    await config.update('stdio.args', ['-y', '@diazstg/memory-bank-mcp'], vscode.ConfigurationTarget.Workspace);
+    await config.update('stdio.args', args, vscode.ConfigurationTarget.Workspace);
     
     // Also write .vscode/mcp.json for Copilot MCP integration
-    await writeMcpJson();
+    await writeMcpJson('npx', args);
     
     vscode.window.showInformationMessage(
       'MCP server configured! Use "Memory Bank: Reconnect" to connect.',
@@ -640,16 +653,30 @@ async function configureMcpServer(): Promise<void> {
 
     const argsStr = await vscode.window.showInputBox({
       prompt: 'Server arguments (space-separated)',
-      value: config.get<string[]>('stdio.args', ['-y', '@diazstg/memory-bank-mcp']).join(' '),
-      placeHolder: '-y @diazstg/memory-bank-mcp',
+      value: config.get<string[]>('stdio.args', ['-y', '@diazstg/memory-bank-mcp', '--mode', 'code']).join(' '),
+      placeHolder: '-y @diazstg/memory-bank-mcp --mode code',
     });
     if (argsStr === undefined) { return; }
 
+    // Prompt for username (highly recommended)
+    const username = await vscode.window.showInputBox({
+      prompt: 'Enter your username (recommended for progress tracking)',
+      placeHolder: 'your-github-username or "Your Name"',
+      value: '',
+    });
+
+    // Build args array
+    const args = argsStr.split(' ').filter(Boolean);
+    // Add username if provided and not already in args
+    if (username && !args.includes('--username') && !args.includes('-u')) {
+      args.push('--username', username);
+    }
+
     await config.update('stdio.command', command, vscode.ConfigurationTarget.Workspace);
-    await config.update('stdio.args', argsStr.split(' ').filter(Boolean), vscode.ConfigurationTarget.Workspace);
+    await config.update('stdio.args', args, vscode.ConfigurationTarget.Workspace);
 
     // Write .vscode/mcp.json
-    await writeMcpJson(command, argsStr.split(' ').filter(Boolean));
+    await writeMcpJson(command, args);
 
   } else {
     const baseUrl = await vscode.window.showInputBox({
@@ -677,7 +704,7 @@ async function configureMcpServer(): Promise<void> {
 
 async function writeMcpJson(
   command = 'npx',
-  args = ['-y', '@diazstg/memory-bank-mcp'],
+  args = ['-y', '@diazstg/memory-bank-mcp', '--mode', 'code'],
 ): Promise<void> {
   const workspaceFolders = vscode.workspace.workspaceFolders;
   if (!workspaceFolders) { return; }
@@ -729,7 +756,7 @@ You have access to Memory Bank MCP tools. USE THEM — they are not optional.
 ## Mandatory Workflow (every task, no exceptions)
 
 ### START of task
-1. Call \`memory-bank_get-instructions\` tool (or \`get_context_digest\` MCP tool) to load context
+1. Call \`get_context_digest\` MCP tool to load context (VS Code Copilot users: \`memory-bank_get-instructions\` also works)
 2. Read the returned active-context.md and progress.md
 3. Use \`graph_search\` to find relevant knowledge graph entities
 

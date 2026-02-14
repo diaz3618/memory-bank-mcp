@@ -840,6 +840,28 @@ export class MemoryBankManager {
   }
 
   /**
+   * Migrates Memory Bank files from camelCase to kebab-case naming convention.
+   * Delegates to MigrationUtils.migrateFileNamingConvention().
+   *
+   * @returns Object with migrated file list and any errors
+   */
+  async migrateFileNaming(): Promise<{ migrated: string[]; errors: string[] }> {
+    if (!this.memoryBankDir) {
+      throw new Error('Memory Bank directory not set');
+    }
+
+    const result = await MigrationUtils.migrateFileNamingConvention(this.memoryBankDir);
+
+    if (!result.success) {
+      logger.warn('MemoryBankManager', `Migration completed with errors: ${result.errors.join(', ')}`);
+    } else {
+      logger.info('MemoryBankManager', `Migration completed: ${result.migratedFiles.length} files migrated`);
+    }
+
+    return { migrated: result.migratedFiles, errors: result.errors };
+  }
+
+  /**
    * Lists available backups of the Memory Bank
    * 
    * Scans the parent directory for backup folders matching the pattern
@@ -862,7 +884,7 @@ export class MemoryBankManager {
         : path.dirname(this.memoryBankDir);
       
       // List directories in parent
-      const entries = await this.fileSystem.listDirectory(parentDir);
+      const entries = await this.fileSystem.listFiles(parentDir);
       
       // Filter for backup directories
       const backupPattern = /^memory-bank-backup-(\d{4}-\d{2}-\d{2}T[\d-]+)$/;
@@ -965,7 +987,7 @@ export class MemoryBankManager {
       }
       
       // List files in backup
-      const backupEntries = await this.fileSystem.listDirectory(backupPath);
+      const backupEntries = await this.fileSystem.listFiles(backupPath);
       const restoredFiles: string[] = [];
       
       // Copy each file from backup to memory bank
