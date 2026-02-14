@@ -10,7 +10,7 @@ import { MemoryBankManager } from '../core/MemoryBankManager.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-describe('Clinerules Integration Tests', () => {
+describe('McpRules Integration Tests', () => {
   const tempDir = path.join(__dirname, 'temp-test-dir');
   let rulesLoader: ExternalRulesLoader;
   let modeManager: ModeManager;
@@ -19,9 +19,9 @@ describe('Clinerules Integration Tests', () => {
     // Create temporary directory
     await fs.ensureDir(tempDir);
     
-    // Create test .clinerules files
+    // Create test .mcprules files
     await fs.writeFile(
-      path.join(tempDir, '.clinerules-code'),
+      path.join(tempDir, '.mcprules-code'),
       JSON.stringify({
         mode: 'code',
         instructions: {
@@ -49,7 +49,7 @@ describe('Clinerules Integration Tests', () => {
     );
     
     await fs.writeFile(
-      path.join(tempDir, '.clinerules-architect'),
+      path.join(tempDir, '.mcprules-architect'),
       JSON.stringify({
         mode: 'architect',
         instructions: {
@@ -91,7 +91,7 @@ describe('Clinerules Integration Tests', () => {
     await fs.remove(tempDir);
   });
   
-  test('Should detect and load .clinerules files', async () => {
+  test('Should detect and load .mcprules files', async () => {
     const rules = await rulesLoader.detectAndLoadRules();
     expect(rules.size).toBeGreaterThanOrEqual(2);
     expect(rules.has('code')).toBe(true);
@@ -142,21 +142,21 @@ describe('Clinerules Integration Tests', () => {
     newModeManager.dispose();
   });
   
-  test('Should switch modes correctly', () => {
+  test('Should switch modes correctly', async () => {
     // Get current mode
     let state = modeManager.getCurrentModeState();
     const initialMode = state.name;
     
     // Switch to the other mode
     const targetMode = initialMode === 'code' ? 'architect' : 'code';
-    const result = modeManager.switchMode(targetMode);
+    const result = await modeManager.switchMode(targetMode);
     expect(result).toBe(true);
     
     state = modeManager.getCurrentModeState();
     expect(state.name).toBe(targetMode);
     
     // Try to switch to non-existent mode
-    const failResult = modeManager.switchMode('nonexistent');
+    const failResult = await modeManager.switchMode('nonexistent');
     expect(failResult).toBe(false);
     
     // Mode should remain unchanged
@@ -184,14 +184,14 @@ describe('Clinerules Integration Tests', () => {
     expect(modeManager.isUmbModeActive()).toBe(false);
   });
   
-  test('Should detect mode triggers', () => {
+  test('Should detect mode triggers', async () => {
     // Get current mode
     let state = modeManager.getCurrentModeState();
     const initialMode = state.name;
     
     // Ensure we're in code mode for this test
     if (initialMode !== 'code') {
-      modeManager.switchMode('code');
+      await modeManager.switchMode('code');
       state = modeManager.getCurrentModeState();
       expect(state.name).toBe('code');
     }
@@ -202,7 +202,7 @@ describe('Clinerules Integration Tests', () => {
     expect(architectTriggers.length).toBe(1);
     
     // Switch to architect mode
-    modeManager.switchMode('architect');
+    await modeManager.switchMode('architect');
     state = modeManager.getCurrentModeState();
     expect(state.name).toBe('architect');
     
@@ -230,23 +230,24 @@ describe('Clinerules Integration Tests', () => {
   });
   
   test('Should emit events on mode changes', async () => {
-    return new Promise<void>((resolve) => {
-      // Get current mode
-      const state = modeManager.getCurrentModeState();
-      const initialMode = state.name;
-      
-      // Switch to the other mode
-      const targetMode = initialMode === 'code' ? 'architect' : 'code';
-      
+    // Get current mode
+    const state = modeManager.getCurrentModeState();
+    const initialMode = state.name;
+    
+    // Switch to the other mode
+    const targetMode = initialMode === 'code' ? 'architect' : 'code';
+    
+    const eventPromise = new Promise<void>((resolve) => {
       // Listen for mode changed event
       modeManager.on(ModeManagerEvent.MODE_CHANGED, (state) => {
         expect(state.name).toBe(targetMode);
         resolve();
       });
-      
-      // Switch mode to trigger event
-      modeManager.switchMode(targetMode);
     });
+    
+    // Switch mode to trigger event
+    await modeManager.switchMode(targetMode);
+    await eventPromise;
   });
   
   test('Should emit events on UMB activation', async () => {
@@ -280,7 +281,7 @@ describe('Clinerules Integration Tests', () => {
   
   test('Should emit events on mode trigger detection', async () => {
     // Ensure we're in code mode for this test
-    modeManager.switchMode('code');
+    await modeManager.switchMode('code');
     
     return new Promise<void>((resolve) => {
       // Listen for mode trigger detected event
@@ -314,8 +315,8 @@ describe('Clinerules Integration Tests', () => {
     await fs.ensureDir(tempDir);
     
     try {
-      // Create .clinerules files with mode_triggers that we can test
-      const modeClinerules = {
+      // Create .mcprules files with mode_triggers that we can test
+      const modeRules = {
         mode: 'code',
         instructions: {
           general: ['Test instruction'],
@@ -330,11 +331,11 @@ describe('Clinerules Integration Tests', () => {
         }
       };
       
-      // Write clinerules files for all modes
+      // Write mcprules files for all modes
       for (const mode of ['architect', 'ask', 'code', 'debug', 'test']) {
         await fs.writeFile(
-          path.join(tempDir, `.clinerules-${mode}`),
-          JSON.stringify({ ...modeClinerules, mode })
+          path.join(tempDir, `.mcprules-${mode}`),
+          JSON.stringify({ ...modeRules, mode })
         );
       }
       

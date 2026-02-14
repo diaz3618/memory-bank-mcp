@@ -6,8 +6,8 @@ You have access to Memory Bank MCP tools. USE THEM — they are not optional.
 ## Mandatory Workflow (every task, no exceptions)
 
 ### START of task
-1. Call `memory-bank_get-instructions` tool (or `get_context_digest` MCP tool) to load context
-2. Read the returned active-context.md and progress.md
+1. ⚠️ CALL THIS FIRST. Call `get_instructions` MCP tool to learn the full tool catalog and workflow (once per session)
+2. Call `get_context_digest` to load current project state (tasks, issues, progress, decisions)
 3. Use `graph_search` to find relevant knowledge graph entities
 
 ### DURING task
@@ -26,6 +26,7 @@ the Memory Bank has never been initialized. You MUST populate all core files wit
 project data from the workspace before doing any other work.
 
 ## Available MCP Tools
+Instructions: get_instructions
 Context: get_context_digest, get_context_bundle, get_memory_bank_status, read/write_memory_bank_file
 Progress: track_progress, add_progress_entry, update_active_context, log_decision, add_session_note
 Graph: graph_search, graph_upsert_entity, graph_add_observation, graph_link_entities, graph_open_nodes

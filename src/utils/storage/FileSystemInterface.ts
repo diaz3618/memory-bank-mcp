@@ -42,6 +42,19 @@ export interface FileSystemInterface {
    * @param content - Content to write
    */
   writeFile(path: string, content: string): Promise<void>;
+
+  /**
+   * Appends content to a file without reading the existing data.
+   * 
+   * Uses the OS append semantic (O_APPEND / >> ) so the operation is
+   * safe even if the file is concurrently read by another process.
+   * The file **must** already exist; behaviour for a missing file is
+   * implementation-defined (may create the file or throw).
+   * 
+   * @param path - Path to the file
+   * @param content - Content to append
+   */
+  appendFile(path: string, content: string): Promise<void>;
   
   /**
    * Lists files in a directory

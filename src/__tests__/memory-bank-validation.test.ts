@@ -19,11 +19,11 @@ describe('Memory Bank Validation Tests', () => {
     // Create temporary directory
     await fs.ensureDir(tempDir);
     
-    // Create test .clinerules files
+    // Create test .mcprules files
     const modes = ['architect', 'ask', 'code', 'debug', 'test'];
     for (const mode of modes) {
       await fs.writeFile(
-        path.join(tempDir, `.clinerules-${mode}`),
+        path.join(tempDir, `.mcprules-${mode}`),
         JSON.stringify({
           mode: mode,
           instructions: {
@@ -58,20 +58,20 @@ describe('Memory Bank Validation Tests', () => {
     await fs.remove(tempDir);
   });
   
-  test('validateClinerules should detect all required files', async () => {
-    const validation = await memoryBankManager.validateClinerules(tempDir);
+  test('validateMcpRules should detect all required files', async () => {
+    const validation = await memoryBankManager.validateMcpRules(tempDir);
     expect(validation.valid).toBe(true);
     expect(validation.missingFiles.length).toBe(0);
     expect(validation.existingFiles.length).toBe(5);
   });
   
-  test('validateClinerules should detect missing files', async () => {
+  test('validateMcpRules should detect missing files', async () => {
     // Remove one of the files
-    await fs.remove(path.join(tempDir, '.clinerules-architect'));
+    await fs.remove(path.join(tempDir, '.mcprules-architect'));
     
-    const validation = await memoryBankManager.validateClinerules(tempDir);
+    const validation = await memoryBankManager.validateMcpRules(tempDir);
     expect(validation.valid).toBe(false);
-    expect(validation.missingFiles).toContain('.clinerules-architect');
+    expect(validation.missingFiles).toContain('.mcprules-architect');
     expect(validation.existingFiles.length).toBe(4);
   });
   
@@ -134,9 +134,9 @@ describe('Memory Bank Validation Tests', () => {
     await fs.remove(mbDir);
   });
   
-  test('initializeMemoryBank should fail if .clinerules files are missing', async () => {
+  test('initializeMemoryBank should fail if .mcprules files are missing', async () => {
     // Remove one of the files
-    await fs.remove(path.join(tempDir, '.clinerules-architect'));
+    await fs.remove(path.join(tempDir, '.mcprules-architect'));
     
     // Try to initialize memory bank
     try {

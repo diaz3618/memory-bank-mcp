@@ -99,17 +99,16 @@ export interface SwitchModeParams {
 }
 
 export interface TrackProgressParams {
-  type: string;
-  summary: string;
-  details?: string;
-  tags?: string[];
-  files?: string[];
+  action: string;
+  description: string;
 }
 
 export interface LogDecisionParams {
+  title: string;
+  context: string;
   decision: string;
-  rationale?: string;
   alternatives?: string[];
+  consequences?: string[];
 }
 
 export interface UpdateActiveContextParams {

@@ -13,6 +13,15 @@ import os from 'os';
  */
 export const coreTools = [
   {
+    name: 'get_instructions',
+    description: '⚠️ CALL THIS FIRST. Get comprehensive instructions for using the Memory Bank MCP server. Call this tool FIRST at the start of every session to understand the available tools and recommended workflow.',
+    inputSchema: {
+      type: 'object',
+      properties: {},
+      additionalProperties: false,
+    },
+  },
+  {
     name: 'initialize_memory_bank',
     description: 'Initialize a Memory Bank in the specified directory',
     inputSchema: {
@@ -363,6 +372,158 @@ export const coreTools = [
 ];
 
 /**
+ * Returns comprehensive instructions for using the Memory Bank MCP server.
+ * This is the canonical entry point — call it FIRST in every session.
+ *
+ * The instructions are static and require no initialized Memory Bank.
+ */
+export function handleGetInstructions() {
+  const instructions = `# Memory Bank MCP Server — Instructions
+
+## What is Memory Bank?
+Memory Bank is an MCP server that persists project context across AI sessions.
+It stores progress, decisions, tasks, and a knowledge graph in a \`memory-bank/\`
+folder inside your project so that every new session can pick up where the last
+one left off.
+
+## Mandatory Workflow (every task, no exceptions)
+
+### START of task
+1. Call \`get_instructions\` (this tool) — you only need to do this once per session.
+2. Call \`get_context_digest\` to load the compact summary of current project state
+   (tasks, issues, recent progress, recent decisions, and knowledge graph summary).
+3. Call \`graph_search\` with a relevant query to find knowledge graph entities
+   related to the current task.
+
+### DURING task
+4. Call \`track_progress\` after completing milestones.
+5. Call \`log_decision\` when making architectural or design choices.
+6. Call \`add_session_note\` for observations, blockers, or questions.
+
+### END of task
+7. Call \`update_active_context\` with updated tasks, issues, and next steps.
+8. Call \`track_progress\` with a final summary of what was accomplished.
+9. Update knowledge graph entities if the project structure changed
+   (use \`graph_upsert_entity\`, \`graph_add_observation\`, \`graph_link_entities\`).
+
+## If Memory Bank Contains Placeholder Text
+If any core file contains \`[Project description]\` or \`[Task 1]\` style placeholders,
+the Memory Bank has never been populated. You MUST fill all core files with real
+project data before doing any other work.
+
+## Valid Modes
+The ONLY valid modes are: architect, code, ask, debug, test.
+There is NO "full" mode. All tools are available in every mode — modes control
+behavior guidelines, not tool access. Use \`switch_mode\` to change modes.
+
+## Core Memory Bank Files
+These files live in the \`memory-bank/\` directory:
+- **product-context.md** — Project overview, objectives, technologies, architecture
+- **active-context.md** — Ongoing tasks, known issues, next steps, session notes
+- **progress.md** — Completed & pending milestones, update history
+- **decision-log.md** — Architectural/design decisions with context and alternatives
+- **system-patterns.md** — Architecture, code, and documentation patterns
+
+## Complete Tool Reference
+
+### 1. Instructions
+| Tool | Purpose |
+|------|---------|
+| \`get_instructions\` | Return these instructions (call once per session) |
+
+### 2. Context Loading (read-only)
+| Tool | Purpose |
+|------|---------|
+| \`get_context_digest\` | Compact summary: recent progress, tasks, issues, decisions, graph overview |
+| \`get_context_bundle\` | Full content of ALL core files in one response (larger payload) |
+| \`get_memory_bank_status\` | Status of the Memory Bank (initialized, path, file list) |
+| \`list_memory_bank_files\` | List all files in the Memory Bank directory |
+| \`search_memory_bank\` | Full-text search across all Memory Bank files |
+| \`get_current_mode\` | Current active mode and its guidelines |
+
+### 3. File Operations
+| Tool | Purpose |
+|------|---------|
+| \`read_memory_bank_file\` | Read a single file (returns content + ETag) |
+| \`write_memory_bank_file\` | Write a single file (supports optimistic concurrency via ETag) |
+| \`batch_read_files\` | Read multiple files in one request |
+| \`batch_write_files\` | Write multiple files in one request |
+
+### 4. Progress Tracking
+| Tool | Purpose |
+|------|---------|
+| \`track_progress\` | Record a progress milestone (action + description) |
+| \`add_progress_entry\` | Structured progress entry with type, summary, details, files, tags |
+| \`update_active_context\` | Update tasks, issues, and next steps in active-context.md |
+| \`update_tasks\` | Add, remove, or replace the tasks list |
+| \`add_session_note\` | Add a timestamped note (observation, blocker, question, decision, todo) |
+| \`log_decision\` | Log an architectural/design decision with context and alternatives |
+
+### 5. Knowledge Graph
+| Tool | Purpose |
+|------|---------|
+| \`graph_search\` | Search entities by query string |
+| \`graph_open_nodes\` | Expand specific nodes and their neighborhood |
+| \`graph_upsert_entity\` | Create or update an entity |
+| \`graph_add_observation\` | Add an observation to an entity |
+| \`graph_link_entities\` | Create a typed relationship between entities |
+| \`graph_unlink_entities\` | Remove a relationship between entities |
+| \`graph_delete_entity\` | Delete an entity |
+| \`graph_delete_observation\` | Delete an observation |
+| \`graph_rebuild\` | Rebuild the graph index |
+| \`graph_compact\` | Compact the graph storage file |
+
+### 6. Modes
+| Tool | Purpose |
+|------|---------|
+| \`switch_mode\` | Switch to a mode: architect, code, ask, debug, or test |
+| \`get_current_mode\` | Get the current mode and its behavioral guidelines |
+| \`process_umb_command\` | Process an Update Memory Bank (UMB) command |
+| \`complete_umb\` | Complete the UMB process |
+
+### 7. Setup & Administration
+| Tool | Purpose |
+|------|---------|
+| \`initialize_memory_bank\` | Create a new Memory Bank in a directory |
+| \`set_memory_bank_path\` | Point to an existing Memory Bank directory |
+| \`migrate_file_naming\` | Migrate files from camelCase to kebab-case |
+| \`debug_mcp_config\` | Debug the current MCP configuration |
+
+### 8. Backup & Restore
+| Tool | Purpose |
+|------|---------|
+| \`create_backup\` | Create a timestamped backup of the Memory Bank |
+| \`list_backups\` | List all available backups |
+| \`restore_backup\` | Restore from a backup (auto-creates pre-restore backup) |
+
+### 9. Multi-Store Management
+| Tool | Purpose |
+|------|---------|
+| \`list_stores\` | List all registered Memory Bank stores |
+| \`select_store\` | Switch the active store (by path or storeId) |
+| \`register_store\` | Add a store to the persistent registry |
+| \`unregister_store\` | Remove a store from the registry |
+
+## Quick-Start Checklist
+1. \`get_instructions\` — read these instructions (done!)
+2. \`get_context_digest\` — load current project state
+3. \`graph_search\` — find relevant entities for your task
+4. Do your work, calling \`track_progress\` / \`log_decision\` / \`add_session_note\` as you go
+5. \`update_active_context\` — save updated tasks, issues, next steps
+6. \`track_progress\` — final summary of accomplishments
+`;
+
+  return {
+    content: [
+      {
+        type: 'text',
+        text: instructions,
+      },
+    ],
+  };
+}
+
+/**
  * Processes the set_memory_bank_path tool
  * @param memoryBankManager Memory Bank Manager
  * @param customPath Custom path for the Memory Bank
@@ -431,6 +592,9 @@ export async function handleInitializeMemoryBank(
       // Initialize the Memory Bank with createIfNotExists = true
       await memoryBankManager.initialize(true);
       
+      // Initialize mode manager (creates missing .mcprules files)
+      await memoryBankManager.initializeModeManager();
+      
       // Get the Memory Bank directory
       const memoryBankDir = memoryBankManager.getMemoryBankDir();
       
@@ -443,11 +607,11 @@ export async function handleInitializeMemoryBank(
         ],
       };
     } catch (initError) {
-      // Check if the error is related to .clinerules files
+      // Check if the error is related to .mcprules files
       const errorMessage = String(initError);
-      if (errorMessage.includes('.clinerules')) {
-        console.warn('Warning: Error related to .clinerules files:', initError);
-        console.warn('Continuing with Memory Bank initialization despite .clinerules issues.');
+      if (errorMessage.includes('.mcprules')) {
+        console.warn('Warning: Error related to .mcprules files:', initError);
+        console.warn('Continuing with Memory Bank initialization despite .mcprules issues.');
         
         // Use the provided path directly as the memory bank directory
         const memoryBankDir = absolutePath;
@@ -459,7 +623,7 @@ export async function handleInitializeMemoryBank(
             content: [
               {
                 type: 'text',
-                text: `Memory Bank initialized at ${memoryBankDir} (with warnings about .clinerules files)`,
+                text: `Memory Bank initialized at ${memoryBankDir} (with warnings about .mcprules files)`,
               },
             ],
           };

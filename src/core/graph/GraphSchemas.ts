@@ -33,8 +33,15 @@ import { MARKER_EVENT } from '../../types/graph.js';
 // Basic Type Guards
 // ============================================================================
 
+/**
+ * Checks whether `value` is a plain object — i.e. one created by `{}`, `Object.create(null)`,
+ * or `new Object`. Rejects `Date`, boxed primitives, class instances, and arrays, all of which
+ * would not survive a JSON round-trip as objects.
+ */
 function isObject(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) return false;
+  const proto = Object.getPrototypeOf(value);
+  return proto === Object.prototype || proto === null;
 }
 
 function isString(value: unknown): value is string {

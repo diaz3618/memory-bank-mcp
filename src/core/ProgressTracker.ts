@@ -18,7 +18,7 @@ export interface ProgressDetails {
   timestamp?: Date;
   /** Optional additional metadata as key-value pairs */
   metadata?: Record<string, string | number | boolean>;
-  /** Optional GitHub profile URL of who performed the action */
+  /** Optional username or GitHub profile URL of who performed the action */
   userId?: string;
   /** 
    * Any additional properties
@@ -45,7 +45,7 @@ export interface Decision {
   date?: Date;
   /** Optional tags to categorize the decision */
   tags?: string[];
-  /** Optional GitHub profile URL of who made the decision */
+  /** Optional username or GitHub profile URL of who made the decision */
   userId?: string;
 }
 
@@ -83,7 +83,7 @@ export class ProgressTracker {
    * Creates a new ProgressTracker instance
    * 
    * @param memoryBankDir - Directory of the Memory Bank (for backwards compatibility)
-   * @param userId - GitHub profile URL for tracking changes
+   * @param userId - Username for progress tracking (can be name or GitHub URL)
    * @param fileSystem - Optional FileSystemInterface for remote support
    * @param memoryBankRelativePath - Relative path to memory bank from fileSystem baseDir
    */
@@ -155,12 +155,13 @@ export class ProgressTracker {
   }
 
   /**
-   * Formats the GitHub profile URL for display in markdown
+   * Formats the username for display in markdown
    * 
    * If the userId is a GitHub URL, it will be formatted as [@username](url)
+   * Otherwise, the username is returned as-is
    * 
-   * @param userId - The GitHub profile URL
-   * @returns Formatted GitHub profile URL string
+   * @param userId - The username or GitHub profile URL
+   * @returns Formatted username string
    * @private
    */
   private formatUserId(userId: string): string {
@@ -195,7 +196,7 @@ export class ProgressTracker {
    */
   async trackProgress(action: string, details: ProgressDetails): Promise<string> {
     try {
-      // Add GitHub profile URL to details if not already present
+      // Add username to details if not already present
       if (!details.userId) {
         details.userId = this.userId;
       }
@@ -308,8 +309,8 @@ export class ProgressTracker {
       if (context.tasks && context.tasks.length > 0) {
         const tasksSection = `## Ongoing Tasks\n\n${context.tasks.map(task => `- ${task}`).join('\n')}\n`;
         
-        if (/## Ongoing Tasks\s+([^#]*)/s.test(contextContent)) {
-          contextContent = contextContent.replace(/## Ongoing Tasks\s+([^#]*)/s, tasksSection);
+        if (/## Ongoing Tasks[\s\S]*?(?=\n## |$)/.test(contextContent)) {
+          contextContent = contextContent.replace(/## Ongoing Tasks[\s\S]*?(?=\n## |$)/, () => tasksSection);
         } else {
           // If the section doesn't exist, add it
           contextContent += `\n\n${tasksSection}`;
@@ -320,8 +321,8 @@ export class ProgressTracker {
       if (context.issues && context.issues.length > 0) {
         const issuesSection = `## Known Issues\n\n${context.issues.map(issue => `- ${issue}`).join('\n')}\n`;
         
-        if (/## Known Issues\s+([^#]*)/s.test(contextContent)) {
-          contextContent = contextContent.replace(/## Known Issues\s+([^#]*)/s, issuesSection);
+        if (/## Known Issues[\s\S]*?(?=\n## |$)/.test(contextContent)) {
+          contextContent = contextContent.replace(/## Known Issues[\s\S]*?(?=\n## |$)/, () => issuesSection);
         } else {
           // If the section doesn't exist, add it
           contextContent += `\n\n${issuesSection}`;
@@ -332,8 +333,8 @@ export class ProgressTracker {
       if (context.nextSteps && context.nextSteps.length > 0) {
         const nextStepsSection = `## Next Steps\n\n${context.nextSteps.map(step => `- ${step}`).join('\n')}\n`;
         
-        if (/## Next Steps\s+([^#]*)/s.test(contextContent)) {
-          contextContent = contextContent.replace(/## Next Steps\s+([^#]*)/s, nextStepsSection);
+        if (/## Next Steps[\s\S]*?(?=\n## |$)/.test(contextContent)) {
+          contextContent = contextContent.replace(/## Next Steps[\s\S]*?(?=\n## |$)/, () => nextStepsSection);
         } else {
           // If the section doesn't exist, add it
           contextContent += `\n\n${nextStepsSection}`;
@@ -357,11 +358,11 @@ export class ProgressTracker {
       let contextContent = await this.readFileContent('active-context.md');
       
       // Replace the current session notes with an empty section
-      const sessionNotesRegex = /## Current Session Notes\s+([^#]*)/s;
+      const sessionNotesRegex = /## Current Session Notes[\s\S]*?(?=\n## |$)/;
       if (sessionNotesRegex.test(contextContent)) {
         contextContent = contextContent.replace(
           sessionNotesRegex,
-          `## Current Session Notes\n\n`
+          () => `## Current Session Notes\n\n`
         );
         
         await this.writeFileContent('active-context.md', contextContent);

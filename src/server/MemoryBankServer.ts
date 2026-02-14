@@ -10,6 +10,38 @@ import { progressTools } from './tools/ProgressTools.js';
 import { contextTools } from './tools/ContextTools.js';
 import { decisionTools } from './tools/DecisionTools.js';
 import { modeTools } from './tools/ModeTools.js';
+import { createRequire } from 'module';
+import { readFileSync } from 'fs';
+import { join, dirname } from 'path';
+import { fileURLToPath } from 'url';
+
+// Get directory name in ESM
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+// Read the canonical version from package.json at startup so the MCP
+// handshake always reports the same version as `npm pkg get version`.
+function getVersion(): string {
+  try {
+    // Try using createRequire first (works in development)
+    const require = createRequire(import.meta.url);
+    const pkg = require('../../package.json') as { version: string };
+    return pkg.version;
+  } catch {
+    try {
+      // In production (build/), try reading from resolved path
+      const packageJsonPath = join(__dirname, '..', '..', 'package.json');
+      const content = readFileSync(packageJsonPath, 'utf-8') as string;
+      const pkg = JSON.parse(content) as { version: string };
+      return pkg.version;
+    } catch {
+      // Fallback to unknown if package.json cannot be found
+      return 'unknown';
+    }
+  }
+}
+
+const PKG_VERSION: string = getVersion();
 
 /**
  * Main MCP server class for Memory Bank
@@ -28,7 +60,7 @@ export class MemoryBankServer {
    * Initializes the MCP server with the necessary handlers for tools and resources.
    * @param initialMode Initial mode (optional)
    * @param projectPath Project path (optional)
-   * @param userId GitHub profile URL for tracking changes (optional)
+   * @param userId Username for progress tracking (can be name or GitHub URL)
    * @param folderName Memory Bank folder name (optional, default: 'memory-bank')
    * @param debugMode Enable debug mode (optional, default: false)
    * @param remoteConfig Remote server configuration (optional)
@@ -66,7 +98,7 @@ export class MemoryBankServer {
     this.server = new Server(
       {
         name: '@diazstg/memory-bank-mcp',
-        version: '0.5.0',
+        version: PKG_VERSION,
       },
       {
         capabilities: {

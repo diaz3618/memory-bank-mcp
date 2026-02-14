@@ -1,11 +1,12 @@
 /**
- * Templates for .clinerules files
+ * Templates for .mcprules files
  * 
- * These templates are used to create default .clinerules files when they don't exist.
+ * These templates are used to create default .mcprules files when they don't exist.
+ * Note: These were previously called .clinerules files but renamed for MCP-server independence.
  */
 
 /**
- * Template for .clinerules-architect
+ * Template for .mcprules-architect
  */
 export const architectTemplate = `mode: architect
 instructions:
@@ -30,7 +31,9 @@ instructions:
              * decision-log.md
              * system-patterns.md
         3. **If Memory Bank Exists:**
-           - Silently read ALL memory bank files
+           - Use \`get_context_digest\` for a quick project overview
+           - Use \`search_memory_bank\` for specific information
+           - Use \`batch_read_files\` for core files (active-context, progress, decision-log)
            - Verify core files exist
            - Initialize missing files if needed
            - Present project status summary
@@ -132,19 +135,22 @@ instructions:
 
   # UMB Section - Added to ALL modes
   umb:
-    trigger: "^(Update Memory Bank|UMB)$"
+    trigger: "(?i)\\b(umb|update memory bank)\\b"
     instructions:
       - "Halt Current Task: Stop current activity"
+      - "Call \`process_umb_command\` to activate UMB mode"
       - "Acknowledge Command: '[MEMORY BANK: UPDATING]'"
       - "Review Chat History"
-      - "Update Memory Bank Files"
+      - "Update Memory Bank Files (use \`write_memory_bank_file\` with \`ifMatchEtag\` for safe updates)"
       - >
           Architecture Focus:
           - Design decisions
           - System patterns
           - Documentation structure
           - Implementation guidance
+      - "Call \`complete_umb\` when finished to restore normal access"
       - "Note: Override is TEMPORARY"
+      - "SECURITY: Never store secrets, tokens, credentials, or private keys in memory-bank files"
     override_file_restrictions: true
 
   memory_bank: {}
@@ -167,7 +173,7 @@ mode_triggers:
     - condition: knowledge_sharing_required`;
 
 /**
- * Template for .clinerules-ask
+ * Template for .mcprules-ask
  */
 export const askTemplate = `mode: ask
 instructions:
@@ -194,7 +200,9 @@ instructions:
            - Ask if they would like to switch to Architect mode to initialize the Memory Bank
            - Use \`switch_mode\` tool to change to Architect mode if agreed
         3. **If Memory Bank Exists:**
-           - Read ALL relevant Memory Bank files silently
+           - Use \`get_context_digest\` for a quick project overview
+           - Use \`search_memory_bank\` for specific information needed to answer
+           - Use \`batch_read_files\` only if full file content is required
            - Use information to provide context-aware answers
            - Check for missing core files:
              * active-context.md
@@ -205,14 +213,14 @@ instructions:
            - If any core files are missing, suggest Architect mode switch
     - >
       Tool Restrictions:
-        - Can use read_file (reading)
-        - Can use search_files (searching)
-        - Can use list_files (directory listing)
-        - Can use list_code_definition_names (code analysis)
-        - Can use ask_followup_question (clarification)
-        - Can use switch_mode (mode changes)
-        - Can use new_task (task creation)
-        - Can use write_to_file ONLY during UMB
+        - Can read files to answer questions
+        - Can search workspace for relevant code
+        - Can list directories for project structure
+        - Can use \`get_context_digest\` for quick context
+        - Can use \`search_memory_bank\` for targeted retrieval
+        - Can use \`batch_read_files\` for multiple files
+        - Can use \`switch_mode\` for mode changes
+        - Can use \`write_memory_bank_file\` ONLY during UMB
     - >
       Guide users to appropriate modes:
         - Code mode for implementation
@@ -259,9 +267,10 @@ instructions:
 
   # UMB Section - Added to ALL modes
   umb:
-    trigger: "^(Update Memory Bank|UMB)$"
+    trigger: "(?i)\\b(umb|update memory bank)\\b"
     instructions:
       - "Halt Current Task: Stop all activity"
+      - "Call \`process_umb_command\` to activate UMB mode"
       - "Acknowledge Command: '[MEMORY BANK: UPDATING]'"
       - "Review Chat History"
       - >
@@ -271,10 +280,12 @@ instructions:
                - Analyze chat history
                - Identify key updates
             2. Available Actions:
-               - CAN update memory-bank/*.md
+               - CAN update memory-bank/*.md via \`write_memory_bank_file\`
+               - Use \`ifMatchEtag\` parameter for safe concurrent writes
                - CANNOT update other files
                - Must be explicit updates
             3. After Update:
+               - Call \`complete_umb\` to restore normal access
                - Document changes made
                - Return to read-only
                - Continue prior task
@@ -285,6 +296,7 @@ instructions:
             - Be specific and clear
             - Document reasoning
       - "Note: This override is TEMPORARY"
+      - "SECURITY: Never store secrets, tokens, credentials, or private keys in memory-bank files"
     override_file_restrictions: true  # Only during UMB process
 
   memory_bank: {}
@@ -307,7 +319,7 @@ mode_triggers:
     - condition: coverage_question`;
 
 /**
- * Template for .clinerules-code
+ * Template for .mcprules-code
  */
 export const codeTemplate = `mode: code
 instructions:
@@ -328,23 +340,23 @@ instructions:
         - Memory Bank updates during UMB only
     - >
       When a Memory Bank is found:
-        1. Read ALL files in the memory-bank directory, one at a time, using the \`read_file\` tool and waiting for confirmation after each read.
-        2. Check for core Memory Bank files:
+        1. Use \`get_context_digest\` for a quick project overview first
+        2. Use \`batch_read_files\` for core files (active-context.md, progress.md, decision-log.md)
+        3. Check for core Memory Bank files:
             - active-context.md
             - product-context.md
             - progress.md
             - decision-log.md
-        3. If any core files are missing:
+        4. If any core files are missing:
             - Inform user about missing files
             - Briefly explain their purposes
             - Offer to create them
-        4. Present available implementation tasks based on Memory Bank content
-        5. Wait for user selection before proceeding
+        5. Present available implementation tasks based on Memory Bank content
+        6. Wait for user selection before proceeding
     - >
       If NO Memory Bank is found:
         - **Ask the user if they would like to switch to Architect mode to initialize the Memory Bank.**
-        - Use the \`ask_followup_question\` tool for this
-        - If the user agrees, use the \`switch_mode\` tool to switch to \`architect\`
+        - If the user agrees, use \`switch_mode\` to switch to \`architect\`
         - If the user declines, proceed with the current task as best as possible without a Memory Bank
     - >
       Mode Collaboration Rules:
@@ -431,10 +443,11 @@ instructions:
 
   # UMB Section - Added to ALL modes
   umb:
-    trigger: "^(Update Memory Bank|UMB)$"
+    trigger: "(?i)\\b(umb|update memory bank)\\b"
     instructions:
       - "Halt Current Task: Stop current activity"
       - "Acknowledge Command: '[MEMORY BANK: UPDATING]'"
+      - "Call \`process_umb_command\` to activate UMB mode (unlocks write access)"
       - "Review Chat History"
       - >
           Code Focus Updates:
@@ -442,7 +455,9 @@ instructions:
           - Code patterns used
           - Technical decisions
           - Test coverage
-      - "Note: Override is TEMPORARY"
+      - "Update Memory Bank Files (use \`write_memory_bank_file\` with \`ifMatchEtag\` for safe updates)"
+      - "Call \`complete_umb\` when finished to restore normal access"
+      - "SECURITY: Never store secrets, tokens, credentials, or private keys in memory-bank files"
     override_file_restrictions: true
 
   memory_bank: {}
@@ -465,7 +480,7 @@ mode_triggers:
     - condition: pattern_documentation`;
 
 /**
- * Template for .clinerules-debug
+ * Template for .mcprules-debug
  */
 export const debugTemplate = `mode: debug
 instructions:
@@ -476,11 +491,11 @@ instructions:
         1. **Check for Memory Bank:** Determine if memory-bank directory exists.
         2. **If NO Memory Bank:**
            - Ask if user wants to switch to Architect mode to initialize
-           - Use ask_followup_question for the prompt
-           - Switch to Architect mode if agreed using switch_mode
+           - Switch to Architect mode if agreed using \`switch_mode\`
            - Otherwise proceed with limited context
         3. **If Memory Bank Exists:**
-           - Silently read ALL memory bank files
+           - Use \`get_context_digest\` for quick project overview
+           - Use \`batch_read_files\` for core files (active-context.md, progress.md)
            - Check for core files:
              * active-context.md
              * product-context.md
@@ -591,22 +606,24 @@ instructions:
            - Validation methods
     - >
       Tool Restrictions:
-        - Can use read_file
+        - Can use \`get_context_digest\` for quick overview
+        - Can use \`search_memory_bank\` for specific queries
+        - Can use \`batch_read_files\` for reading memory bank files
         - Can use search_files
         - Can use list_files
         - Can use list_code_definition_names
         - Can use execute_command
-        - Can use ask_followup_question
-        - Can use write_to_file ONLY during UMB
+        - Can use \`write_memory_bank_file\` ONLY during UMB
         - CANNOT modify project files
     - "CRITICAL: Must get user confirmation of diagnosis before suggesting fixes"
 
   # UMB Section - Added to ALL modes
   umb:
-    trigger: "^(Update Memory Bank|UMB)$"
+    trigger: "(?i)\\b(umb|update memory bank)\\b"
     instructions:
       - "Halt Current Task: Stop all activity"
       - "Acknowledge Command: '[MEMORY BANK: UPDATING]'"
+      - "Call \`process_umb_command\` to activate UMB mode (unlocks write access)"
       - "Review Chat History"
       - >
           UMB Process Flow:
@@ -615,12 +632,13 @@ instructions:
                - Analyze debug history
                - Identify key findings
             2. Available Actions:
-               - CAN update memory-bank/*.md
+               - CAN update memory-bank/*.md using \`write_memory_bank_file\`
+               - Use \`ifMatchEtag\` parameter for safe concurrent updates
                - CANNOT update other files
                - Must document clearly
             3. After Update:
                - Document changes made
-               - Return to read-only
+               - Call \`complete_umb\` to restore normal access
                - Continue debugging
       - >
           Debug-Specific Updates:
@@ -628,7 +646,7 @@ instructions:
             - Log investigation steps
             - Track root causes
             - Note validation results
-      - "Note: This override is TEMPORARY"
+      - "SECURITY: Never store secrets, tokens, credentials, or private keys in memory-bank files"
     override_file_restrictions: true  # Only during UMB process
 
   memory_bank: {}
@@ -647,7 +665,7 @@ mode_triggers:
     - condition: coverage_assessment_required`;
 
 /**
- * Template for .clinerules-test
+ * Template for .mcprules-test
  */
 export const testTemplate = `mode: test
 instructions:
@@ -661,9 +679,10 @@ instructions:
            - Answer the user's question directly if possible
            - Ask clarifying questions if needed
            - Suggest switching to Architect mode to initialize Memory Bank
-           - Use switch_mode tool if user agrees
+           - Use \`switch_mode\` tool if user agrees
         3. **If Memory Bank Exists:**
-           - Silently read ALL memory bank files
+           - Use \`get_context_digest\` for quick project overview
+           - Use \`batch_read_files\` for core files (active-context.md, progress.md)
            - Check for core files:
              * active-context.md
              * product-context.md
@@ -750,23 +769,25 @@ instructions:
            - Follow-ups
     - >
       Tool Restrictions:
-        - Can use read_file (reading)
+        - Can use \`get_context_digest\` for quick overview
+        - Can use \`search_memory_bank\` for specific queries
+        - Can use \`batch_read_files\` for reading memory bank files
         - Can use search_files (coverage)
         - Can use list_files (test suites)
         - Can use list_code_definition_names
         - Can use execute_command (tests)
-        - Can use ask_followup_question
-        - Can use switch_mode (mode changes)
-        - Can use write_to_file ONLY during UMB
+        - Can use \`switch_mode\` (mode changes)
+        - Can use \`write_memory_bank_file\` ONLY during UMB
         - CANNOT modify project files
     - "CRITICAL: Must get Architect approval for test strategy changes"
 
   # UMB Section - Added to ALL modes
   umb:
-    trigger: "^(Update Memory Bank|UMB)$"
+    trigger: "(?i)\\b(umb|update memory bank)\\b"
     instructions:
       - "Halt Current Task: Stop all activity"
       - "Acknowledge Command: '[MEMORY BANK: UPDATING]'"
+      - "Call \`process_umb_command\` to activate UMB mode (unlocks write access)"
       - "Review Chat History"
       - >
           UMB Process Flow:
@@ -775,12 +796,13 @@ instructions:
                - Analyze test results
                - Identify key findings
             2. Available Actions:
-               - CAN update memory-bank/*.md
+               - CAN update memory-bank/*.md using \`write_memory_bank_file\`
+               - Use \`ifMatchEtag\` parameter for safe concurrent updates
                - CANNOT update other files
                - Must document clearly
             3. After Update:
                - Document changes made
-               - Return to read-only
+               - Call \`complete_umb\` to restore normal access
                - Continue testing
       - >
           Test-Specific Updates:
@@ -788,7 +810,7 @@ instructions:
             - Log coverage metrics
             - Track test plans
             - Note failures
-      - "Note: This override is TEMPORARY"
+      - "SECURITY: Never store secrets, tokens, credentials, or private keys in memory-bank files"
     override_file_restrictions: true  # Only during UMB process
 
   memory_bank: {}
@@ -809,10 +831,13 @@ mode_triggers:
 /**
  * Map of mode names to templates
  */
-export const clineruleTemplates: Record<string, string> = {
+export const mcpRulesTemplates: Record<string, string> = {
   'architect': architectTemplate,
   'ask': askTemplate,
   'code': codeTemplate,
   'debug': debugTemplate,
   'test': testTemplate
-}; 
+};
+
+// Backward compatibility alias
+export const clineruleTemplates = mcpRulesTemplates; 

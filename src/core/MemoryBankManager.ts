@@ -340,22 +340,22 @@ export class MemoryBankManager {
   }
 
   /**
-   * Validates if all required .clinerules files exist in the project root
+   * Validates if all required .mcprules files exist in the project root
    * 
    * @param projectDir - Project directory to check
    * @returns Object with validation results
    */
-  async validateClinerules(projectDir: string): Promise<{
+  async validateMcpRules(projectDir: string): Promise<{
     valid: boolean;
     missingFiles: string[];
     existingFiles: string[];
   }> {
     const requiredFiles = [
-      '.clinerules-architect',
-      '.clinerules-ask',
-      '.clinerules-code',
-      '.clinerules-debug',
-      '.clinerules-test'
+      '.mcprules-architect',
+      '.mcprules-ask',
+      '.mcprules-code',
+      '.mcprules-debug',
+      '.mcprules-test'
     ];
     
     const missingFiles: string[] = [];
@@ -840,6 +840,28 @@ export class MemoryBankManager {
   }
 
   /**
+   * Migrates Memory Bank files from camelCase to kebab-case naming convention.
+   * Delegates to MigrationUtils.migrateFileNamingConvention().
+   *
+   * @returns Object with migrated file list and any errors
+   */
+  async migrateFileNaming(): Promise<{ migrated: string[]; errors: string[] }> {
+    if (!this.memoryBankDir) {
+      throw new Error('Memory Bank directory not set');
+    }
+
+    const result = await MigrationUtils.migrateFileNamingConvention(this.memoryBankDir);
+
+    if (!result.success) {
+      logger.warn('MemoryBankManager', `Migration completed with errors: ${result.errors.join(', ')}`);
+    } else {
+      logger.info('MemoryBankManager', `Migration completed: ${result.migratedFiles.length} files migrated`);
+    }
+
+    return { migrated: result.migratedFiles, errors: result.errors };
+  }
+
+  /**
    * Lists available backups of the Memory Bank
    * 
    * Scans the parent directory for backup folders matching the pattern
@@ -862,7 +884,7 @@ export class MemoryBankManager {
         : path.dirname(this.memoryBankDir);
       
       // List directories in parent
-      const entries = await this.fileSystem.listDirectory(parentDir);
+      const entries = await this.fileSystem.listFiles(parentDir);
       
       // Filter for backup directories
       const backupPattern = /^memory-bank-backup-(\d{4}-\d{2}-\d{2}T[\d-]+)$/;
@@ -965,7 +987,7 @@ export class MemoryBankManager {
       }
       
       // List files in backup
-      const backupEntries = await this.fileSystem.listDirectory(backupPath);
+      const backupEntries = await this.fileSystem.listFiles(backupPath);
       const restoredFiles: string[] = [];
       
       // Copy each file from backup to memory bank
@@ -1026,6 +1048,13 @@ export class MemoryBankManager {
       // Create the ExternalRulesLoader for the project
       this.rulesLoader = new ExternalRulesLoader(this.projectPath);
 
+      // Ensure all .mcprules-{mode} files exist before loading rules
+      const validation = await this.rulesLoader.validateRequiredFiles();
+      if (!validation.valid && validation.missingFiles.length > 0) {
+        logger.info('MemoryBankManager', `Creating missing mcprules files: ${validation.missingFiles.join(', ')}`);
+        await this.rulesLoader.createMissingMcpRules(validation.missingFiles);
+      }
+
       // Create the ModeManager with the rules loader
       this.modeManager = new ModeManager(this.rulesLoader);
 
@@ -1059,13 +1088,13 @@ export class MemoryBankManager {
    * @param mode Mode name
    * @returns True if the mode was successfully switched, false otherwise
    */
-  switchMode(mode: string): boolean {
+  async switchMode(mode: string): Promise<boolean> {
     if (!this.modeManager) {
       logger.warn('MemoryBankManager', 'Mode manager not initialized, cannot switch mode');
       return false;
     }
     
-    const success = this.modeManager.switchMode(mode);
+    const success = await this.modeManager.switchMode(mode);
     if (success) {
       logger.info('MemoryBankManager', `Switched to mode: ${mode}`);
     } else {

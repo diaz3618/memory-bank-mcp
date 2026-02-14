@@ -71,10 +71,35 @@ export class GraphStore {
   private cachedIndex: GraphIndex | null = null;
   private lastJsonlEtag: string | null = null;
 
+  // Async write queue to prevent concurrent write race conditions
+  private writeQueue: Promise<void> = Promise.resolve();
+
+  // Cached marker validation: once the marker is verified during
+  // initialize() or the first append, skip re-reading the whole file
+  // on subsequent appends.
+  private markerVerified = false;
+
   constructor(fs: FileSystemInterface, storeRoot: string, storeId: string = 'default') {
     this.fs = fs;
     this.storeRoot = storeRoot;
     this.storeId = storeId;
+  }
+
+  /**
+   * Serializes write operations to prevent race conditions.
+   * All operations that read-modify-write must go through this lock.
+   */
+  private async withWriteLock<T>(fn: () => Promise<T>): Promise<T> {
+    let releaseLock!: () => void;
+    const nextSlot = new Promise<void>(resolve => { releaseLock = resolve; });
+    const previousSlot = this.writeQueue;
+    this.writeQueue = nextSlot;
+    await previousSlot;
+    try {
+      return await fn();
+    } finally {
+      releaseLock();
+    }
   }
 
   // ==========================================================================
@@ -124,6 +149,7 @@ export class GraphStore {
         // Create with marker line
         const markerLine = JSON.stringify(ME) + '\n';
         await this.fs.writeFile(this.jsonlPath, markerLine);
+        this.markerVerified = true;
         logger.info('GraphStore', `Created graph.jsonl with marker at ${this.jsonlPath}`);
       } else {
         // Validate existing marker
@@ -131,6 +157,7 @@ export class GraphStore {
         if (!validation.success) {
           return validation;
         }
+        this.markerVerified = true;
       }
 
       // Build initial snapshot if needed
@@ -202,44 +229,43 @@ export class GraphStore {
 
   /**
    * Appends an event to the JSONL file
-   * Uses atomic write pattern for safety
+   * Uses filesystem append (O_APPEND) instead of read-modify-write.
+   * Serialized via writeQueue to prevent concurrent-append race conditions.
    */
   private async appendEvent(event: DataEvent): Promise<GraphOperationResult<void>> {
-    try {
-      // Read current content
-      const currentContent = await this.fs.readFile(this.jsonlPath);
-
-      // Validate marker still present
-      const firstLine = currentContent.split('\n')[0];
-      let markerValid = false;
+    return this.withWriteLock(async () => {
       try {
-        markerValid = !!firstLine && isMarkerEvent(JSON.parse(firstLine));
-      } catch {
-        // JSON.parse failed — marker is corrupted
+        // Validate marker once — after that, trust it hasn't been tampered with
+        if (!this.markerVerified) {
+          const currentContent = await this.fs.readFile(this.jsonlPath);
+          const firstLine = currentContent.split('\n')[0];
+          let markerValid = false;
+          try {
+            markerValid = !!firstLine && isMarkerEvent(JSON.parse(firstLine));
+          } catch {
+            // JSON.parse failed — marker is corrupted
+          }
+          if (!markerValid) {
+            return { success: false, error: 'JSONL file marker missing or invalid', code: 'MARKER_MISMATCH' as const };
+          }
+          this.markerVerified = true;
+        }
+
+        // Append only the new event line — no read-modify-write
+        const eventLine = JSON.stringify(event) + '\n';
+        await this.fs.appendFile(this.jsonlPath, eventLine);
+
+        // Invalidate cache
+        this.cachedSnapshot = null;
+        this.cachedIndex = null;
+
+        return { success: true, data: undefined };
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        logger.error('GraphStore', `Failed to append event: ${message}`);
+        return { success: false, error: message, code: 'IO_ERROR' as const };
       }
-      if (!markerValid) {
-        return { success: false, error: 'JSONL file marker missing or invalid', code: 'MARKER_MISMATCH' };
-      }
-
-      // Append new event
-      const eventLine = JSON.stringify(event) + '\n';
-      const newContent = currentContent.endsWith('\n')
-        ? currentContent + eventLine
-        : currentContent + '\n' + eventLine;
-
-      // Write atomically
-      await this.fs.writeFile(this.jsonlPath, newContent);
-
-      // Invalidate cache
-      this.cachedSnapshot = null;
-      this.cachedIndex = null;
-
-      return { success: true, data: undefined };
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      logger.error('GraphStore', `Failed to append event: ${message}`);
-      return { success: false, error: message, code: 'IO_ERROR' };
-    }
+    });
   }
 
   // ==========================================================================
@@ -684,7 +710,8 @@ export class GraphStore {
    * This reduces log size without losing current state.
    */
   async compact(): Promise<GraphOperationResult<{ before: number; after: number }>> {
-    try {
+    return this.withWriteLock(async () => {
+      try {
       // Ensure we have a fresh snapshot
       const snapshotResult = await this.rebuildSnapshot();
       if (!snapshotResult.success) {
@@ -748,11 +775,12 @@ export class GraphStore {
       logger.info('GraphStore', `Compacted JSONL: ${beforeLines} → ${afterLines} lines`);
 
       return { success: true, data: { before: beforeLines, after: afterLines } };
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      logger.error('GraphStore', `Compaction failed: ${message}`);
-      return { success: false, error: message, code: 'IO_ERROR' };
-    }
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        logger.error('GraphStore', `Compaction failed: ${message}`);
+        return { success: false, error: message, code: 'IO_ERROR' };
+      }
+    });
   }
 
   // ==========================================================================

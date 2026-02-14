@@ -91,6 +91,26 @@ export class FileUtils {
   }
 
   /**
+   * Appends content to a file using the OS append semantic.
+   * 
+   * This avoids the read-modify-write pattern and is safe for
+   * concurrent in-process appenders (each call is a single write
+   * syscall at the current end of the file).
+   * 
+   * @param filePath - Path to the file
+   * @param content - Content to append
+   * @throws Error if appending fails
+   */
+  static async appendFile(filePath: string, content: string): Promise<void> {
+    try {
+      await fs.appendFile(filePath, content, 'utf-8');
+    } catch (error) {
+      logger.error('FileUtils', `Failed to append to file ${filePath}: ${error instanceof Error ? error.message : String(error)}`);
+      throw new Error(`Failed to append to file ${filePath}: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
+
+  /**
    * Lists files in a directory
    * 
    * @param dirPath - Path to the directory

@@ -41,6 +41,7 @@ export class StdioMcpClient extends BaseMcpClient {
   private nextId = 1;
   private pendingRequests = new Map<number, PendingRequest>();
   private buffer = '';
+  private decoder = new TextDecoder();
 
   async connect(config: ConnectionConfig): Promise<void> {
     if (config.mode !== 'stdio') {
@@ -192,7 +193,7 @@ export class StdioMcpClient extends BaseMcpClient {
   }
 
   private handleData(data: Buffer): void {
-    this.buffer += data.toString();
+    this.buffer += this.decoder.decode(data, { stream: true });
     const lines = this.buffer.split('\n');
     this.buffer = lines.pop() || '';
 

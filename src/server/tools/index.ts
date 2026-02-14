@@ -4,7 +4,7 @@ import { MemoryBankManager } from '../../core/MemoryBankManager.js';
 import { ProgressTracker } from '../../core/ProgressTracker.js';
 
 // Import tools and handlers
-import { coreTools, handleSetMemoryBankPath, handleInitializeMemoryBank, handleReadMemoryBankFile, handleWriteMemoryBankFile, handleListMemoryBankFiles, handleGetMemoryBankStatus, handleMigrateFileNaming, handleDebugMcpConfig, handleGetContextBundle, handleGetContextDigest, handleSearchMemoryBank, handleCreateBackup, handleListBackups, handleRestoreBackup, handleAddProgressEntry, handleAddSessionNote, handleUpdateTasks, handleBatchReadFiles, handleBatchWriteFiles } from './CoreTools.js';
+import { coreTools, handleGetInstructions, handleSetMemoryBankPath, handleInitializeMemoryBank, handleReadMemoryBankFile, handleWriteMemoryBankFile, handleListMemoryBankFiles, handleGetMemoryBankStatus, handleMigrateFileNaming, handleDebugMcpConfig, handleGetContextBundle, handleGetContextDigest, handleSearchMemoryBank, handleCreateBackup, handleListBackups, handleRestoreBackup, handleAddProgressEntry, handleAddSessionNote, handleUpdateTasks, handleBatchReadFiles, handleBatchWriteFiles } from './CoreTools.js';
 import { progressTools, handleTrackProgress } from './ProgressTools.js';
 import { contextTools, handleUpdateActiveContext } from './ContextTools.js';
 import { decisionTools, handleLogDecision } from './DecisionTools.js';
@@ -50,6 +50,7 @@ export function setupToolHandlers(
 
       // Check if arguments are valid
       if (
+        request.params.name !== 'get_instructions' &&
         request.params.name !== 'get_memory_bank_status' &&
         request.params.name !== 'list_memory_bank_files' &&
         request.params.name !== 'get_current_mode' &&
@@ -67,6 +68,11 @@ export function setupToolHandlers(
 
       // Process tools
       switch (request.params.name) {
+        // Instructions (no Memory Bank required)
+        case 'get_instructions': {
+          return handleGetInstructions();
+        }
+
         // Main tools
         case 'set_memory_bank_path': {
           const { path: customPath } = request.params.arguments as { path?: string };
@@ -261,7 +267,7 @@ export function setupToolHandlers(
           if (!mode) {
             throw new McpError(ErrorCode.InvalidParams, 'Mode not specified');
           }
-          return handleSwitchMode(memoryBankManager, mode);
+          return await handleSwitchMode(memoryBankManager, mode);
         }
 
         case 'get_current_mode': {

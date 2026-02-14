@@ -1,11 +1,12 @@
 /**
  * Type definitions for rules in Memory Bank MCP
  * 
- * This file contains interfaces related to clinerules and mode management.
+ * This file contains interfaces related to MCP rules and mode management.
+ * Note: These were previously called "clinerules" but renamed for MCP-server independence.
  */
 
 /**
- * Interface for Memory Bank configuration in clinerules
+ * Interface for Memory Bank configuration in MCP rules
  */
 export interface MemoryBankConfig {
   /** Files to read from the Memory Bank */
@@ -26,9 +27,9 @@ export interface MemoryBankConfig {
 }
 
 /**
- * Interface to represent the basic structure of rules
+ * Interface to represent the basic structure of MCP rules
  */
-export interface ClineruleBase {
+export interface McpRuleBase {
   /** Mode identifier (architect, ask, code, debug, test) */
   mode: string;
   /** Instructions for the mode */
@@ -51,6 +52,9 @@ export interface ClineruleBase {
   mode_triggers?: Record<string, Array<{ condition: string }>>;
 }
 
+// Backward compatibility alias
+export type ClineruleBase = McpRuleBase;
+
 /**
  * Interface for mode state
  */
@@ -62,5 +66,5 @@ export interface ModeState {
   /** Whether UMB mode is active */
   isUmbActive?: boolean;
   /** Rules for the current mode */
-  rules?: ClineruleBase | null;
+  rules?: McpRuleBase | null;
 } 

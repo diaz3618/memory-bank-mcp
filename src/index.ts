@@ -5,12 +5,80 @@
 import { MemoryBankServer } from './server/MemoryBankServer.js';
 import { getLogManager, logger, LogLevel } from './utils/LogManager.js';
 import { FileSystemFactory } from './utils/storage/FileSystemFactory.js';
+import { readFileSync } from 'fs';
+import { join, dirname } from 'path';
+import { fileURLToPath } from 'url';
+
+// Get directory name in ESM
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+/**
+ * Display startup banner with version information
+ */
+function displayBanner(): void {
+  try {
+    // Read version from package.json
+    // Resolve path from current directory (works in both development and production)
+    let packageJson: any;
+    let version = 'unknown';
+    
+    try {
+      // Try build/ location first (production)
+      const packageJsonPath = join(__dirname, '..', 'package.json');
+      const content = readFileSync(packageJsonPath, 'utf-8') as string;
+      packageJson = JSON.parse(content);
+      version = packageJson.version || 'unknown';
+    } catch {
+      try {
+        // If not found, try from src/ location (development)
+        const packageJsonPath = join(__dirname, '..', '..', 'package.json');
+        const content = readFileSync(packageJsonPath, 'utf-8') as string;
+        packageJson = JSON.parse(content);
+        version = packageJson.version || 'unknown';
+      } catch {
+        // If still not found, use 'unknown'
+        version = 'unknown';
+      }
+    }
+
+    const banner = `
+╭──────────────────────────────────────────────────────────────────────────────╮
+│                                                                              │
+│                                                                              │
+│                █▀▄▀█ █▀▀ █▀▄▀█ █▀█ █▀█ █▄█   █▄▄ ▄▀█ █▄ █ █▄▀                │
+│                █ ▀ █ ██▄ █ ▀ █ █▄█ █▀▄  █    █▄█ █▀█ █ ▀█ █ █                │
+│                                                                              │
+│                                █▀▄▀█ █▀▀ █▀█                                 │
+│                                █ ▀ █ █▄▄ █▀▀                                 │
+│                                                                              │
+│                                                                              │
+│                            Memory Bank MCP ${version.padEnd(5)}                             │
+│            https://www.npmjs.com/package/@diazstg/memory-bank-mcp            │
+│                                                                              │
+│                                 GitHub Repo:                                 │
+│                 https://github.com/diaz3618/memory-bank-mcp                  │
+│                                                                              │
+╰──────────────────────────────────────────────────────────────────────────────╯
+╭──────────────────────────────────────────────────────────────────────────────╮
+│                            Memory Bank MCP ${version.padEnd(5)}                             │
+│        MCP Server for managing persistent context across AI sessions         │
+╰──────────────────────────────────────────────────────────────────────────────╯
+`;
+
+    // Write to stderr so it appears in logs (stdout is for MCP protocol)
+    console.error(banner);
+  } catch (error) {
+    // Silently fail if banner cannot be displayed
+    console.error('Memory Bank MCP Server starting...');
+  }
+}
 
 /**
  * Display program help
  */
 function showHelp(): never {
-  console.log(`
+  process.stderr.write(`
 Memory Bank MCP - MCP Server for managing Memory Bank
 
 Usage: memory-bank-mcp [options]
@@ -19,15 +87,15 @@ Options:
   --mode, -m <mode>    Set execution mode (code, ask, architect, etc.)
   --path, -p <path>    Set project path (default: current directory)
   --folder, -f <folder> Set Memory Bank folder name (default: memory-bank)
-  --githubProfileUrl, -g <url>    Set GitHub profile URL for tracking changes
+  --username, -u <name> Set username for progress tracking (can be name or GitHub URL)
   --debug, -d          Enable debug mode (show detailed logs)
   --help, -h           Display this help
 
 Remote Server Options:
   --remote, -r         Enable remote server mode
   --ssh-key, -k <path> Path to SSH private key (default: ~/.ssh/your_ssh_key)
-  --remote-user, -u <user> Remote server username
-  --remote-host, -h <host> Remote server hostname or IP address
+  --remote-user <user> Remote server username
+  --remote-host <host> Remote server hostname or IP address
   --remote-path, -rp <path> Remote server base path for memory bank storage
   
 Examples:
@@ -35,9 +103,10 @@ Examples:
   memory-bank-mcp --mode code
   memory-bank-mcp --path /path/to/project
   memory-bank-mcp --folder custom-memory-bank
-  memory-bank-mcp --githubProfileUrl "https://github.com/username"
+  memory-bank-mcp --username "John Doe"
+  memory-bank-mcp --username "https://github.com/username"
   memory-bank-mcp --debug
-  memory-bank-mcp --remote --remote-user username --remote-host example.host.com --remote-path /home/username/memory-bank
+  memory-bank-mcp --remote --remote-user remoteuser --remote-host example.host.com --remote-path /home/remoteuser/memory-bank
   
 For more information, visit: https://github.com/diaz3618/memory-bank-mcp
 `);
@@ -74,7 +143,7 @@ function processArgs() {
       options.projectPath = args[++i];
     } else if (arg === '--folder' || arg === '-f') {
       options.folderName = args[++i];
-    } else if (arg === '--githubProfileUrl' || arg === '-g') {
+    } else if (arg === '--username' || arg === '-u') {
       options.userId = args[++i];
     } else if (arg === '--debug' || arg === '-d') {
       options.debug = true;
@@ -82,7 +151,7 @@ function processArgs() {
       options.remote = true;
     } else if (arg === '--ssh-key' || arg === '-k') {
       options.sshKey = args[++i];
-    } else if (arg === '--remote-user' || arg === '-u') {
+    } else if (arg === '--remote-user') {
       options.remoteUser = args[++i];
     } else if (arg === '--remote-host') {
       options.remoteHost = args[++i];
@@ -105,6 +174,9 @@ function processArgs() {
  */
 async function main() {
   try {
+    // Display startup banner first (before any other output)
+    displayBanner();
+    
     const options = processArgs();
     
     // Configure log manager
@@ -125,7 +197,7 @@ async function main() {
       logger.debug('Main', `Using Memory Bank folder name: ${options.folderName}`);
     }
     if (options.userId) {
-      logger.debug('Main', `Using GitHub profile URL: ${options.userId}`);
+      logger.debug('Main', `Using username: ${options.userId}`);
     }
     
     // Handle remote server configuration
@@ -146,7 +218,7 @@ async function main() {
       
       // Validate required remote options
       if (!options.remoteUser) {
-        logger.error('Main', 'Remote user is required. Use --remote-user or -u to specify.');
+        logger.error('Main', 'Remote user is required. Use --remote-user to specify.');
         process?.exit?.(1);
         return;
       }

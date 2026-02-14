@@ -226,7 +226,7 @@ export async function handleSelectStore(
   // Resolve path from storeId if needed
   let resolvedPath = storePath;
   if (!resolvedPath && storeId) {
-    resolvedPath = await registry.resolveStorePath(storeId);
+    resolvedPath = (await registry.resolveStorePath(storeId)) ?? undefined;
     if (!resolvedPath) {
       return {
         content: [{ type: 'text', text: `Store "${storeId}" not found in registry` }],

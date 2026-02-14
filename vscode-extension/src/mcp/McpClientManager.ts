@@ -5,6 +5,7 @@
  */
 
 import * as vscode from 'vscode';
+import * as jsonc from 'jsonc-parser';
 import { ConnectionConfig, ConnectionStatus, IMcpClient } from './types';
 import { StdioMcpClient } from './StdioMcpClient';
 import { HttpMcpClient } from './HttpMcpClient';
@@ -143,9 +144,8 @@ export class McpClientManager implements vscode.Disposable {
       // Use fs.readFileSync since we need this synchronously during config reading
       const fs = require('fs');
       const raw = fs.readFileSync(mcpJsonPath.fsPath, 'utf-8');
-      // Strip JSON comments (// and /* */)
-      const stripped = raw.replace(/\/\/.*$/gm, '').replace(/\/\*[\s\S]*?\*\//g, '');
-      const parsed = JSON.parse(stripped);
+      // Use jsonc-parser to safely handle // and /* */ comments in mcp.json
+      const parsed = jsonc.parse(raw);
       const server = parsed?.servers?.['memory-bank-mcp'];
 
       if (server && server.command) {

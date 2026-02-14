@@ -6,6 +6,7 @@
  */
 
 import * as vscode from 'vscode';
+import * as jsonc from 'jsonc-parser';
 import { ext } from '../extensionVariables';
 import type { TreeProviders } from '../tree/registerTrees';
 import { GraphWebviewPanel } from '../views/GraphWebviewPanel';
@@ -162,7 +163,7 @@ export function registerCommands(
       placeHolder: 'Additional details about the progress',
     });
 
-    await ext.memoryBankService.trackProgress(summary, details || undefined);
+    await ext.memoryBankService.trackProgress('other', details ? `${summary} — ${details}` : summary);
     vscode.window.showInformationMessage('Progress tracked.');
     trees.files.refresh();
   });
@@ -179,7 +180,7 @@ export function registerCommands(
       placeHolder: 'Why this decision was made',
     });
 
-    await ext.memoryBankService.logDecision(decision, rationale || undefined);
+    await ext.memoryBankService.logDecision(decision, rationale || '', decision);
     vscode.window.showInformationMessage('Decision logged.');
     trees.files.refresh();
   });
@@ -562,8 +563,7 @@ async function syncModeToMcpJson(mode: string): Promise<void> {
   }
 
   try {
-    const stripped = raw.replace(/\/\/.*$/gm, '').replace(/\/\*[\s\S]*?\*\//g, '');
-    const parsed = JSON.parse(stripped);
+    const parsed = jsonc.parse(raw);
     const server = parsed?.servers?.['memory-bank-mcp'];
     if (!server) return;
 
@@ -600,14 +600,27 @@ async function installMcpServer(): Promise<void> {
   if (!choice) { return; }
 
   if (choice.detail === 'default') {
-    // Default: npx -y @diazstg/memory-bank-mcp
+    // Prompt for username (highly recommended)
+    const username = await vscode.window.showInputBox({
+      prompt: 'Enter your username (recommended for progress tracking)',
+      placeHolder: 'your-github-username or "Your Name"',
+      value: '',
+    });
+    // Note: We allow empty username, but it's recommended to provide one
+    
+    // Default: npx -y @diazstg/memory-bank-mcp --mode code --username <username>
+    const args = ['-y', '@diazstg/memory-bank-mcp', '--mode', 'code'];
+    if (username) {
+      args.push('--username', username);
+    }
+    
     const config = vscode.workspace.getConfiguration('memoryBank');
     await config.update('connectionMode', 'stdio', vscode.ConfigurationTarget.Workspace);
     await config.update('stdio.command', 'npx', vscode.ConfigurationTarget.Workspace);
-    await config.update('stdio.args', ['-y', '@diazstg/memory-bank-mcp'], vscode.ConfigurationTarget.Workspace);
+    await config.update('stdio.args', args, vscode.ConfigurationTarget.Workspace);
     
     // Also write .vscode/mcp.json for Copilot MCP integration
-    await writeMcpJson();
+    await writeMcpJson('npx', args);
     
     vscode.window.showInformationMessage(
       'MCP server configured! Use "Memory Bank: Reconnect" to connect.',
@@ -640,16 +653,30 @@ async function configureMcpServer(): Promise<void> {
 
     const argsStr = await vscode.window.showInputBox({
       prompt: 'Server arguments (space-separated)',
-      value: config.get<string[]>('stdio.args', ['-y', '@diazstg/memory-bank-mcp']).join(' '),
-      placeHolder: '-y @diazstg/memory-bank-mcp',
+      value: config.get<string[]>('stdio.args', ['-y', '@diazstg/memory-bank-mcp', '--mode', 'code']).join(' '),
+      placeHolder: '-y @diazstg/memory-bank-mcp --mode code',
     });
     if (argsStr === undefined) { return; }
 
+    // Prompt for username (highly recommended)
+    const username = await vscode.window.showInputBox({
+      prompt: 'Enter your username (recommended for progress tracking)',
+      placeHolder: 'your-github-username or "Your Name"',
+      value: '',
+    });
+
+    // Build args array
+    const args = argsStr.split(' ').filter(Boolean);
+    // Add username if provided and not already in args
+    if (username && !args.includes('--username') && !args.includes('-u')) {
+      args.push('--username', username);
+    }
+
     await config.update('stdio.command', command, vscode.ConfigurationTarget.Workspace);
-    await config.update('stdio.args', argsStr.split(' ').filter(Boolean), vscode.ConfigurationTarget.Workspace);
+    await config.update('stdio.args', args, vscode.ConfigurationTarget.Workspace);
 
     // Write .vscode/mcp.json
-    await writeMcpJson(command, argsStr.split(' ').filter(Boolean));
+    await writeMcpJson(command, args);
 
   } else {
     const baseUrl = await vscode.window.showInputBox({
@@ -677,7 +704,7 @@ async function configureMcpServer(): Promise<void> {
 
 async function writeMcpJson(
   command = 'npx',
-  args = ['-y', '@diazstg/memory-bank-mcp'],
+  args = ['-y', '@diazstg/memory-bank-mcp', '--mode', 'code'],
 ): Promise<void> {
   const workspaceFolders = vscode.workspace.workspaceFolders;
   if (!workspaceFolders) { return; }
@@ -687,9 +714,21 @@ async function writeMcpJson(
   let existing: Record<string, unknown> = {};
   try {
     const content = await vscode.workspace.fs.readFile(mcpJsonPath);
-    existing = JSON.parse(Buffer.from(content).toString());
-  } catch {
-    // File doesn't exist yet
+    const raw = Buffer.from(content).toString('utf-8');
+    const parsed = jsonc.parse(raw);
+    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+      existing = parsed;
+    } else {
+      vscode.window.showWarningMessage('mcp.json has unexpected structure — creating fresh config.');
+    }
+  } catch (err) {
+    // Distinguish "file not found" from "parse error"
+    if (err && typeof err === 'object' && 'code' in err && (err as { code: string }).code === 'FileNotFound') {
+      // File doesn't exist yet — will create
+    } else if (err instanceof SyntaxError) {
+      vscode.window.showWarningMessage('mcp.json contains invalid JSON(C). Creating fresh config — back up your file if needed.');
+    }
+    // Fall through with empty existing
   }
 
   const servers = (existing['servers'] as Record<string, unknown>) || {};
@@ -717,8 +756,8 @@ You have access to Memory Bank MCP tools. USE THEM — they are not optional.
 ## Mandatory Workflow (every task, no exceptions)
 
 ### START of task
-1. Call \`memory-bank_get-instructions\` tool (or \`get_context_digest\` MCP tool) to load context
-2. Read the returned active-context.md and progress.md
+1. ⚠️ CALL THIS FIRST. Call \`get_instructions\` MCP tool to learn the full tool catalog and workflow (once per session)
+2. Call \`get_context_digest\` to load current project state (tasks, issues, progress, decisions)
 3. Use \`graph_search\` to find relevant knowledge graph entities
 
 ### DURING task
@@ -771,6 +810,7 @@ When placeholder content is detected:
 - \`graph_rebuild\` / \`graph_compact\` — Maintenance
 
 ### Other
+- \`get_instructions\` — Full tool catalog and workflow guide (call first!)
 - \`switch_mode\` / \`get_current_mode\` — Mode management
 - \`list_stores\` / \`select_store\` — Store management
 - \`create_backup\` / \`list_backups\` / \`restore_backup\` — Backups
@@ -817,6 +857,9 @@ async function createCopilotAgentInstructions(): Promise<void> {
       return;
     }
   }
+
+  // Ensure .github directory exists
+  await vscode.workspace.fs.createDirectory(githubDir);
 
   // Write the file
   const encoded = Buffer.from(COPILOT_INSTRUCTIONS_CONTENT);

@@ -19,7 +19,10 @@ import type {
   DataEvent,
 } from '../../types/graph.js';
 import { createRelationId } from './GraphIds.js';
-import { isMarkerEvent } from './GraphSchemas.js';
+import { isMarkerEvent, isGraphEvent } from './GraphSchemas.js';
+import { LogManager } from '../../utils/LogManager.js';
+
+const logger = LogManager.getInstance();
 
 // ============================================================================
 // Mutable State for Building
@@ -138,7 +141,16 @@ export function reduceEventsToSnapshot(
     if (event.type === 'memory_bank_graph' || event.type === 'snapshot_written') {
       continue;
     }
-    applyEvent(state, event as DataEvent);
+    try {
+      applyEvent(state, event as DataEvent);
+    } catch (err) {
+      // Defensive: if a structurally-valid event still blows up at runtime,
+      // skip it rather than crashing the whole reduction.
+      logger.warn(
+        'GraphReducer',
+        `Event ${i} (${event.type}) skipped due to error: ${err instanceof Error ? err.message : String(err)}`
+      );
+    }
   }
 
   // Convert to immutable snapshot
@@ -181,20 +193,32 @@ export function reduceJsonlToSnapshot(
 
   for (let i = 0; i < lines.length; i++) {
     try {
-      const event = JSON.parse(lines[i]);
-      // Validate parsed value is a non-null object with a type field
-      if (event === null || typeof event !== 'object' || typeof event.type !== 'string') {
-        parseErrors.push(`Line ${i + 1}: Invalid event — expected object with 'type' field`);
+      const parsed: unknown = JSON.parse(lines[i]);
+
+      // Use full structural validation — not just `typeof type === 'string'`
+      if (!isGraphEvent(parsed)) {
+        const snippet = lines[i].length > 80 ? lines[i].slice(0, 80) + '…' : lines[i];
+        const msg = `Line ${i + 1}: Invalid event structure — skipping (${snippet})`;
+        parseErrors.push(msg);
+        logger.warn('GraphReducer', msg);
         continue;
       }
-      events.push(event);
+
+      events.push(parsed);
     } catch (err) {
-      parseErrors.push(`Line ${i + 1}: ${err instanceof Error ? err.message : String(err)}`);
+      const msg = `Line ${i + 1}: ${err instanceof Error ? err.message : String(err)}`;
+      parseErrors.push(msg);
+      logger.warn('GraphReducer', msg);
     }
   }
 
+  // Log warnings but do NOT abort — skip malformed lines and continue with
+  // valid events so one corrupted line doesn't take down the whole graph.
   if (parseErrors.length > 0) {
-    return { success: false, error: `Parse errors:\n${parseErrors.join('\n')}` };
+    logger.warn(
+      'GraphReducer',
+      `Skipped ${parseErrors.length} malformed line(s) while reducing JSONL`
+    );
   }
 
   return reduceEventsToSnapshot(events, storeId);

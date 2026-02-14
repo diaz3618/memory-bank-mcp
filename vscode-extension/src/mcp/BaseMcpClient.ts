@@ -95,19 +95,18 @@ export abstract class BaseMcpClient implements IMcpClient {
 
   async trackProgress(params: TrackProgressParams): Promise<void> {
     await this.callTool('track_progress', {
-      type: params.type,
-      summary: params.summary,
-      details: params.details,
-      tags: params.tags,
-      files: params.files,
+      action: params.action,
+      description: params.description,
     });
   }
 
   async logDecision(params: LogDecisionParams): Promise<void> {
     await this.callTool('log_decision', {
+      title: params.title,
+      context: params.context,
       decision: params.decision,
-      rationale: params.rationale,
       alternatives: params.alternatives,
+      consequences: params.consequences,
     });
   }
 

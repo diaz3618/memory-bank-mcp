@@ -104,6 +104,23 @@ export class RemoteFileSystem implements FileSystemInterface {
   }
 
   /**
+   * Appends content to a file over SSH
+   * 
+   * Falls back to read + writeFile when native append is not available.
+   * 
+   * @param relativePath - Relative path to the file
+   * @param content - Content to append
+   */
+  async appendFile(relativePath: string, content: string): Promise<void> {
+    // SshUtils has no dedicated appendFile — fall back to read-modify-write.
+    // The in-process write lock in GraphStore already serializes callers,
+    // so this is safe for our single-process use-case.
+    const existing = await this.sshUtils.readFile(relativePath);
+    const newContent = existing.endsWith('\n') ? existing + content : existing + '\n' + content;
+    return this.sshUtils.writeFile(relativePath, newContent);
+  }
+
+  /**
    * Lists files in a directory
    * 
    * @param relativePath - Relative path to the directory
