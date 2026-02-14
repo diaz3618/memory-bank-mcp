@@ -2,6 +2,82 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.8.0](https://github.com/diaz3618/memory-bank-mcp/compare/v1.7.0...v1.8.0) (2026-02-14)
+
+
+### ⚠ BREAKING CHANGES
+
+* Graph webview now uses React Flow instead of Cytoscape.js
+
+## Core Changes
+- Replaced Cytoscape.js (470KB) with React Flow (415KB) - 33KB smaller
+- Dual esbuild configuration: extension (Node/CJS) + webview (Browser/IIFE with TSX)
+- React webview with TypeScript, generic types, and full type safety
+
+## Advanced Features Implemented
+✨ Custom EntityNode component with professional styling
+✨ NodeToolbar with context actions (Expand, Delete, Add Link)
+✨ MiniMap component for overview navigation
+✨ Controls component for zoom and fit-to-view
+✨ Background with dot pattern (VS Code themed)
+✨ Dagre layout algorithm for automatic node positioning
+✨ 4-directional layout options (TB, LR, BT, RL)
+✨ Search functionality with query input
+✨ Stats panel showing node/edge counts
+✨ Message passing between extension and webview
+✨ Loading states and error handling
+
+## Files Added
+- src/webview/graph/index.tsx - React entry point
+- src/webview/graph/KnowledgeGraph.tsx - Main React Flow component
+- src/webview/graph/Entity Node.tsx - Custom node with toolbar
+- src/webview/graph/layout.ts - Dagre layout utilities
+- src/webview/graph/types.ts - TypeScript type definitions
+- src/webview/graph/styles.css - Professional VS Code-themed styles
+- docs/archive/react-flow-research.md - Comprehensive research doc
+
+## Dependencies Added
+- @xyflow/react@^12.0.0 - React Flow library
+- react@^18.0.0 - React core
+- react-dom@^18.0.0 - React DOM
+- @dagrejs/dagre - Layout algorithm
+- @types/react, @types/react-dom - TypeScript types
+
+## Bundle Sizes
+- graph.js: 415KB (minified)
+- graph.css: 22KB
+- Total: 437KB vs Cytoscape 470KB (-33KB, -7%)
+
+## Documentation
+Comprehensive React Flow research and best practices documented in:
+docs/archive/react-flow-research.md
+
+### Features
+
+* add get_instructions tool — canonical session entry point ([d6a7c5e](https://github.com/diaz3618/memory-bank-mcp/commit/d6a7c5ec65582a56c113ca1033bcad082a9d2cee))
+* **graph:** add animated edges, right-side settings panel, context menu, snap-to-grid ([5202dcf](https://github.com/diaz3618/memory-bank-mcp/commit/5202dcf1dd491634071793ff5fd12791aca6b650))
+* **graph:** complete settings overhaul with persistent UI options ([6aaf135](https://github.com/diaz3618/memory-bank-mcp/commit/6aaf135cb9ca1644e136661de1713120f1fa767c))
+* migrate graph webview from Cytoscape.js to React Flow ([5a7831f](https://github.com/diaz3618/memory-bank-mcp/commit/5a7831f8b7faac5db8d64f07d66ec1c21e8a889d))
+* **vscode:** enhance graph webview with settings panel and fixes ([6512ccf](https://github.com/diaz3618/memory-bank-mcp/commit/6512ccf48ba43aeb9ce840c07c1eb81c451b31d6))
+
+
+### Bug Fixes
+
+* **graph:** improve context menu, edge handling, and VSCode dialog integration ([b8527b3](https://github.com/diaz3618/memory-bank-mcp/commit/b8527b3dd3593daef75e2bf1249f7b5918606182))
+* **graph:** settings panel toggle + ELK layout algorithms ([0d55725](https://github.com/diaz3618/memory-bank-mcp/commit/0d55725994f539e41d2571c1c157f7da8c2dc5bc))
+* implement fix-pack-2026-02-13 (15 issues) ([5062df5](https://github.com/diaz3618/memory-bank-mcp/commit/5062df5a222a549d8ef5cf4d7dc7071211aab954)), closes [#1](https://github.com/diaz3618/memory-bank-mcp/issues/1) [#2](https://github.com/diaz3618/memory-bank-mcp/issues/2) [#4](https://github.com/diaz3618/memory-bank-mcp/issues/4) [#5](https://github.com/diaz3618/memory-bank-mcp/issues/5) [#6](https://github.com/diaz3618/memory-bank-mcp/issues/6) [#7](https://github.com/diaz3618/memory-bank-mcp/issues/7) [#11](https://github.com/diaz3618/memory-bank-mcp/issues/11) [#12](https://github.com/diaz3618/memory-bank-mcp/issues/12) [#15](https://github.com/diaz3618/memory-bank-mcp/issues/15) [#3](https://github.com/diaz3618/memory-bank-mcp/issues/3) [#8](https://github.com/diaz3618/memory-bank-mcp/issues/8) [#9](https://github.com/diaz3618/memory-bank-mcp/issues/9) [#10](https://github.com/diaz3618/memory-bank-mcp/issues/10) [#13](https://github.com/diaz3618/memory-bank-mcp/issues/13) [#14](https://github.com/diaz3618/memory-bank-mcp/issues/14)
+* mode switching, graph race conditions, docs restructure ([8e4a2dc](https://github.com/diaz3618/memory-bank-mcp/commit/8e4a2dc0efa5aa32d776428320f228f916204f1d))
+* resolve issues [#16](https://github.com/diaz3618/memory-bank-mcp/issues/16)-[#21](https://github.com/diaz3618/memory-bank-mcp/issues/21) and close all GitHub issues ([13ede4f](https://github.com/diaz3618/memory-bank-mcp/commit/13ede4fbb111dbe9f362bcd45d6e0484c8ce4cdd)), closes [#17](https://github.com/diaz3618/memory-bank-mcp/issues/17) [#18](https://github.com/diaz3618/memory-bank-mcp/issues/18) [#19](https://github.com/diaz3618/memory-bank-mcp/issues/19)
+* **vscode:** fix Auto layout button to use LR direction ([716ef4b](https://github.com/diaz3618/memory-bank-mcp/commit/716ef4bb844963fc8d515873fc53b4d3bed7fa1e))
+* **vscode:** fix blank graph webview - single acquireVsCodeApi call ([2a3a798](https://github.com/diaz3618/memory-bank-mcp/commit/2a3a798213d73fdff4010b83ead1b494b77ba2e6))
+
+
+### Documentation
+
+* Clean up and reorganize development documentation ([aba997f](https://github.com/diaz3618/memory-bank-mcp/commit/aba997f09801fcb14793876377cc29b8ca9e1c27))
+* Fix integration docs, rename --githubProfileUrl to --username ([ab3a57c](https://github.com/diaz3618/memory-bank-mcp/commit/ab3a57c0537ec8273d6d39220563880cb1326be9))
+* Fix mcp-protocol-specification.md and update docs navigation ([02ecfa7](https://github.com/diaz3618/memory-bank-mcp/commit/02ecfa7b65e05e62fe42581661f3035110c92319))
+
 ## [1.7.0](https://github.com/diaz3618/memory-bank-mcp/compare/v1.6.0...v1.7.0) (2026-02-12)
 
 
