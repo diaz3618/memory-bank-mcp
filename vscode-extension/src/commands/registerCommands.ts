@@ -756,8 +756,8 @@ You have access to Memory Bank MCP tools. USE THEM — they are not optional.
 ## Mandatory Workflow (every task, no exceptions)
 
 ### START of task
-1. Call \`get_context_digest\` MCP tool to load context (VS Code Copilot users: \`memory-bank_get-instructions\` also works)
-2. Read the returned active-context.md and progress.md
+1. Call \`get_instructions\` MCP tool to learn the full tool catalog and workflow (once per session)
+2. Call \`get_context_digest\` to load current project state (tasks, issues, progress, decisions)
 3. Use \`graph_search\` to find relevant knowledge graph entities
 
 ### DURING task
@@ -810,6 +810,7 @@ When placeholder content is detected:
 - \`graph_rebuild\` / \`graph_compact\` — Maintenance
 
 ### Other
+- \`get_instructions\` — Full tool catalog and workflow guide (call first!)
 - \`switch_mode\` / \`get_current_mode\` — Mode management
 - \`list_stores\` / \`select_store\` — Store management
 - \`create_backup\` / \`list_backups\` / \`restore_backup\` — Backups
