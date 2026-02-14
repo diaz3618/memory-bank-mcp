@@ -31,7 +31,12 @@ Add to your editor's MCP config (`.vscode/mcp.json`, Cursor, Claude Desktop, etc
   "servers": {
     "memory-bank-mcp": {
       "command": "npx",
-      "args": ["-y", "@diazstg/memory-bank-mcp", "--username", "your-github-username"]
+      "args": ["-y",
+          "@diazstg/memory-bank-mcp",
+          "--username",
+          "your-github-username"
+      ],
+      "type": "stdio"
     }
   }
 }
