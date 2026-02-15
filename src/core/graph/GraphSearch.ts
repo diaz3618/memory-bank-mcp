@@ -21,13 +21,13 @@ import { normalizeName } from './GraphIds.js';
 // Search Types
 // ============================================================================
 
-interface EntityMatch {
+export interface EntityMatch {
   entity: Entity;
   score: number;
   matchedIn: ('name' | 'type' | 'attrs')[];
 }
 
-interface ObservationMatch {
+export interface ObservationMatch {
   observation: Observation;
   score: number;
 }
@@ -403,5 +403,48 @@ export function buildNameToIdMap(snapshot: GraphSnapshot): Map<string, EntityId>
     map.set(normalizeName(entity.name), entity.id);
   }
   return map;
+}
+
+// ============================================================================
+// Detailed Search (exposes scores + matched-fields)
+// ============================================================================
+
+export interface DetailedSearchResult {
+  entityMatches: EntityMatch[];
+  observationMatches: ObservationMatch[];
+}
+
+/**
+ * Like `searchGraph` but returns raw scored matches instead of flattened
+ * entity/observation arrays. Used by `get_targeted_context` to rank
+ * pointers and build budgeted payloads.
+ *
+ * Does NOT modify `searchGraph`'s existing output.
+ */
+export function searchGraphDetailed(
+  snapshot: GraphSnapshot,
+  options: { query: string; limit?: number }
+): DetailedSearchResult {
+  const limit = options.limit ?? 20;
+  const { query } = options;
+
+  const isWildcard = !query || query === '*' || query.trim() === '';
+
+  const entityMatches: EntityMatch[] = isWildcard
+    ? snapshot.entities.slice(0, limit).map((entity) => ({
+        entity,
+        score: 100,
+        matchedIn: ['name' as const],
+      }))
+    : searchEntities(snapshot.entities, query, limit);
+
+  const observationMatches: ObservationMatch[] = isWildcard
+    ? snapshot.observations.slice(0, limit).map((obs) => ({
+        observation: obs,
+        score: 100,
+      }))
+    : searchObservations(snapshot.observations, query, limit);
+
+  return { entityMatches, observationMatches };
 }
 

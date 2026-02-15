@@ -1,3 +1,8 @@
+/**
+ * @modelcontextprotocol/sdk >= 1.26.0 required to address:
+ *   - GHSA-8r9q-7v3j-jr4g (ReDoS in UriTemplate, fixed in 1.25.2)
+ *   - GHSA-345p-7cg4-v4c7 (cross-client data leak, fixed in 1.26.0)
+ */
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { MemoryBankManager } from '../core/MemoryBankManager.js';

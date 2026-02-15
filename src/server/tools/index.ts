@@ -11,6 +11,8 @@ import { decisionTools, handleLogDecision } from './DecisionTools.js';
 import { modeTools, handleSwitchMode, handleGetCurrentMode, handleProcessUmbCommand, handleCompleteUmb } from './ModeTools.js';
 import { graphTools, handleGraphUpsertEntity, handleGraphAddObservation, handleGraphLinkEntities, handleGraphUnlinkEntities, handleGraphSearch, handleGraphOpenNodes, handleGraphRebuild, handleGraphDeleteEntity, handleGraphDeleteObservation, handleGraphCompact } from './GraphTools.js';
 import { storeToolDefinitions, handleListStores, handleSelectStore, handleRegisterStore, handleUnregisterStore } from './StoreTools.js';
+import { thinkingTools, handleSequentialThinking, handleResetSequentialThinking, handleFinalizeThinkingSession } from './ThinkingTools.js';
+import { kgContextTools, handleGetTargetedContext, handleGraphAddDocPointer } from './KGContextTools.js';
 
 /**
  * Sets up all tool handlers for the MCP server
@@ -33,6 +35,8 @@ export function setupToolHandlers(
       ...modeTools,
       ...graphTools,
       ...storeToolDefinitions,
+      ...thinkingTools,
+      ...kgContextTools,
     ],
   }));
 
@@ -61,6 +65,7 @@ export function setupToolHandlers(
         request.params.name !== 'list_backups' &&
         request.params.name !== 'update_tasks' &&
         request.params.name !== 'list_stores' &&
+        request.params.name !== 'reset_sequential_thinking' &&
         (!request.params.arguments || typeof request.params.arguments !== 'object')
       ) {
         throw new McpError(ErrorCode.InvalidParams, 'Invalid arguments');
@@ -519,6 +524,87 @@ export function setupToolHandlers(
         case 'graph_compact': {
           const { storeId } = (request.params.arguments as { storeId?: string }) ?? {};
           return handleGraphCompact(memoryBankManager, storeId);
+        }
+
+        // Thinking tools
+        case 'sequential_thinking': {
+          const thinkingInput = request.params.arguments as {
+            thought: string;
+            nextThoughtNeeded: boolean;
+            thoughtNumber: number;
+            totalThoughts: number;
+            isRevision?: boolean;
+            revisesThought?: number;
+            branchFromThought?: number;
+            branchId?: string;
+            needsMoreThoughts?: boolean;
+            sessionId?: string;
+          };
+          if (!thinkingInput.thought || thinkingInput.thoughtNumber === undefined || thinkingInput.totalThoughts === undefined || thinkingInput.nextThoughtNeeded === undefined) {
+            throw new McpError(ErrorCode.InvalidParams, 'thought, thoughtNumber, totalThoughts, and nextThoughtNeeded are required');
+          }
+          return handleSequentialThinking(thinkingInput);
+        }
+
+        case 'reset_sequential_thinking': {
+          const args = request.params.arguments as { sessionId?: string } | undefined;
+          return handleResetSequentialThinking(args?.sessionId);
+        }
+
+        case 'finalize_thinking_session': {
+          const finalizeInput = request.params.arguments as {
+            summary: string;
+            decision?: {
+              title: string;
+              context: string;
+              decision: string;
+              alternatives?: string[];
+              consequences?: string[];
+            };
+            tasks?: { add?: string[]; remove?: string[]; replace?: string[] };
+            nextSteps?: string[];
+            progressEntry?: {
+              type: 'feature' | 'fix' | 'refactor' | 'docs' | 'test' | 'chore' | 'other';
+              summary: string;
+              details?: string;
+              files?: string[];
+              tags?: string[];
+            };
+            sessionId?: string;
+          };
+          if (!finalizeInput.summary) {
+            throw new McpError(ErrorCode.InvalidParams, 'summary is required');
+          }
+          return handleFinalizeThinkingSession(memoryBankManager, finalizeInput);
+        }
+
+        // KG Context tools
+        case 'get_targeted_context': {
+          const tcInput = request.params.arguments as {
+            query: string;
+            maxChars?: number;
+            maxFiles?: number;
+            graphLimit?: number;
+            graphDepth?: 1 | 2;
+            preferActiveContext?: boolean;
+          };
+          if (!tcInput.query) {
+            throw new McpError(ErrorCode.InvalidParams, 'query is required');
+          }
+          return handleGetTargetedContext(memoryBankManager, tcInput);
+        }
+
+        case 'graph_add_doc_pointer': {
+          const dpInput = request.params.arguments as {
+            entityNameOrId: string;
+            docPath: string;
+            heading?: string;
+            note?: string;
+          };
+          if (!dpInput.entityNameOrId || !dpInput.docPath) {
+            throw new McpError(ErrorCode.InvalidParams, 'entityNameOrId and docPath are required');
+          }
+          return handleGraphAddDocPointer(memoryBankManager, dpInput);
         }
 
         // Store tools

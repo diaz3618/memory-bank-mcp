@@ -462,10 +462,12 @@ These files live in the \`memory-bank/\` directory:
 ### 5. Knowledge Graph
 | Tool | Purpose |
 |------|---------|
+| \`get_targeted_context\` | **Preferred.** Budgeted context pack via KG + excerpts. Use before batch_read_files or get_context_bundle |
 | \`graph_search\` | Search entities by query string |
 | \`graph_open_nodes\` | Expand specific nodes and their neighborhood |
 | \`graph_upsert_entity\` | Create or update an entity |
 | \`graph_add_observation\` | Add an observation to an entity |
+| \`graph_add_doc_pointer\` | Link an entity to a Memory Bank file + optional heading |
 | \`graph_link_entities\` | Create a typed relationship between entities |
 | \`graph_unlink_entities\` | Remove a relationship between entities |
 | \`graph_delete_entity\` | Delete an entity |
@@ -504,13 +506,21 @@ These files live in the \`memory-bank/\` directory:
 | \`register_store\` | Add a store to the persistent registry |
 | \`unregister_store\` | Remove a store from the registry |
 
+### 10. Sequential Thinking
+| Tool | Purpose |
+|------|---------|
+| \`sequential_thinking\` | Record a numbered thinking step (raw thought NOT returned) |
+| \`reset_sequential_thinking\` | Clear thinking session state |
+| \`finalize_thinking_session\` | Persist thinking outcomes to Memory Bank (summary, decisions, tasks, progress) |
+
 ## Quick-Start Checklist
 1. \`get_instructions\` — read these instructions (done!)
 2. \`get_context_digest\` — load current project state
-3. \`graph_search\` — find relevant entities for your task
+3. \`get_targeted_context\` or \`graph_search\` — find relevant context for your task
 4. Do your work, calling \`track_progress\` / \`log_decision\` / \`add_session_note\` as you go
-5. \`update_active_context\` — save updated tasks, issues, next steps
-6. \`track_progress\` — final summary of accomplishments
+5. Use \`sequential_thinking\` for complex reasoning, then \`finalize_thinking_session\` to persist
+6. \`update_active_context\` — save updated tasks, issues, next steps
+7. \`track_progress\` — final summary of accomplishments
 `;
 
   return {

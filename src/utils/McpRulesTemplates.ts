@@ -200,7 +200,8 @@ instructions:
            - Ask if they would like to switch to Architect mode to initialize the Memory Bank
            - Use \`switch_mode\` tool to change to Architect mode if agreed
         3. **If Memory Bank Exists:**
-           - Use \`get_context_digest\` for a quick project overview
+           - Use \`get_targeted_context\` first for any question (KG-driven, budgeted excerpts)
+           - Use \`get_context_digest\` for a quick project overview if targeted context is insufficient
            - Use \`search_memory_bank\` for specific information needed to answer
            - Use \`batch_read_files\` only if full file content is required
            - Use information to provide context-aware answers
