@@ -34,10 +34,15 @@ export class DatabaseManager {
 
   constructor(config: DatabaseConfig) {
     this.config = config;
+
+    // Supabase session pooler typically limits to 10-15 concurrent connections
+    const defaultMax = config.provider === 'supabase' ? 10 : 20;
+
     this.pool = new Pool({
       connectionString: config.connectionString,
-      max: config.maxConnections ?? 10,
+      max: config.maxConnections ?? defaultMax,
       idleTimeoutMillis: config.idleTimeoutMs ?? 30_000,
+      connectionTimeoutMillis: 10_000,
       // For Supabase session pooler, we need to handle SSL
       ssl: config.provider === 'supabase' ? { rejectUnauthorized: false } : undefined,
     });

@@ -23,12 +23,12 @@ services:
   # Traefik — Reverse proxy with Web UI
   # ---------------------------------------------------------------------------
   traefik:
-    image: traefik:v3
+    image: traefik:v3.3
     container_name: mbmcp-traefik
     restart: unless-stopped
     command:
       - --api.dashboard=true
-      - --api.insecure=true
+      - --api.insecure=true          # ⚠ Dev only — use BasicAuth middleware or disable in production
       - --providers.docker=true
       - --providers.docker.exposedbydefault=false
       - --entrypoints.web.address=:80
@@ -56,7 +56,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.http
-    image: ${DOCKER_IMAGE:-diaz3618/memory-bank-mcp}:${DOCKER_TAG:-latest}
+    image: ${DOCKER_IMAGE:-diaz3618/memory-bank-mcp}:${DOCKER_TAG:-1.8.0}
     container_name: mbmcp-server
     restart: unless-stopped
     depends_on:

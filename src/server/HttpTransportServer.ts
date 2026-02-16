@@ -39,7 +39,7 @@ class PostgresEventStore implements EventStore {
   async storeEvent(streamId: StreamId, message: JSONRPCMessage): Promise<EventId> {
     const result = await this.db.query<{ id: string }>(
       `INSERT INTO mcp_events (stream_id, message)
-       VALUES ($1, $2)
+       VALUES ($1, $2::jsonb)
        RETURNING id::text`,
       [streamId, JSON.stringify(message)],
     );
@@ -69,15 +69,15 @@ class PostgresEventStore implements EventStore {
     }
 
     // Replay all events after the given event for the same stream
-    const events = await this.db.query<{ id: string; message: string }>(
-      `SELECT id::text, message::text FROM mcp_events
+    const events = await this.db.query<{ id: string; message: object }>(
+      `SELECT id::text, message FROM mcp_events
        WHERE stream_id = $1 AND id > $2
        ORDER BY id`,
       [streamId, lastEventId],
     );
 
     for (const event of events.rows) {
-      await send(event.id, JSON.parse(event.message));
+      await send(event.id, event.message as JSONRPCMessage);
     }
 
     return streamId;
@@ -185,7 +185,23 @@ export class HttpTransportServer {
 
     // Build Express app
     this.app = express();
-    this.app.use(express.json());
+
+    // Trust Traefik / reverse proxy
+    this.app.set('trust proxy', 1);
+
+    // Body size limit (1 MB — MCP messages are small)
+    this.app.use(express.json({ limit: '1mb' }));
+
+    // Security headers
+    this.app.use((_req, res, next) => {
+      res.setHeader('X-Content-Type-Options', 'nosniff');
+      res.setHeader('X-Frame-Options', 'DENY');
+      res.setHeader('X-XSS-Protection', '0');
+      res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+      res.setHeader('Cache-Control', 'no-store');
+      next();
+    });
+
     this.setupMiddleware();
     this.setupRoutes();
   }

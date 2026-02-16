@@ -338,6 +338,7 @@ async function main() {
           url: redisUrl,
           keyPrefix: process.env.REDIS_KEY_PREFIX,
         });
+        await redis.connect();
         logger.info('Main', 'Redis connected');
       } else {
         logger.info('Main', 'Redis not configured — running without cache/rate limiting');

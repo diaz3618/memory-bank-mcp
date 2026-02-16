@@ -14,7 +14,8 @@
     "dev": "bun --watch src/index.ts",
     "build:start": "bun run build && bun run start",
     "build:ext": "cd vscode-extension && npm run compile && npm run package",
-    "test": "bun test",
+    "test": "bun test && bun test src/__tests__/server/apiKeyAuth.test.ts src/__tests__/server/httpTransportServer.test.ts src/__tests__/server/kgContextTools.test.ts src/__tests__/server/rateLimiter.test.ts src/__tests__/server/redisResilience.test.ts src/__tests__/server/thinkingTools.test.ts src/__tests__/server/transportSecurity.test.ts src/__tests__/storage/databaseManagerRls.test.ts src/__tests__/storage/postgresFileSystem.test.ts src/__tests__/storage/rlsIsolation.test.ts",
+    "test:all": "bun test && bun test $(find src/__tests__ -path '*/server/*.test.ts' -o -path '*/storage/*.test.ts' | sort | tr '\\n' ' ')",
     "test:coverage": "bun test --coverage",
     "prepublishOnly": "bun run build",
     "release": "standard-version",
@@ -50,9 +51,10 @@
     "express": "^5.2.1",
     "fs-extra": "^11.1.1",
     "ioredis": "^5.9.3",
-    "js-yaml": "4.1.0",
+    "js-yaml": "4.1.1",
     "path": "^0.12.7",
-    "pg": "^8.18.0"
+    "pg": "^8.18.0",
+    "qs": "6.14.2"
   },
   "devDependencies": {
     "@types/bun": "^1.2.4",

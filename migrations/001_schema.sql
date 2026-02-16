@@ -166,15 +166,12 @@ CREATE INDEX idx_relations_to      ON graph_relations(to_entity_id);
 
 CREATE TABLE mcp_events (
   id          BIGSERIAL PRIMARY KEY,
-  session_id  TEXT NOT NULL,
   stream_id   TEXT NOT NULL,
-  event_id    TEXT NOT NULL,
-  event_type  TEXT,
-  data        TEXT NOT NULL,
+  message     JSONB NOT NULL,
   created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
-CREATE INDEX idx_events_session ON mcp_events(session_id, stream_id, id);
+CREATE INDEX idx_events_stream  ON mcp_events(stream_id, id);
 CREATE INDEX idx_events_cleanup ON mcp_events(created_at);
 
 -- =============================================================================
