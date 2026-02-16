@@ -12,3 +12,12 @@ sourcemap = true
 # Development settings
 [dev]
 hot = true
+
+[test]
+root = "src"
+
+# Multiple patterns to exclude from the coverage report
+coverageExclude = [
+  "repos/**",
+  "node_modules/**"
+]

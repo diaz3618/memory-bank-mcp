@@ -165,8 +165,8 @@ export const coreTools = [
         },
         includeSystemPatterns: {
           type: 'boolean',
-          description: 'Whether to include system patterns summary (default: true)',
-          default: true,
+          description: 'Whether to include system patterns summary (default: false)',
+          default: false,
         },
       },
       additionalProperties: false,
@@ -1243,7 +1243,7 @@ export async function handleGetContextDigest(
   memoryBankManager: MemoryBankManager,
   maxProgressEntries: number = 10,
   maxDecisions: number = 5,
-  includeSystemPatterns: boolean = true
+  includeSystemPatterns: boolean = false
 ) {
   try {
     const memoryBankDir = memoryBankManager.getMemoryBankDir();
