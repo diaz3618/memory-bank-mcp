@@ -307,7 +307,7 @@ export function setupToolHandlers(
             memoryBankManager,
             args?.maxProgressEntries ?? 10,
             args?.maxDecisions ?? 5,
-            args?.includeSystemPatterns ?? false
+            args?.includeSystemPatterns ?? true
           );
         }
 

@@ -8,7 +8,8 @@ You have access to Memory Bank MCP tools. USE THEM — they are not optional.
 ### START of task
 1. ⚠️ CALL THIS FIRST. Call `get_instructions` MCP tool to learn the full tool catalog and workflow (once per session)
 2. Call `get_context_digest` to load current project state (tasks, issues, progress, decisions)
-3. Use `graph_search` to find relevant knowledge graph entities
+3. Read `system-patterns.md` (via `read_memory_bank_file`) to understand project conventions, architecture patterns, and coding standards
+4. Use `graph_search` to find relevant knowledge graph entities
 
 ### DURING task
 4. Call `track_progress` after completing milestones
@@ -19,6 +20,7 @@ You have access to Memory Bank MCP tools. USE THEM — they are not optional.
 7. Call `update_active_context` with updated tasks, issues, and next steps
 8. Call `track_progress` with a final summary of what was accomplished
 9. Update knowledge graph entities if project structure changed
+10. Update `system-patterns.md` if new patterns, architecture, or conventions were introduced
 
 ## If Memory Bank contains placeholder text
 If any core file contains `[Project description]` or `[Task 1]` style placeholders,

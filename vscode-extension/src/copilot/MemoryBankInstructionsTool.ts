@@ -68,10 +68,12 @@ class MemoryBankInstructionsTool implements vscode.LanguageModelTool<ToolInput> 
         let activeCtx: string | undefined;
         let progress: string | undefined;
         let productCtx: string | undefined;
+        let systemPatterns: string | undefined;
 
         try { activeCtx = await ext.memoryBankService.readFile('active-context.md'); } catch { /* */ }
         try { progress = await ext.memoryBankService.readFile('progress.md'); } catch { /* */ }
         try { productCtx = await ext.memoryBankService.readFile('product-context.md'); } catch { /* */ }
+        try { systemPatterns = await ext.memoryBankService.readFile('system-patterns.md'); } catch { /* */ }
 
         isFresh = [activeCtx, progress, productCtx].some(
           (c) => c !== undefined && this.hasPlaceholders(c),
@@ -101,6 +103,12 @@ class MemoryBankInstructionsTool implements vscode.LanguageModelTool<ToolInput> 
           parts.push(trimmed.join('\n'));
           parts.push('');
         }
+
+        if (systemPatterns && !this.hasPlaceholders(systemPatterns)) {
+          parts.push('## System Patterns & Conventions\n');
+          parts.push(systemPatterns);
+          parts.push('');
+        }
       } else {
         parts.push('## Status: NOT CONNECTED');
         parts.push('Use the Memory Bank sidebar to connect the MCP server.\n');
@@ -112,9 +120,9 @@ class MemoryBankInstructionsTool implements vscode.LanguageModelTool<ToolInput> 
     // ── Workflow (compact) ─────────────────────────────────────────
     if (isConnected && !isFresh) {
       parts.push('## Workflow Reminder');
-      parts.push('**Before:** Context loaded (above). Review it. Use `graph_search` if you need entity details.');
+      parts.push('**Before:** Context loaded (above). Review it, including System Patterns. Use `graph_search` if you need entity details.');
       parts.push('**During:** `track_progress` after milestones · `log_decision` for choices · `add_session_note` for blockers/observations');
-      parts.push('**After:** `update_active_context` (tasks, issues, nextSteps) · final `track_progress` summary · update graph entities\n');
+      parts.push('**After:** `update_active_context` (tasks, issues, nextSteps) · final `track_progress` summary · update graph entities · update `system-patterns.md` if new patterns were introduced\n');
     }
 
     // ── Tool reference (compact table) ─────────────────────────────

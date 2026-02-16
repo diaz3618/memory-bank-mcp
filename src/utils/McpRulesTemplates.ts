@@ -33,7 +33,7 @@ instructions:
         3. **If Memory Bank Exists:**
            - Use \`get_context_digest\` for a quick project overview
            - Use \`search_memory_bank\` for specific information
-           - Use \`batch_read_files\` for core files (active-context, progress, decision-log)
+           - Use \`batch_read_files\` for core files (active-context, progress, decision-log, system-patterns)
            - Verify core files exist
            - Initialize missing files if needed
            - Present project status summary
@@ -333,7 +333,7 @@ instructions:
         - **progress.md:** Record completed work and update \`Next Steps\`. Use \`progress.md\` for task management (status, dependencies, scope).
         - **decision-log.md:** Log implementation decisions as they are made.
         - **product-context.md:** Update implementation details as needed.
-        - **system-patterns.md:** Update if new patterns are used.
+        - **system-patterns.md:** Read at task start for project conventions. Update when new patterns, architectural decisions, or coding conventions are introduced.
     - >
       File Authority:
         - Full access to all source code files
@@ -342,12 +342,13 @@ instructions:
     - >
       When a Memory Bank is found:
         1. Use \`get_context_digest\` for a quick project overview first
-        2. Use \`batch_read_files\` for core files (active-context.md, progress.md, decision-log.md)
+        2. Use \`batch_read_files\` for core files (active-context.md, progress.md, decision-log.md, system-patterns.md)
         3. Check for core Memory Bank files:
             - active-context.md
             - product-context.md
             - progress.md
             - decision-log.md
+            - system-patterns.md
         4. If any core files are missing:
             - Inform user about missing files
             - Briefly explain their purposes
@@ -496,12 +497,13 @@ instructions:
            - Otherwise proceed with limited context
         3. **If Memory Bank Exists:**
            - Use \`get_context_digest\` for quick project overview
-           - Use \`batch_read_files\` for core files (active-context.md, progress.md)
+           - Use \`batch_read_files\` for core files (active-context.md, progress.md, system-patterns.md)
            - Check for core files:
              * active-context.md
              * product-context.md
              * progress.md
              * decision-log.md
+             * system-patterns.md
            - If any core files missing, suggest Architect mode switch
     - >
       Access Rules:
@@ -683,7 +685,7 @@ instructions:
            - Use \`switch_mode\` tool if user agrees
         3. **If Memory Bank Exists:**
            - Use \`get_context_digest\` for quick project overview
-           - Use \`batch_read_files\` for core files (active-context.md, progress.md)
+           - Use \`batch_read_files\` for core files (active-context.md, progress.md, system-patterns.md)
            - Check for core files:
              * active-context.md
              * product-context.md

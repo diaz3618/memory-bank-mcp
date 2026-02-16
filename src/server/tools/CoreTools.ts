@@ -165,8 +165,8 @@ export const coreTools = [
         },
         includeSystemPatterns: {
           type: 'boolean',
-          description: 'Whether to include system patterns summary (default: false)',
-          default: false,
+          description: 'Whether to include system patterns summary (default: true)',
+          default: true,
         },
       },
       additionalProperties: false,
@@ -422,7 +422,9 @@ These files live in the \`memory-bank/\` directory:
 - **active-context.md** — Ongoing tasks, known issues, next steps, session notes
 - **progress.md** — Completed & pending milestones, update history
 - **decision-log.md** — Architectural/design decisions with context and alternatives
-- **system-patterns.md** — Architecture, code, and documentation patterns
+- **system-patterns.md** — Architecture, code, and documentation patterns.
+  **IMPORTANT:** Read this file when starting work to understand project conventions.
+  Update it whenever you introduce new patterns, change architecture, or adopt new coding conventions.
 
 ## Complete Tool Reference
 
@@ -1241,7 +1243,7 @@ export async function handleGetContextDigest(
   memoryBankManager: MemoryBankManager,
   maxProgressEntries: number = 10,
   maxDecisions: number = 5,
-  includeSystemPatterns: boolean = false
+  includeSystemPatterns: boolean = true
 ) {
   try {
     const memoryBankDir = memoryBankManager.getMemoryBankDir();
