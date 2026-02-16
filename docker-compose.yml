@@ -1,0 +1,153 @@
+# =============================================================================
+# Memory Bank MCP — Docker Compose Stack
+# =============================================================================
+# Services:
+#   - memory-bank-mcp  : HTTP Streamable MCP server
+#   - postgres          : PostgreSQL 17 (profile: local-db)
+#   - redis             : Redis 7 for session cache + rate limiting
+#   - traefik           : Reverse proxy + TLS termination + Web UI
+#
+# Usage:
+#   Full stack with local DB:
+#     docker compose --profile local-db up -d
+#
+#   With external Supabase DB:
+#     docker compose up -d
+#
+#   View Traefik dashboard:
+#     http://localhost:8080
+# =============================================================================
+
+services:
+  # ---------------------------------------------------------------------------
+  # Traefik — Reverse proxy with Web UI
+  # ---------------------------------------------------------------------------
+  traefik:
+    image: traefik:v3
+    container_name: mbmcp-traefik
+    restart: unless-stopped
+    command:
+      - --api.dashboard=true
+      - --api.insecure=true
+      - --providers.docker=true
+      - --providers.docker.exposedbydefault=false
+      - --entrypoints.web.address=:80
+      - --entrypoints.websecure.address=:443
+      # Uncomment for Let's Encrypt
+      # - --certificatesresolvers.letsencrypt.acme.httpchallenge=true
+      # - --certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web
+      # - --certificatesresolvers.letsencrypt.acme.email=${ACME_EMAIL:-admin@example.com}
+      # - --certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json
+      - --log.level=INFO
+    ports:
+      - "${TRAEFIK_HTTP_PORT:-80}:80"
+      - "${TRAEFIK_HTTPS_PORT:-443}:443"
+      - "${TRAEFIK_DASHBOARD_PORT:-8080}:8080"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - traefik-certs:/letsencrypt
+    networks:
+      - mbmcp-net
+
+  # ---------------------------------------------------------------------------
+  # Memory Bank MCP — HTTP transport
+  # ---------------------------------------------------------------------------
+  memory-bank-mcp:
+    build:
+      context: .
+      dockerfile: Dockerfile.http
+    image: ${DOCKER_IMAGE:-diaz3618/memory-bank-mcp}:${DOCKER_TAG:-latest}
+    container_name: mbmcp-server
+    restart: unless-stopped
+    depends_on:
+      redis:
+        condition: service_healthy
+    environment:
+      - MCP_TRANSPORT=http
+      - MCP_PORT=3100
+      - MCP_HOST=0.0.0.0
+      - DATABASE_URL=${DATABASE_URL:-postgresql://mbmcp:mbmcp_secret@postgres:5432/memory_bank_mcp}
+      - DB_PROVIDER=${DB_PROVIDER:-postgres}
+      - REDIS_URL=${REDIS_URL:-redis://redis:6379}
+      - NODE_ENV=${NODE_ENV:-production}
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.mbmcp.rule=PathPrefix(`/mcp`) || PathPrefix(`/health`)
+      - traefik.http.routers.mbmcp.entrypoints=web
+      - traefik.http.services.mbmcp.loadbalancer.server.port=3100
+      # HTTPS router (uncomment when TLS is configured)
+      # - traefik.http.routers.mbmcp-secure.rule=PathPrefix(`/mcp`) || PathPrefix(`/health`)
+      # - traefik.http.routers.mbmcp-secure.entrypoints=websecure
+      # - traefik.http.routers.mbmcp-secure.tls.certresolver=letsencrypt
+    networks:
+      - mbmcp-net
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3100/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  # ---------------------------------------------------------------------------
+  # PostgreSQL 17 — Only when using local database
+  # ---------------------------------------------------------------------------
+  postgres:
+    image: postgres:17-alpine
+    container_name: mbmcp-postgres
+    restart: unless-stopped
+    profiles:
+      - local-db
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-memory_bank_mcp}
+      POSTGRES_USER: ${POSTGRES_USER:-mbmcp}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-mbmcp_secret}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./migrations:/docker-entrypoint-initdb.d:ro
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    networks:
+      - mbmcp-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-mbmcp} -d ${POSTGRES_DB:-memory_bank_mcp}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ---------------------------------------------------------------------------
+  # Redis 7 — Session cache + rate limiting
+  # ---------------------------------------------------------------------------
+  redis:
+    image: redis:7-alpine
+    container_name: mbmcp-redis
+    restart: unless-stopped
+    command: redis-server --maxmemory 128mb --maxmemory-policy allkeys-lru --appendonly no
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis-data:/data
+    networks:
+      - mbmcp-net
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+
+# =============================================================================
+# Volumes
+# =============================================================================
+volumes:
+  postgres-data:
+    driver: local
+  redis-data:
+    driver: local
+  traefik-certs:
+    driver: local
+
+# =============================================================================
+# Networks
+# =============================================================================
+networks:
+  mbmcp-net:
+    driver: bridge

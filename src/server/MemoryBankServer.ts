@@ -15,6 +15,9 @@ import { progressTools } from './tools/ProgressTools.js';
 import { contextTools } from './tools/ContextTools.js';
 import { decisionTools } from './tools/DecisionTools.js';
 import { modeTools } from './tools/ModeTools.js';
+import { HttpTransportServer, type HttpTransportConfig } from './HttpTransportServer.js';
+import type { DatabaseManager } from '../utils/DatabaseManager.js';
+import type { RedisManager } from '../utils/RedisManager.js';
 import { createRequire } from 'module';
 import { readFileSync } from 'fs';
 import { join, dirname } from 'path';
@@ -53,11 +56,17 @@ const PKG_VERSION: string = getVersion();
  * 
  * This class is responsible for setting up and running the MCP server
  * that provides tools and resources for managing memory banks.
+ * Supports both stdio (default) and HTTP Streamable transport modes.
  */
 export class MemoryBankServer {
   private server: Server;
   private memoryBankManager: MemoryBankManager;
   private isRunning: boolean = false;
+  private httpTransportServer: HttpTransportServer | null = null;
+
+  // Optional infrastructure for HTTP mode
+  private db: DatabaseManager | null = null;
+  private redis: RedisManager | null = null;
 
   /**
    * Creates a new MemoryBankServer instance
@@ -69,6 +78,9 @@ export class MemoryBankServer {
    * @param folderName Memory Bank folder name (optional, default: 'memory-bank')
    * @param debugMode Enable debug mode (optional, default: false)
    * @param remoteConfig Remote server configuration (optional)
+   * @param httpConfig HTTP transport configuration (optional — if provided, runs in HTTP mode)
+   * @param db DatabaseManager for HTTP/Postgres mode (optional)
+   * @param redis RedisManager for caching/rate limiting (optional)
    */
   constructor(
     initialMode?: string, 
@@ -81,8 +93,14 @@ export class MemoryBankServer {
       remoteUser: string;
       remoteHost: string;
       remotePath: string;
-    }
+    },
+    httpConfig?: HttpTransportConfig,
+    db?: DatabaseManager,
+    redis?: RedisManager,
   ) {
+    this.db = db ?? null;
+    this.redis = redis ?? null;
+
     this.memoryBankManager = new MemoryBankManager(
       projectPath, 
       userId, 
@@ -158,6 +176,18 @@ export class MemoryBankServer {
       }
     };
 
+    // Set up HTTP transport server if config provided
+    if (httpConfig && db) {
+      this.httpTransportServer = new HttpTransportServer(
+        httpConfig,
+        db,
+        redis ?? null,
+        (sessionUserId: string, sessionProjectId: string) => {
+          return this.createMcpServerInstance(initialMode, sessionUserId, sessionProjectId);
+        },
+      );
+    }
+
     // Handle process termination
     process.on('SIGINT', async () => {
       await this.shutdown();
@@ -169,21 +199,76 @@ export class MemoryBankServer {
   }
 
   /**
+   * Creates a new MCP Server instance with tool/resource handlers.
+   * Used by HttpTransportServer to create per-session servers.
+   */
+  private createMcpServerInstance(
+    initialMode?: string,
+    _userId?: string,
+    _projectId?: string,
+  ): Server {
+    const allTools = [
+      ...coreTools,
+      ...progressTools,
+      ...contextTools,
+      ...decisionTools,
+      ...modeTools,
+    ];
+
+    const mcpServer = new Server(
+      {
+        name: '@diazstg/memory-bank-mcp',
+        version: PKG_VERSION,
+      },
+      {
+        capabilities: {
+          tools: { tools: allTools },
+          resources: {},
+        },
+      },
+    );
+
+    // Re-use the same MemoryBankManager (it handles multi-project via path)
+    setupToolHandlers(
+      mcpServer,
+      this.memoryBankManager,
+      () => this.memoryBankManager.getProgressTracker(),
+    );
+    setupResourceHandlers(mcpServer, this.memoryBankManager);
+
+    mcpServer.onerror = (error) => {
+      console.error('[MCP Session Error]', error);
+    };
+
+    return mcpServer;
+  }
+
+  /**
    * Starts the MCP server
    * 
-   * Connects the server to the stdio transport and begins listening for requests.
+   * In stdio mode: connects to stdio transport.
+   * In HTTP mode: starts the Express HTTP server.
+   * Can run both simultaneously if configured.
    */
-  async run() {
+  async run(transport: 'stdio' | 'http' = 'stdio') {
     if (this.isRunning) {
       console.error('Server is already running');
       return;
     }
 
     try {
-      const transport = new StdioServerTransport();
-      await this.server.connect(transport);
-      this.isRunning = true;
-      console.error('Memory Bank MCP server running on stdio');
+      if (transport === 'http' && this.httpTransportServer) {
+        // HTTP transport mode
+        await this.httpTransportServer.start();
+        this.isRunning = true;
+        console.error('Memory Bank MCP server running on HTTP');
+      } else {
+        // Default: stdio transport
+        const stdioTransport = new StdioServerTransport();
+        await this.server.connect(stdioTransport);
+        this.isRunning = true;
+        console.error('Memory Bank MCP server running on stdio');
+      }
       
       // Display information about available modes
       const modeManager = this.memoryBankManager.getModeManager();
@@ -214,6 +299,19 @@ export class MemoryBankServer {
         modeManager.dispose();
       }
       
+      // Shut down HTTP transport if running
+      if (this.httpTransportServer) {
+        await this.httpTransportServer.shutdown();
+      }
+
+      // Close Redis and DB connections if present
+      if (this.redis) {
+        await this.redis.close();
+      }
+      if (this.db) {
+        await this.db.close();
+      }
+
       await this.server.close();
       this.isRunning = false;
       console.error('Memory Bank server shut down successfully');

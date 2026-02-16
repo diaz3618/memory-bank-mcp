@@ -5,6 +5,8 @@
 import { MemoryBankServer } from './server/MemoryBankServer.js';
 import { getLogManager, logger, LogLevel } from './utils/LogManager.js';
 import { FileSystemFactory } from './utils/storage/FileSystemFactory.js';
+import { DatabaseManager } from './utils/DatabaseManager.js';
+import { RedisManager } from './utils/RedisManager.js';
 import { readFileSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
@@ -89,7 +91,15 @@ Options:
   --folder, -f <folder> Set Memory Bank folder name (default: memory-bank)
   --username, -u <name> Set username for progress tracking (can be name or GitHub URL)
   --debug, -d          Enable debug mode (show detailed logs)
+  --transport, -t <type> Transport mode: stdio (default) or http
   --help, -h           Display this help
+
+HTTP Transport Options (also configurable via environment variables):
+  DATABASE_URL         PostgreSQL connection string (required for http mode)
+  REDIS_URL            Redis connection string (optional, for caching/rate limiting)
+  MCP_PORT             HTTP listen port (default: 3100)
+  MCP_HOST             HTTP bind address (default: 0.0.0.0)
+  DB_PROVIDER          Database provider: postgres or supabase (default: postgres)
 
 Remote Server Options:
   --remote, -r         Enable remote server mode
@@ -101,6 +111,7 @@ Remote Server Options:
 Examples:
   memory-bank-mcp
   memory-bank-mcp --mode code
+  memory-bank-mcp --transport http
   memory-bank-mcp --path /path/to/project
   memory-bank-mcp --folder custom-memory-bank
   memory-bank-mcp --username "John Doe"
@@ -127,6 +138,7 @@ function processArgs() {
     folderName?: string; 
     userId?: string;
     debug?: boolean;
+    transport?: 'stdio' | 'http';
     remote?: boolean;
     sshKey?: string;
     remoteUser?: string;
@@ -147,6 +159,13 @@ function processArgs() {
       options.userId = args[++i];
     } else if (arg === '--debug' || arg === '-d') {
       options.debug = true;
+    } else if (arg === '--transport' || arg === '-t') {
+      const val = args[++i];
+      if (val !== 'stdio' && val !== 'http') {
+        process.stderr.write(`Invalid transport: ${val}. Use "stdio" or "http".\n`);
+        process?.exit?.(1);
+      }
+      options.transport = val;
     } else if (arg === '--remote' || arg === '-r') {
       options.remote = true;
     } else if (arg === '--ssh-key' || arg === '-k') {
@@ -272,17 +291,80 @@ async function main() {
       
       logger.info('Main', 'Successfully connected to remote server');
     }
-    
+
+    // Determine transport mode from CLI or env
+    const transportMode = options.transport
+      ?? (process.env.MCP_TRANSPORT as 'stdio' | 'http' | undefined)
+      ?? 'stdio';
+
+    let db: DatabaseManager | undefined;
+    let redis: RedisManager | undefined;
+    let httpConfig: { port: number; host: string; enableJsonResponse?: boolean } | undefined;
+
+    if (transportMode === 'http') {
+      // Validate required env vars for HTTP mode
+      const databaseUrl = process.env.DATABASE_URL || process.env.SUPABASE_DB_URL;
+      if (!databaseUrl) {
+        logger.error('Main', 'DATABASE_URL or SUPABASE_DB_URL is required for HTTP transport.');
+        process?.exit?.(1);
+        return;
+      }
+
+      const dbProvider = (process.env.DB_PROVIDER as 'postgres' | 'supabase') || 'postgres';
+      logger.info('Main', `Database provider: ${dbProvider}`);
+
+      db = new DatabaseManager({
+        provider: dbProvider,
+        connectionString: databaseUrl,
+        maxConnections: parseInt(process.env.DB_MAX_CONNECTIONS || '20', 10),
+      });
+
+      // Run migrations for local Postgres (skip for Supabase — migrations are applied manually)
+      if (dbProvider === 'postgres') {
+        const migrationsDir = join(dirname(fileURLToPath(import.meta.url)), '..', 'migrations');
+        logger.info('Main', `Running migrations from ${migrationsDir}...`);
+        try {
+          await db.runMigrations(migrationsDir);
+          logger.info('Main', 'Migrations completed');
+        } catch (err) {
+          logger.warn('Main', `Migration warning: ${err}`);
+        }
+      }
+
+      // Redis (optional)
+      const redisUrl = process.env.REDIS_URL;
+      if (redisUrl) {
+        redis = new RedisManager({
+          url: redisUrl,
+          keyPrefix: process.env.REDIS_KEY_PREFIX,
+        });
+        logger.info('Main', 'Redis connected');
+      } else {
+        logger.info('Main', 'Redis not configured — running without cache/rate limiting');
+      }
+
+      httpConfig = {
+        port: parseInt(process.env.MCP_PORT || '3100', 10),
+        host: process.env.MCP_HOST || '0.0.0.0',
+        enableJsonResponse: process.env.MCP_JSON_RESPONSE === 'true',
+      };
+
+      logger.info('Main', `HTTP transport configured on ${httpConfig.host}:${httpConfig.port}`);
+    }
+
     const server = new MemoryBankServer(
       options.mode, 
       options.projectPath, 
       options.userId, 
       options.folderName, 
       options.debug,
-      remoteConfig
+      remoteConfig,
+      httpConfig,
+      db,
+      redis,
     );
-    await server.run();
-    logger.info('Main', 'Memory Bank Server started successfully');
+    await server.run(transportMode);
+    logger.info('Main', `Memory Bank Server started successfully (transport: ${transportMode})`);
   } catch (error) {
     logger.error('Main', `Error starting Memory Bank server: ${error}`);
     process?.exit?.(1);
