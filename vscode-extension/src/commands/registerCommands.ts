@@ -567,7 +567,7 @@ async function syncModeToMcpJson(mode: string): Promise<void> {
     const server = parsed?.servers?.['memory-bank-mcp'];
     if (!server) return;
 
-    const args: string[] = server.args || [];
+    const args: string[] = [...(server.args || [])];
     const modeIdx = args.indexOf('--mode');
     if (modeIdx !== -1 && modeIdx + 1 < args.length) {
       args[modeIdx + 1] = mode;
@@ -576,10 +576,13 @@ async function syncModeToMcpJson(mode: string): Promise<void> {
     } else {
       args.push('--mode', mode);
     }
-    server.args = args;
 
-    const encoded = Buffer.from(JSON.stringify(parsed, null, 2) + '\n');
-    await vscode.workspace.fs.writeFile(mcpJsonPath, encoded);
+    // Use jsonc.modify to update only the args — preserves comments and formatting
+    const formattingOptions: jsonc.FormattingOptions = { tabSize: 4, insertSpaces: true, eol: '\n' };
+    const edits = jsonc.modify(raw, ['servers', 'memory-bank-mcp', 'args'], args, { formattingOptions });
+    const newText = jsonc.applyEdits(raw, edits);
+
+    await vscode.workspace.fs.writeFile(mcpJsonPath, Buffer.from(newText));
     ext.outputChannel.appendLine(`Synced --mode ${mode} to .vscode/mcp.json`);
   } catch (err) {
     ext.outputChannel.appendLine(`Failed to sync mode to mcp.json: ${err}`);
@@ -710,38 +713,38 @@ async function writeMcpJson(
   if (!workspaceFolders) { return; }
 
   const mcpJsonPath = vscode.Uri.joinPath(workspaceFolders[0].uri, '.vscode', 'mcp.json');
-  
-  let existing: Record<string, unknown> = {};
+
+  // Read existing content or start fresh
+  let text = '{}';
   try {
-    const content = await vscode.workspace.fs.readFile(mcpJsonPath);
-    const raw = Buffer.from(content).toString('utf-8');
-    const parsed = jsonc.parse(raw);
-    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
-      existing = parsed;
-    } else {
-      vscode.window.showWarningMessage('mcp.json has unexpected structure — creating fresh config.');
+    const bytes = await vscode.workspace.fs.readFile(mcpJsonPath);
+    text = Buffer.from(bytes).toString('utf-8');
+    // Validate it's parseable
+    const errors: jsonc.ParseError[] = [];
+    jsonc.parse(text, errors);
+    if (errors.length > 0) {
+      vscode.window.showWarningMessage('mcp.json contains JSON syntax errors. Creating fresh config — back up your file if needed.');
+      text = '{}';
     }
   } catch (err) {
-    // Distinguish "file not found" from "parse error"
-    if (err && typeof err === 'object' && 'code' in err && (err as { code: string }).code === 'FileNotFound') {
-      // File doesn't exist yet — will create
-    } else if (err instanceof SyntaxError) {
-      vscode.window.showWarningMessage('mcp.json contains invalid JSON(C). Creating fresh config — back up your file if needed.');
+    if (err && typeof err === 'object' && 'code' in err && (err as { code: string }).code !== 'FileNotFound') {
+      ext.outputChannel.appendLine(`Error reading mcp.json: ${err}`);
     }
-    // Fall through with empty existing
+    // File doesn't exist — will create from scratch
   }
 
-  const servers = (existing['servers'] as Record<string, unknown>) || {};
-  servers['memory-bank-mcp'] = {
-    command,
-    args,
-    type: 'stdio',
-  };
-  existing['servers'] = servers;
+  // Use jsonc.modify to upsert the server entry — preserves comments and formatting
+  const formattingOptions: jsonc.FormattingOptions = { tabSize: 4, insertSpaces: true, eol: '\n' };
+  const serverConfig = { command, args, type: 'stdio' };
+  const edits = jsonc.modify(text, ['servers', 'memory-bank-mcp'], serverConfig, { formattingOptions });
+  const newText = jsonc.applyEdits(text, edits);
 
-  const encoded = Buffer.from(JSON.stringify(existing, null, 2));
-  await vscode.workspace.fs.writeFile(mcpJsonPath, encoded);
-  ext.outputChannel.appendLine(`Wrote .vscode/mcp.json with memory-bank-mcp server config`);
+  // Ensure .vscode directory exists
+  const vscodeDir = vscode.Uri.joinPath(workspaceFolders[0].uri, '.vscode');
+  await vscode.workspace.fs.createDirectory(vscodeDir);
+
+  await vscode.workspace.fs.writeFile(mcpJsonPath, Buffer.from(newText));
+  ext.outputChannel.appendLine('Wrote .vscode/mcp.json with memory-bank-mcp server config (existing entries preserved)');
 }
 
 // ---------- Copilot Agent Instructions ----------
@@ -834,46 +837,68 @@ async function createCopilotAgentInstructions(): Promise<void> {
   const githubDir = vscode.Uri.joinPath(workspaceFolders[0].uri, '.github');
   const instructionsPath = vscode.Uri.joinPath(githubDir, 'copilot-instructions.md');
 
-  // Check if file already exists
-  let exists = false;
-  try {
-    await vscode.workspace.fs.stat(instructionsPath);
-    exists = true;
-  } catch {
-    // Doesn't exist yet
-  }
-
-  if (exists) {
-    const choice = await vscode.window.showWarningMessage(
-      '.github/copilot-instructions.md already exists. Overwrite?',
-      'Overwrite',
-      'Open Existing',
-      'Cancel',
-    );
-    if (choice === 'Open Existing') {
-      const doc = await vscode.workspace.openTextDocument(instructionsPath);
-      await vscode.window.showTextDocument(doc);
-      return;
-    }
-    if (choice !== 'Overwrite') {
-      return;
-    }
-  }
-
   // Ensure .github directory exists
   await vscode.workspace.fs.createDirectory(githubDir);
 
-  // Write the file
-  const encoded = Buffer.from(COPILOT_INSTRUCTIONS_CONTENT);
-  await vscode.workspace.fs.writeFile(instructionsPath, encoded);
+  // Check if file already exists
+  let existingContent = '';
+  try {
+    const bytes = await vscode.workspace.fs.readFile(instructionsPath);
+    existingContent = Buffer.from(bytes).toString('utf-8');
+  } catch {
+    // Doesn't exist yet — will create fresh
+  }
 
-  ext.outputChannel.appendLine('Created .github/copilot-instructions.md');
+  if (existingContent) {
+    // Check if memory bank section is already present
+    if (existingContent.includes('Memory Bank')) {
+      const choice = await vscode.window.showWarningMessage(
+        '.github/copilot-instructions.md already contains Memory Bank instructions.',
+        'Replace Memory Bank Section',
+        'Open File',
+        'Cancel',
+      );
+      if (choice === 'Open File') {
+        const doc = await vscode.workspace.openTextDocument(instructionsPath);
+        await vscode.window.showTextDocument(doc);
+        return;
+      }
+      if (choice !== 'Replace Memory Bank Section') {
+        return;
+      }
+      // Remove existing Memory Bank section (from header to end or next top-level heading)
+      const mbStart = existingContent.indexOf('# Memory Bank');
+      if (mbStart !== -1) {
+        // Find the next top-level heading after the Memory Bank section
+        const afterMbStart = existingContent.slice(mbStart + 1);
+        const nextH1 = afterMbStart.search(/^# (?!Memory Bank)/m);
+        if (nextH1 !== -1) {
+          // Another top-level section follows — remove only the Memory Bank part
+          existingContent = existingContent.slice(0, mbStart).trimEnd() + '\n\n' + afterMbStart.slice(nextH1);
+        } else {
+          // Memory Bank section goes to the end of file
+          existingContent = existingContent.slice(0, mbStart).trimEnd();
+        }
+      }
+    }
+
+    // Append Memory Bank instructions to existing content
+    const separator = existingContent.length > 0 ? '\n\n' : '';
+    const finalContent = existingContent + separator + COPILOT_INSTRUCTIONS_CONTENT;
+    await vscode.workspace.fs.writeFile(instructionsPath, Buffer.from(finalContent));
+
+    ext.outputChannel.appendLine('Appended Memory Bank instructions to existing .github/copilot-instructions.md');
+  } else {
+    // No existing file — write fresh
+    await vscode.workspace.fs.writeFile(instructionsPath, Buffer.from(COPILOT_INSTRUCTIONS_CONTENT));
+    ext.outputChannel.appendLine('Created .github/copilot-instructions.md');
+  }
 
   // Open the file
   const doc = await vscode.workspace.openTextDocument(instructionsPath);
   await vscode.window.showTextDocument(doc);
 
   vscode.window.showInformationMessage(
-    'Copilot agent instructions created! GitHub Copilot will now use Memory Bank MCP in every conversation.',
+    'Copilot agent instructions ready! GitHub Copilot will now use Memory Bank MCP in every conversation.',
   );
 }

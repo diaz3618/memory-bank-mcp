@@ -1,0 +1,91 @@
+name: Release VS Code Extension
+
+# Trigger on vscode-v* tags OR manual dispatch
+on:
+  push:
+    tags:
+      - 'vscode-v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag to release (e.g., vscode-v2.0.0)'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  release-extension:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: vscode-extension
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.tag || github.ref }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Compile extension
+        run: npm run compile
+
+      - name: Package VSIX
+        run: npx @vscode/vsce package --no-dependencies
+
+      - name: Extract version from tag
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            TAG="${{ github.event.inputs.tag }}"
+          else
+            TAG="${GITHUB_REF#refs/tags/}"
+          fi
+          VERSION="${TAG#vscode-v}"
+          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+          echo "TAG=$TAG" >> $GITHUB_OUTPUT
+          echo "Releasing VS Code extension version: $VERSION"
+
+      - name: Find VSIX file
+        id: vsix
+        run: |
+          VSIX_FILE=$(ls *.vsix | head -1)
+          echo "VSIX_FILE=$VSIX_FILE" >> $GITHUB_OUTPUT
+          echo "Found VSIX: $VSIX_FILE"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ steps.version.outputs.TAG }}
+          name: "VS Code Extension v${{ steps.version.outputs.VERSION }}"
+          body: |
+            ## Memory Bank MCP — VS Code Extension v${{ steps.version.outputs.VERSION }}
+
+            ### Installation
+
+            1. Download the `.vsix` file below
+            2. In VS Code: `Ctrl+Shift+P` → **Extensions: Install from VSIX...**
+            3. Select the downloaded `.vsix` file
+
+            Or right-click the `.vsix` file in VS Code and choose "Install Extension VSIX".
+
+            ### What's Included
+
+            - Memory Bank sidebar with Status, Files, Actions, Mode, Knowledge Graph, Stores, and Remote views
+            - GitHub Copilot integration via Language Model Tool
+            - One-click MCP server installation and configuration
+            - Interactive knowledge graph visualization
+
+            See the [extension README](https://github.com/${{ github.repository }}/blob/main/vscode-extension/README.md) for full documentation.
+          draft: false
+          prerelease: false
+          files: |
+            vscode-extension/${{ steps.vsix.outputs.VSIX_FILE }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

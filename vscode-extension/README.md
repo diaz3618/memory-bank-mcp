@@ -7,7 +7,7 @@ A Visual Studio Code extension that provides seamless integration with the Memor
 
 ## Features
 
-### 🎯 Memory Bank Sidebar
+### Sidebar
 
 - **Status View**: See connection status, mode, and Memory Bank health at a glance
 - **Files View**: Browse and edit Memory Bank files (active-context.md, progress.md, etc.)
@@ -17,13 +17,13 @@ A Visual Studio Code extension that provides seamless integration with the Memor
 - **Multi-Store Support**: Manage multiple Memory Banks per project
 - **Remote Servers**: Connect to SSH-based Memory Banks on remote machines
 
-### 🤖 GitHub Copilot Integration
+### GitHub Copilot Integration
 
 - **Language Model Tool**: Copilot can read Memory Bank context automatically
 - **One-Click Setup**: Install `.github/copilot-instructions.md` with proper workflow
 - **Automatic Context Loading**: System patterns, active context, and progress displayed to Copilot
 
-### 🔧 Quick Actions
+### Quick Actions
 
 - Initialize Memory Bank in your workspace
 - Install MCP server configuration (`.vscode/mcp.json`)
@@ -37,9 +37,12 @@ A Visual Studio Code extension that provides seamless integration with the Memor
 
 ### From VSIX (Recommended)
 
-1. Download the latest `.vsix` file from the [releases page](https://github.com/diaz3618/memory-bank-mcp/releases)
-2. In VS Code: `Ctrl+Shift+P` → "Extensions: Install from VSIX"
-3. Select the downloaded `.vsix` file
+1. Go to the [VS Code Extension releases](https://github.com/diaz3618/memory-bank-mcp/releases?q=vscode-v) (look for tags starting with `vscode-v`)
+2. Download the `.vsix` file from the latest release
+3. In VS Code: `Ctrl+Shift+P` → **Extensions: Install from VSIX...**
+4. Select the downloaded `.vsix` file
+
+Or right-click the `.vsix` file and select **Install Extension VSIX**
 
 ### From Source
 
@@ -47,35 +50,32 @@ A Visual Studio Code extension that provides seamless integration with the Memor
 cd vscode-extension
 npm install
 npm run compile
-npm run package  # Creates .vsix file
+npm run package
 ```
 
-Then install the generated `.vsix` file.
+Then install the `.vsix` file.
 
 ## Quick Start
 
 ### 1. Install the MCP Server
 
-The extension requires the Memory Bank MCP server. Install it via one of these commands:
+The extension requires the Memory Bank MCP server. Install it via one of these options:
 
-**Command Palette:**
 - `Ctrl+Shift+P` → "Memory Bank: Install MCP Server"
+- Install it from the sidebar
+- Manually install it; look at <https://www.npmjs.com/package/@diazstg/memory-bank-mcp> for details
 
 This writes `.vscode/mcp.json` with the server configuration.
-
-**Manual Installation:**
-
-```bash
-npm install -g @diazstg/memory-bank-mcp
-```
 
 ### 2. Initialize Memory Bank
 
 Click the Memory Bank icon in the Activity Bar, then:
+
 - Click "Initialize Memory Bank" button, or
 - `Ctrl+Shift+P` → "Memory Bank: Initialize Memory Bank"
 
 This creates the `memory-bank/` folder with core files:
+
 - `product-context.md` — Project overview and goals
 - `active-context.md` — Current tasks and issues
 - `progress.md` — Session history and milestones
@@ -95,17 +95,21 @@ This creates `.github/copilot-instructions.md` with mandatory workflow instructi
 ### Memory Bank Views
 
 #### Status View
+
 Shows connection status, current mode, file count, and completion status. Use the refresh button to update.
 
 **Actions:**
+
 - Reconnect to MCP Server
 - Show Logs (for troubleshooting)
 - Initialize Memory Bank
 
 #### Files View
+
 Lists all Memory Bank files. Click to open and edit. Changes are automatically reflected in AI assistant context.
 
 **Core Files:**
+
 - `active-context.md` — Tasks, issues, blockers
 - `progress.md` — What's been accomplished
 - `product-context.md` — Project goals and requirements
@@ -113,7 +117,9 @@ Lists all Memory Bank files. Click to open and edit. Changes are automatically r
 - `system-patterns.md` — Coding conventions and patterns
 
 #### Actions View
+
 Quick access buttons for common operations:
+
 - Set Memory Bank Path
 - Switch Mode
 - Show Context Digest
@@ -121,7 +127,9 @@ Quick access buttons for common operations:
 - Create Copilot Agent Instructions
 
 #### Mode View
+
 Switch between AI assistant behavioral modes:
+
 - **architect** — High-level design and planning
 - **code** — Implementation and development
 - **debug** — Troubleshooting and fixes
@@ -131,7 +139,9 @@ Switch between AI assistant behavioral modes:
 Each mode gets its own `.mcprules-{mode}` file with specific guidelines.
 
 #### Knowledge Graph View
+
 Browse and manage entities in your project's knowledge graph:
+
 - Search entities by name or type
 - View entity observations and relationships
 - Create/update/delete entities
@@ -140,13 +150,17 @@ Browse and manage entities in your project's knowledge graph:
 - Visualize graph in interactive webview
 
 #### Stores View
+
 Manage multiple Memory Banks per project:
+
 - List registered stores
 - Select active store
 - Each store has independent context
 
 #### Remote Servers View
+
 Connect to Memory Banks on remote machines via SSH:
+
 - Add remote server credentials
 - Manage SSH keys
 - Switch between local and remote Memory Banks
@@ -156,12 +170,14 @@ Connect to Memory Banks on remote machines via SSH:
 All commands available via `Ctrl+Shift+P` → "Memory Bank:":
 
 **Setup:**
+
 - Initialize Memory Bank
 - Install MCP Server
 - Configure MCP Server
 - Create Copilot Agent Instructions
 
 **Operations:**
+
 - Set Memory Bank Path
 - Refresh
 - Reconnect to MCP Server
@@ -170,6 +186,7 @@ All commands available via `Ctrl+Shift+P` → "Memory Bank:":
 - Show Logs
 
 **Graph:**
+
 - Search Graph
 - Create/Update Entity
 - Add Observation
@@ -179,6 +196,7 @@ All commands available via `Ctrl+Shift+P` → "Memory Bank:":
 - Open Graph Visualization
 
 **Remote:**
+
 - Add Remote Server
 - Refresh Remote Servers
 
@@ -216,6 +234,7 @@ When you create Copilot agent instructions via the extension, AI assistants will
 5. **Maintain system patterns** with project conventions
 
 The Language Model Tool provides:
+
 - Current task list and blockers
 - Recent progress history
 - System patterns and conventions
@@ -229,6 +248,7 @@ The Language Model Tool provides:
 - **Memory Bank MCP Server** (auto-installed via "Install MCP Server" command)
 
 For remote servers:
+
 - SSH access to target machine
 - Memory Bank MCP server installed on remote machine
 
@@ -248,6 +268,7 @@ Check the Output panel: `View → Output → "Memory Bank Extension"`
 ### "There is no data provider registered" error?
 
 The extension failed to activate. Check:
+
 1. Extension host logs: Help → Toggle Developer Tools → Console
 2. Look for module resolution errors
 3. Try reinstalling the extension
@@ -258,7 +279,6 @@ The extension failed to activate. Check:
 - **NPM Package**: [@diazstg/memory-bank-mcp](https://www.npmjs.com/package/@diazstg/memory-bank-mcp)
 - **Documentation**: [github.com/diaz3618/memory-bank-mcp/tree/main/docs](https://github.com/diaz3618/memory-bank-mcp/tree/main/docs)
 - **Issues**: [github.com/diaz3618/memory-bank-mcp/issues](https://github.com/diaz3618/memory-bank-mcp/issues)
-- **MCP Protocol Spec**: [modelcontextprotocol.io](https://modelcontextprotocol.io)
 
 ## Contributing
 
@@ -271,7 +291,3 @@ MIT License - See [LICENSE](LICENSE) file for details.
 ## Changelog
 
 See [CHANGELOG.md](https://github.com/diaz3618/memory-bank-mcp/blob/main/CHANGELOG.md) for release history.
-
----
-
-**Made with ❤️ for AI-assisted development**
