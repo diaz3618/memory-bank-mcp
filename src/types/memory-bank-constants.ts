@@ -114,11 +114,3 @@ export interface Decision {
   consequences?: string[];
   status?: string;
 }
-
-/** Interface for remote server configuration */
-export interface RemoteConfig {
-  sshKeyPath: string;
-  remoteUser: string;
-  remoteHost: string;
-  remotePath: string;
-} 

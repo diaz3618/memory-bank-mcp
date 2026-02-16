@@ -77,7 +77,6 @@ export class MemoryBankServer {
    * @param userId Username for progress tracking (can be name or GitHub URL)
    * @param folderName Memory Bank folder name (optional, default: 'memory-bank')
    * @param debugMode Enable debug mode (optional, default: false)
-   * @param remoteConfig Remote server configuration (optional)
    * @param httpConfig HTTP transport configuration (optional — if provided, runs in HTTP mode)
    * @param db DatabaseManager for HTTP/Postgres mode (optional)
    * @param redis RedisManager for caching/rate limiting (optional)
@@ -88,12 +87,6 @@ export class MemoryBankServer {
     userId?: string, 
     folderName?: string, 
     debugMode?: boolean,
-    remoteConfig?: {
-      sshKeyPath: string;
-      remoteUser: string;
-      remoteHost: string;
-      remotePath: string;
-    },
     httpConfig?: HttpTransportConfig,
     db?: DatabaseManager,
     redis?: RedisManager,
@@ -105,8 +98,7 @@ export class MemoryBankServer {
       projectPath, 
       userId, 
       folderName, 
-      debugMode,
-      remoteConfig
+      debugMode
     );
     
     // Combine all tools
@@ -201,6 +193,12 @@ export class MemoryBankServer {
   /**
    * Creates a new MCP Server instance with tool/resource handlers.
    * Used by HttpTransportServer to create per-session servers.
+   *
+   * TODO [integration-gap]: _userId and _projectId are received from
+   * HttpTransportServer session auth but currently ignored. A future task
+   * must create a per-session MemoryBankManager backed by PostgresFileSystem
+   * so each session reads/writes its own project in Postgres, not the shared
+   * local filesystem.
    */
   private createMcpServerInstance(
     initialMode?: string,

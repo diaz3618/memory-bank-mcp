@@ -153,6 +153,10 @@ export function excerptAroundMatches(
 
 // ============================================================================
 // Shared: getGraphStore (duplicated from GraphTools to avoid circular deps)
+// TODO [integration-gap]: Same as GraphTools.getGraphStore() — always uses
+// LocalFileSystem. In HTTP+Postgres mode, should use PostgresGraphStore.
+// Both copies maintain separate storeCache Maps, which could cause
+// inconsistencies if both are called in the same process.
 // ============================================================================
 
 let storeRegistryInstance: StoreRegistry | null = null;

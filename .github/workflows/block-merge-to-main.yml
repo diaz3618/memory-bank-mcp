@@ -1,0 +1,26 @@
+name: Block merge to main
+
+# Prevents this branch from being merged into main.
+# Runs on pull requests targeting main from the HTTP+Postgres+Redis feature branch.
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  block-merge:
+    runs-on: ubuntu-latest
+    if: contains(github.head_ref, 'http-postgres-redis-supabase')
+    steps:
+      - name: Block merge from HTTP+Postgres+Redis branch
+        run: |
+          echo "❌ ERROR: The branch '${{ github.head_ref }}' must NOT be merged into main."
+          echo ""
+          echo "This is the HTTP+Postgres+Redis deployment variant."
+          echo "It is an independent track — not the npm/mainline release."
+          echo ""
+          echo "To deploy this variant, use Docker:"
+          echo "  docker compose up -d"
+          echo ""
+          echo "See docs/deployment/http-postgres-redis-supabase.md for details."
+          exit 1

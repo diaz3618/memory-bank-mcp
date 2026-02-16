@@ -56,7 +56,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.http
-    image: ${DOCKER_IMAGE:-diaz3618/memory-bank-mcp}:${DOCKER_TAG:-1.8.0}
+    image: ${DOCKER_IMAGE:-diaz3618/memory-bank-mcp}:${DOCKER_TAG:-1.8.0-http-pg-redis}
     container_name: mbmcp-server
     restart: unless-stopped
     depends_on:

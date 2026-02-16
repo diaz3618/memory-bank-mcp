@@ -1,7 +1,7 @@
 {
   "name": "@diazstg/memory-bank-mcp",
   "version": "1.8.0",
-  "description": "MCP Server for managing Memory Bank with remote server support",
+  "description": "MCP Server for managing Memory Bank — HTTP+Postgres+Redis variant (branch-only, not for npm publish)",
   "type": "module",
   "main": "build/index.js",
   "bin": {
@@ -17,12 +17,12 @@
     "test": "bun test && bun test src/__tests__/server/apiKeyAuth.test.ts src/__tests__/server/httpTransportServer.test.ts src/__tests__/server/kgContextTools.test.ts src/__tests__/server/rateLimiter.test.ts src/__tests__/server/redisResilience.test.ts src/__tests__/server/thinkingTools.test.ts src/__tests__/server/transportSecurity.test.ts src/__tests__/storage/databaseManagerRls.test.ts src/__tests__/storage/postgresFileSystem.test.ts src/__tests__/storage/rlsIsolation.test.ts",
     "test:all": "bun test && bun test $(find src/__tests__ -path '*/server/*.test.ts' -o -path '*/storage/*.test.ts' | sort | tr '\\n' ' ')",
     "test:coverage": "bun test --coverage",
-    "prepublishOnly": "bun run build",
+    "prepublishOnly": "echo '❌ ERROR: This branch (feature/http-postgres-redis-supabase) must NOT be published to npm. Use Docker instead.' && exit 1",
     "release": "standard-version",
     "release:minor": "standard-version --release-as minor",
     "release:major": "standard-version --release-as major",
     "release:patch": "standard-version --release-as patch",
-    "release:push": "git push --follow-tags origin main"
+    "release:push": "echo '❌ ERROR: Do not push releases from this branch to main.' && exit 1"
   },
   "keywords": [
     "mcp",
@@ -42,17 +42,15 @@
   },
   "homepage": "https://github.com/diaz3618/memory-bank-mcp#readme",
   "publishConfig": {
-    "access": "public"
+    "access": "restricted"
   },
+  "private": true,
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.26.0",
-    "@types/js-yaml": "4.0.9",
-    "@types/node": "^20.4.5",
     "express": "^5.2.1",
     "fs-extra": "^11.1.1",
     "ioredis": "^5.9.3",
     "js-yaml": "4.1.1",
-    "path": "^0.12.7",
     "pg": "^8.18.0",
     "qs": "6.14.2"
   },
@@ -60,6 +58,8 @@
     "@types/bun": "^1.2.4",
     "@types/express": "^5.0.6",
     "@types/fs-extra": "^11.0.1",
+    "@types/js-yaml": "4.0.9",
+    "@types/node": "^20.4.5",
     "@types/pg": "^8.16.0",
     "standard-version": "^9.5.0",
     "ts-node": "10.9.2",

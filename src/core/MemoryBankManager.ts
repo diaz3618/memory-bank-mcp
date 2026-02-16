@@ -14,7 +14,6 @@ import {
   MemoryBankFiles,
   ModeConfig,
   ProductContext,
-  RemoteConfig,
   ActiveContext,
   Decision,
   ProgressItem,
@@ -107,13 +106,13 @@ export class MemoryBankManager {
   private userId: string | null = null;
   private folderName: string = 'memory-bank';
   private fileSystem: FileSystemInterface | null = null;
-  private isRemote: boolean = false;
-  private remoteConfig: {
-    sshKeyPath: string;
-    remoteUser: string;
-    remoteHost: string;
-    remotePath: string;
-  } | null = null;
+
+  // TODO [integration-gap]: In HTTP+Postgres mode, this class still creates a
+  // LocalFileSystem. A future task must add a constructor branch (or factory) that
+  // wires in FileSystemFactory.createPostgresFileSystem() when a DatabaseManager
+  // is available, so Memory Bank documents are stored in Postgres instead of disk.
+  // See also: MemoryBankServer.createMcpServerInstance() which receives
+  // userId/projectId but currently ignores them.
   
   // Language is always set to English
   private language: string = 'en';
@@ -130,19 +129,12 @@ export class MemoryBankManager {
    * @param userId Optional GitHub profile URL for tracking changes
    * @param folderName Optional folder name for the Memory Bank (default: 'memory-bank')
    * @param debugMode Optional flag to enable debug mode
-   * @param remoteConfig Optional remote server configuration
    */
   constructor(
     projectPath?: string, 
     userId?: string, 
     folderName?: string, 
-    debugMode?: boolean,
-    remoteConfig?: {
-      sshKeyPath: string;
-      remoteUser: string;
-      remoteHost: string;
-      remotePath: string;
-    }
+    debugMode?: boolean
   ) {
     // Ensure language is always English - this is a hard requirement
     // All Memory Bank content will be in English regardless of system locale or user settings
@@ -168,25 +160,9 @@ export class MemoryBankManager {
     
     logger.info('MemoryBankManager', `Memory Bank language is set to English (${this.language}) - all content will be in English`);
     
-    // Set up remote configuration if provided
-    if (remoteConfig) {
-      this.isRemote = true;
-      this.remoteConfig = remoteConfig;
-      logger.info('MemoryBankManager', `Using remote server: ${remoteConfig.remoteUser}@${remoteConfig.remoteHost}:${remoteConfig.remotePath}`);
-      
-      // Create remote file system
-      this.fileSystem = FileSystemFactory.createRemoteFileSystem(
-        remoteConfig.remotePath,
-        remoteConfig.sshKeyPath,
-        remoteConfig.remoteUser,
-        remoteConfig.remoteHost
-      );
-    } else {
-      // Create local file system
-      this.isRemote = false;
-      if (this.projectPath) {
-        this.fileSystem = FileSystemFactory.createLocalFileSystem(this.projectPath);
-      }
+    // Create local file system
+    if (this.projectPath) {
+      this.fileSystem = FileSystemFactory.createLocalFileSystem(this.projectPath);
     }
     
     // Check for an existing memory-bank directory in the project path
@@ -241,15 +217,7 @@ export class MemoryBankManager {
    */
   async findMemoryBankDir(startDir: string, customPath?: string): Promise<string | null> {
     if (!this.fileSystem) {
-      if (this.isRemote && this.remoteConfig) {
-        // Create remote file system if not already created
-        this.fileSystem = FileSystemFactory.createRemoteFileSystem(
-          this.remoteConfig.remotePath,
-          this.remoteConfig.sshKeyPath,
-          this.remoteConfig.remoteUser,
-          this.remoteConfig.remoteHost
-        );
-      } else if (startDir) {
+      if (startDir) {
         // Create local file system if not already created
         this.fileSystem = FileSystemFactory.createLocalFileSystem(startDir);
       } else {
@@ -258,7 +226,7 @@ export class MemoryBankManager {
     }
     
     // Combine the start directory with the folder name
-    const mbDir = this.isRemote ? this.folderName : path.join(startDir, this.folderName);
+    const mbDir = path.join(startDir, this.folderName);
     
     // Check if the directory exists and is a valid Memory Bank
     if (await this.fileSystem.fileExists(mbDir) && await this.fileSystem.isDirectory(mbDir)) {
@@ -284,15 +252,7 @@ export class MemoryBankManager {
   async isMemoryBank(dirPath: string): Promise<boolean> {
     try {
       if (!this.fileSystem) {
-        if (this.isRemote && this.remoteConfig) {
-          // Create remote file system if not already created
-          this.fileSystem = FileSystemFactory.createRemoteFileSystem(
-            this.remoteConfig.remotePath,
-            this.remoteConfig.sshKeyPath,
-            this.remoteConfig.remoteUser,
-            this.remoteConfig.remoteHost
-          );
-        } else if (this.projectPath) {
+        if (this.projectPath) {
           // Create local file system if not already created
           this.fileSystem = FileSystemFactory.createLocalFileSystem(this.projectPath);
         } else {
@@ -326,7 +286,7 @@ export class MemoryBankManager {
       
       // Verify each file individually
       for (const coreFile of coreFiles) {
-        const filePath = this.isRemote ? `${dirPath}/${coreFile}` : path.join(dirPath, coreFile);
+        const filePath = path.join(dirPath, coreFile);
         if (await this.fileSystem.fileExists(filePath)) {
           return true;
         }
@@ -393,13 +353,7 @@ export class MemoryBankManager {
       let relativeMemoryBankPath: string;
       let absoluteMemoryBankPath: string;
       
-      if (this.isRemote) {
-        // For remote: use folderName directly under remote path (don't need to append to remotePath)
-        memoryBankPath = this.folderName;
-        relativeMemoryBankPath = this.folderName;
-        absoluteMemoryBankPath = this.folderName;
-        logger.debug('MemoryBankManager', `Initializing remote Memory Bank with path: ${memoryBankPath}`);
-      } else if (this.customPath) {
+      if (this.customPath) {
         // Use the custom path if set (for local filesystem)
         absoluteMemoryBankPath = path.join(this.customPath, this.folderName);
         relativeMemoryBankPath = this.folderName; // LocalFileSystem expects relative to baseDir
@@ -425,16 +379,8 @@ export class MemoryBankManager {
         
         // For local file system, (re)create if the base directory changed
         // This ensures we use the correct path when customPath is set
-        if (!this.isRemote && baseDir) {
+        if (baseDir) {
           this.fileSystem = FileSystemFactory.createLocalFileSystem(baseDir);
-        } else if (this.isRemote && this.remoteConfig && !this.fileSystem) {
-          // Create remote file system if not already created
-          this.fileSystem = FileSystemFactory.createRemoteFileSystem(
-            this.remoteConfig.remotePath,
-            this.remoteConfig.sshKeyPath,
-            this.remoteConfig.remoteUser,
-            this.remoteConfig.remoteHost
-          );
         }
         
         if (!this.fileSystem) {
@@ -452,9 +398,7 @@ export class MemoryBankManager {
         
         // Create core template files if they don't exist
         for (const template of coreTemplates) {
-          const filePath = this.isRemote 
-            ? `${relativeMemoryBankPath}/${template.name}` 
-            : path.join(relativeMemoryBankPath, template.name);
+          const filePath = path.join(relativeMemoryBankPath, template.name);
           
           const fileExists = await this.fileSystem.fileExists(filePath);
           if (!fileExists) {
@@ -524,9 +468,7 @@ export class MemoryBankManager {
       }
       const safeFilename = validation.sanitized;
       
-      const filePath = this.isRemote 
-        ? path.posix.join(this.getFileSystemPath()!, safeFilename) 
-        : path.join(this.getFileSystemPath()!, safeFilename);
+      const filePath = path.join(this.getFileSystemPath()!, safeFilename);
       return await this.fileSystem.readFile(filePath);
     } catch (error) {
       logger.error('MemoryBankManager', `Failed to read file ${filename}: ${error}`);
@@ -564,9 +506,7 @@ export class MemoryBankManager {
       }
       const safeFilename = validation.sanitized;
       
-      const filePath = this.isRemote 
-        ? path.posix.join(this.getFileSystemPath()!, safeFilename) 
-        : path.join(this.getFileSystemPath()!, safeFilename);
+      const filePath = path.join(this.getFileSystemPath()!, safeFilename);
       await this.fileSystem.writeFile(filePath, content);
     } catch (error) {
       logger.error('MemoryBankManager', `Failed to write to file ${filename}: ${error}`);
@@ -763,13 +703,12 @@ export class MemoryBankManager {
 
   /**
    * Gets the path to use for FileSystem operations
-   * For non-remote: returns relative path
-   * For remote: returns the full path
+   * Returns relative path for filesystem operations, or memoryBankDir as fallback
    * 
    * @returns Path for filesystem operations
    */
   private getFileSystemPath(): string | null {
-    if (this.isRemote || !this.relativeMemoryBankPath) {
+    if (!this.relativeMemoryBankPath) {
       return this.memoryBankDir;
     }
     return this.relativeMemoryBankPath;
@@ -786,11 +725,9 @@ export class MemoryBankManager {
   /**
    * Creates a backup of the Memory Bank
    * 
-   * Supports both local and remote file systems through FileSystemInterface.
-   * For remote: creates backup on the remote server.
-   * For local: creates backup locally.
+   * Creates a backup of all files in the Memory Bank directory.
    * 
-   * @param backupDir - Directory where the backup will be stored (relative for remote, absolute for local)
+   * @param backupDir - Directory where the backup will be stored
    * @returns Path to the backup directory
    * @throws Error if the Memory Bank directory is not set or backup fails
    */
@@ -807,16 +744,9 @@ export class MemoryBankManager {
       const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
       let backupPath: string;
       
-      if (this.isRemote) {
-        // For remote: create backup relative to the memory bank path
-        const parentDir = backupDir || '..';
-        backupPath = path.posix.join(this.relativeMemoryBankPath || '', parentDir, `memory-bank-backup-${timestamp}`);
-      } else {
-        // For local: use absolute paths
-        backupPath = backupDir 
-          ? path.join(backupDir, `memory-bank-backup-${timestamp}`)
-          : path.join(path.dirname(this.memoryBankDir), `memory-bank-backup-${timestamp}`);
-      }
+      backupPath = backupDir 
+        ? path.join(backupDir, `memory-bank-backup-${timestamp}`)
+        : path.join(path.dirname(this.memoryBankDir), `memory-bank-backup-${timestamp}`);
       
       // Create backup directory using FileSystemInterface
       await this.fileSystem.ensureDirectory(backupPath);
@@ -825,9 +755,7 @@ export class MemoryBankManager {
       const files = await this.listFiles();
       for (const file of files) {
         const content = await this.readFile(file);
-        const backupFilePath = this.isRemote 
-          ? path.posix.join(backupPath, file)
-          : path.join(backupPath, file);
+        const backupFilePath = path.join(backupPath, file);
         await this.fileSystem.writeFile(backupFilePath, content);
       }
       
@@ -879,9 +807,7 @@ export class MemoryBankManager {
     }
     
     try {
-      const parentDir = this.isRemote 
-        ? path.posix.dirname(this.relativeMemoryBankPath || '')
-        : path.dirname(this.memoryBankDir);
+      const parentDir = path.dirname(this.memoryBankDir);
       
       // List directories in parent
       const entries = await this.fileSystem.listFiles(parentDir);
@@ -894,9 +820,7 @@ export class MemoryBankManager {
         const name = entry.endsWith('/') ? entry.slice(0, -1) : entry;
         const match = name.match(backupPattern);
         if (match) {
-          const backupPath = this.isRemote 
-            ? path.posix.join(parentDir, name)
-            : path.join(parentDir, name);
+          const backupPath = path.join(parentDir, name);
           
           // Verify it's a directory
           try {
@@ -955,13 +879,9 @@ export class MemoryBankManager {
     
     try {
       // Construct backup path
-      const parentDir = this.isRemote 
-        ? path.posix.dirname(this.relativeMemoryBankPath || '')
-        : path.dirname(this.memoryBankDir);
+      const parentDir = path.dirname(this.memoryBankDir);
       
-      const backupPath = this.isRemote 
-        ? path.posix.join(parentDir, backupId)
-        : path.join(parentDir, backupId);
+      const backupPath = path.join(parentDir, backupId);
       
       // Verify backup exists and is a directory
       const backupExists = await this.fileSystem.fileExists(backupPath);
@@ -994,9 +914,7 @@ export class MemoryBankManager {
       for (const entry of backupEntries) {
         // Skip directories (only restore files)
         const entryName = entry.endsWith('/') ? entry.slice(0, -1) : entry;
-        const sourcePath = this.isRemote 
-          ? path.posix.join(backupPath, entryName)
-          : path.join(backupPath, entryName);
+        const sourcePath = path.join(backupPath, entryName);
         
         try {
           const isFile = !(await this.fileSystem.isDirectory(sourcePath));

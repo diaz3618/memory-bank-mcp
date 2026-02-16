@@ -1,10 +1,18 @@
 # Memory Bank MCP
 
-[![NPM Version](https://img.shields.io/npm/v/@diazstg/memory-bank-mcp.svg)](https://www.npmjs.com/package/@diazstg/memory-bank-mcp)
-[![Semgrep CE scan](https://github.com/diaz3618/memory-bank-mcp/actions/workflows/semgrep.yml/badge.svg)](https://github.com/diaz3618/memory-bank-mcp/actions/workflows/semgrep.yml)
+> **⚠️ Branch variant: HTTP + Postgres + Redis**
+>
+> You are on the `feature/http-postgres-redis-supabase` branch.
+> This is an **independent deployment track** — it is NOT the npm/mainline release.
+>
+> - **Do not** `npm publish` from this branch
+> - **Do not** merge this branch into `main`
+> - Deploy via **Docker**: `docker compose up -d`
+> - See [docs/deployment/http-postgres-redis-supabase.md](docs/deployment/http-postgres-redis-supabase.md) for setup
+
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-An MCP server that gives AI assistants persistent memory across sessions. It stores project context, decisions, and progress in structured markdown files — locally or on a remote server via SSH.
+An MCP server that gives AI assistants persistent memory across sessions. This variant uses HTTP Streamable transport with Postgres/Supabase storage and Redis caching — deployed via Docker.
 
 ## Quick Start
 

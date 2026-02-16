@@ -271,6 +271,10 @@ function getStoreRegistry(): StoreRegistry {
  *
  * If `storeId` is provided, resolves the store path from the registry
  * instead of using the active store from `memoryBankManager`.
+ *
+ * TODO [integration-gap]: This always creates a LocalFileSystem-backed GraphStore.
+ * In HTTP+Postgres mode, it should use PostgresGraphStore instead.
+ * See also: KGContextTools.ts has a duplicate getGraphStore() with the same gap.
  */
 async function getGraphStore(
   memoryBankManager: MemoryBankManager,

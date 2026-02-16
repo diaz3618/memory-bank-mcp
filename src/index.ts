@@ -4,7 +4,6 @@
 
 import { MemoryBankServer } from './server/MemoryBankServer.js';
 import { getLogManager, logger, LogLevel } from './utils/LogManager.js';
-import { FileSystemFactory } from './utils/storage/FileSystemFactory.js';
 import { DatabaseManager } from './utils/DatabaseManager.js';
 import { RedisManager } from './utils/RedisManager.js';
 import { readFileSync } from 'fs';
@@ -100,13 +99,6 @@ HTTP Transport Options (also configurable via environment variables):
   MCP_PORT             HTTP listen port (default: 3100)
   MCP_HOST             HTTP bind address (default: 0.0.0.0)
   DB_PROVIDER          Database provider: postgres or supabase (default: postgres)
-
-Remote Server Options:
-  --remote, -r         Enable remote server mode
-  --ssh-key, -k <path> Path to SSH private key (default: ~/.ssh/your_ssh_key)
-  --remote-user <user> Remote server username
-  --remote-host <host> Remote server hostname or IP address
-  --remote-path, -rp <path> Remote server base path for memory bank storage
   
 Examples:
   memory-bank-mcp
@@ -117,7 +109,6 @@ Examples:
   memory-bank-mcp --username "John Doe"
   memory-bank-mcp --username "https://github.com/username"
   memory-bank-mcp --debug
-  memory-bank-mcp --remote --remote-user remoteuser --remote-host example.host.com --remote-path /home/remoteuser/memory-bank
   
 For more information, visit: https://github.com/diaz3618/memory-bank-mcp
 `);
@@ -139,11 +130,6 @@ function processArgs() {
     userId?: string;
     debug?: boolean;
     transport?: 'stdio' | 'http';
-    remote?: boolean;
-    sshKey?: string;
-    remoteUser?: string;
-    remoteHost?: string;
-    remotePath?: string;
   } = {};
 
   for (let i = 0; i < args.length; i++) {
@@ -166,16 +152,15 @@ function processArgs() {
         process?.exit?.(1);
       }
       options.transport = val;
-    } else if (arg === '--remote' || arg === '-r') {
-      options.remote = true;
-    } else if (arg === '--ssh-key' || arg === '-k') {
-      options.sshKey = args[++i];
-    } else if (arg === '--remote-user') {
-      options.remoteUser = args[++i];
-    } else if (arg === '--remote-host') {
-      options.remoteHost = args[++i];
-    } else if (arg === '--remote-path' || arg === '-rp') {
-      options.remotePath = args[++i];
+    } else if (arg === '--remote' || arg === '-r'
+      || arg === '--ssh-key' || arg === '-k'
+      || arg === '--remote-user'
+      || arg === '--remote-host'
+      || arg === '--remote-path' || arg === '-rp') {
+      // Remote/SSH options are no longer supported — skip silently
+      if (arg !== '--remote' && arg !== '-r') {
+        i++; // skip the argument value
+      }
     } else if (arg === '--help' || arg === '-h') {
       showHelp();
     }
@@ -219,79 +204,6 @@ async function main() {
       logger.debug('Main', `Using username: ${options.userId}`);
     }
     
-    // Handle remote server configuration
-    let remoteConfig = undefined;
-    if (options.remote) {
-      logger.info('Main', 'Remote server mode enabled');
-      
-      // Use default SSH key path if not specified
-      const homeDir = process?.env?.HOME || '';
-      let sshKey = options.sshKey || `${homeDir}/.ssh/your_ssh_key`;
-      
-      // Expand tilde (~) in SSH key path
-      if (sshKey.startsWith('~')) {
-        sshKey = sshKey.replace(/^~/, homeDir);
-      }
-      
-      logger.debug('Main', `Using SSH key (resolved path): ${sshKey}`);
-      
-      // Validate required remote options
-      if (!options.remoteUser) {
-        logger.error('Main', 'Remote user is required. Use --remote-user to specify.');
-        process?.exit?.(1);
-        return;
-      }
-      
-      if (!options.remoteHost) {
-        logger.error('Main', 'Remote host is required. Use --remote-host to specify.');
-        process?.exit?.(1);
-        return;
-      }
-      
-      if (!options.remotePath) {
-        logger.error('Main', 'Remote path is required. Use --remote-path or -rp to specify.');
-        process?.exit?.(1);
-        return;
-      }
-      
-      remoteConfig = {
-        sshKeyPath: sshKey,
-        remoteUser: options.remoteUser,
-        remoteHost: options.remoteHost,
-        remotePath: options.remotePath
-      };
-      
-      logger.info('Main', `Remote server: ${options.remoteUser}@${options.remoteHost}:${options.remotePath}`);
-      
-      // Test connection to remote server
-      logger.info('Main', 'Testing connection to remote server...');
-      
-      // Extract the values and validate they are strings to make TypeScript happy
-      const remoteUser = options.remoteUser;
-      const remoteHost = options.remoteHost;
-      
-      if (typeof remoteUser !== 'string' || typeof remoteHost !== 'string') {
-        logger.error('Main', 'Remote user and host must be strings.');
-        process?.exit?.(1);
-        return;
-      }
-      
-      const connected = await FileSystemFactory.testRemoteConnection(
-        sshKey,
-        remoteUser,
-        remoteHost,
-        options.remotePath
-      );
-      
-      if (!connected) {
-        logger.error('Main', 'Failed to connect to remote server. Please check your SSH key and remote server configuration.');
-        process?.exit?.(1);
-        return;
-      }
-      
-      logger.info('Main', 'Successfully connected to remote server');
-    }
-
     // Determine transport mode from CLI or env
     const transportMode = options.transport
       ?? (process.env.MCP_TRANSPORT as 'stdio' | 'http' | undefined)
@@ -359,7 +271,6 @@ async function main() {
       options.userId, 
       options.folderName, 
       options.debug,
-      remoteConfig,
       httpConfig,
       db,
       redis,

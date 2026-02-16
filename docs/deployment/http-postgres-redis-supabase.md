@@ -1,4 +1,4 @@
-# Option C — HTTP + Postgres + Redis Deployment Guide
+# HTTP + Postgres + Redis Deployment Guide
 
 > Memory Bank MCP server with HTTP Streamable transport, PostgreSQL storage,
 > Redis caching, and Traefik reverse proxy.
@@ -23,8 +23,8 @@
 
 ```
                 ┌───────────────────────────────────────────┐
-                │              Client (IDE / CLI)           │
-                │   X-API-Key: mbmcp_live_abc123...         │
+                │             Client (IDE / CLI)            │
+                │       X-API-Key: mbmcp_live_abc123...     │
                 └──────────────────┬────────────────────────┘
                                    │ HTTPS / HTTP
                                    ▼
@@ -39,8 +39,8 @@
                 ┌──────────────────────────────────────────┐
                 │     Memory Bank MCP Server (Express)     │
                 │  • Streamable HTTP transport (SSE)       │
-                │  • API key auth middleware                │
-                │  • Redis-backed rate limiter              │
+                │  • API key auth middleware               │
+                │  • Redis-backed rate limiter             │
                 │  • Security headers                      │
                 │  • trust proxy = 1                       │
                 ├──────────┬───────────────────────────────┤
@@ -233,7 +233,7 @@ does not propagate `SET LOCAL` used for RLS context.
 | `TRAEFIK_DASHBOARD_PORT` | `8080` | Traefik dashboard port |
 | `ACME_EMAIL` | — | Let's Encrypt email (uncomment in compose) |
 | `DOCKER_IMAGE` | `diaz3618/memory-bank-mcp` | Docker image name |
-| `DOCKER_TAG` | `1.8.0` | Docker image tag |
+| `DOCKER_TAG` | `1.8.0-http-pg-redis` | Docker image tag (branch-distinct, not mainline) |
 | `NODE_ENV` | `production` | Node environment |
 
 ---
@@ -420,7 +420,7 @@ COMMIT;
 
 ```bash
 docker compose --profile local-db down -v
-docker rmi diaz3618/memory-bank-mcp:1.8.0
+docker rmi diaz3618/memory-bank-mcp:1.8.0-http-pg-redis
 ```
 
 ### Option 4: Git revert
