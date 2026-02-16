@@ -16,6 +16,10 @@ async function main() {
     platform: 'node',
     outfile: 'dist/extension.js',
     external: ['vscode'],
+    // Prefer ESM entry points — jsonc-parser's UMD build uses dynamic
+    // require("./impl/format") calls that esbuild wraps but can't resolve
+    // at runtime, causing "Cannot find module './impl/format'" on activation.
+    mainFields: ['module', 'main'],
     logLevel: 'info',
   });
 

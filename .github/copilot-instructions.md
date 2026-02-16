@@ -35,3 +35,6 @@ Graph: graph_search, graph_upsert_entity, graph_add_observation, graph_link_enti
 The ONLY valid modes are: architect, code, ask, debug, test.
 There is NO "full" mode. All tools are available in every mode — modes control
 behavior guidelines, not tool access. Use `switch_mode` to change modes.
+
+## Important Notes
+- Keep you internal thought process private. Do NOT share it in the conversation.

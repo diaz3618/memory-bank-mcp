@@ -206,13 +206,13 @@ async function runTests() {
     console.log('\nTest 1: Verify server connection');
     const statusResponse = await axios.get(`${SERVER_URL}/status`);
     assert.strictEqual(statusResponse.data.status, 'ok');
-    console.log('✅ Server connection verified');
+    console.log('[x] Server connection verified');
     
     // Test 2: Read Memory Bank files
     console.log('\nTest 2: Read Memory Bank files');
     const readResponse = await axios.get(`${SERVER_URL}/memory-bank/file/activeContext.md`);
     assert.strictEqual(readResponse.data.status, 'success');
-    console.log('✅ Memory Bank file read successfully');
+    console.log('[x] Memory Bank file read successfully');
     
     // Test 3: Write to Memory Bank
     console.log('\nTest 3: Write to Memory Bank');
@@ -221,14 +221,14 @@ async function runTests() {
       description: 'Testing Memory Bank MCP integration with AI assistants'
     });
     assert.strictEqual(writeResponse.data.status, 'success');
-    console.log('✅ Memory Bank updated successfully');
+    console.log('[x] Memory Bank updated successfully');
     
     // Test 4: List Memory Bank files
     console.log('\nTest 4: List Memory Bank files');
     const listResponse = await axios.get(`${SERVER_URL}/memory-bank/files`);
     assert.strictEqual(listResponse.data.status, 'success');
     assert(Array.isArray(listResponse.data.files));
-    console.log('✅ Memory Bank files listed successfully');
+    console.log('[x] Memory Bank files listed successfully');
     
     // Test 5: Basic chat with Memory Bank context
     console.log('\nTest 5: Basic chat with Memory Bank context');
@@ -246,7 +246,7 @@ async function runTests() {
       useMemoryBank: true
     });
     assert.strictEqual(basicChatResponse.data.status, 'success');
-    console.log('✅ Basic chat with Memory Bank context successful');
+    console.log('[x] Basic chat with Memory Bank context successful');
     
     // Test 6: Mode-specific chat
     console.log('\nTest 6: Mode-specific chat');
@@ -265,7 +265,7 @@ async function runTests() {
       useMemoryBank: true
     });
     assert.strictEqual(modeChatResponse.data.status, 'success');
-    console.log('✅ Mode-specific chat successful');
+    console.log('[x] Mode-specific chat successful');
     
     // Test 7: Memory Bank updates from chat
     console.log('\nTest 7: Memory Bank updates from chat');
@@ -285,7 +285,7 @@ async function runTests() {
       allowMemoryBankUpdates: true
     });
     assert.strictEqual(updateChatResponse.data.status, 'success');
-    console.log('✅ Memory Bank updates from chat successful');
+    console.log('[x] Memory Bank updates from chat successful');
     
     console.log('\nAll tests passed! Memory Bank MCP integration is working correctly.');
   } catch (error) {
@@ -346,7 +346,7 @@ async function testModeSwitching() {
         useMemoryBank: true
       });
       
-      console.log(`✅ ${mode} mode response:`, response.data.response.substring(0, 100) + '...');
+      console.log(`[x] ${mode} mode response:`, response.data.response.substring(0, 100) + '...');
     } catch (error) {
       console.error(`❌ ${mode} mode test failed:`, error.message);
     }
@@ -375,12 +375,12 @@ async function testFileOperations() {
       filename: 'test-file.md',
       content: '# Test File\n\nThis is a test file created during integration testing.'
     });
-    console.log('✅ Write response:', writeResponse.data);
+    console.log('[x] Write response:', writeResponse.data);
     
     // Test reading the file
     console.log('\nTesting reading the file...');
     const readResponse = await axios.get(`${SERVER_URL}/memory-bank/file/test-file.md`);
-    console.log('✅ Read response:', readResponse.data);
+    console.log('[x] Read response:', readResponse.data);
     
     // Test updating the file
     console.log('\nTesting updating the file...');
@@ -388,17 +388,17 @@ async function testFileOperations() {
       filename: 'test-file.md',
       content: '# Updated Test File\n\nThis file was updated during integration testing.'
     });
-    console.log('✅ Update response:', updateResponse.data);
+    console.log('[x] Update response:', updateResponse.data);
     
     // Test reading the updated file
     console.log('\nTesting reading the updated file...');
     const readUpdatedResponse = await axios.get(`${SERVER_URL}/memory-bank/file/test-file.md`);
-    console.log('✅ Read updated response:', readUpdatedResponse.data);
+    console.log('[x] Read updated response:', readUpdatedResponse.data);
     
     // Test deleting the file
     console.log('\nTesting deleting the file...');
     const deleteResponse = await axios.delete(`${SERVER_URL}/memory-bank/file/test-file.md`);
-    console.log('✅ Delete response:', deleteResponse.data);
+    console.log('[x] Delete response:', deleteResponse.data);
   } catch (error) {
     console.error('❌ Test failed:', error.message);
     if (error.response) {
@@ -441,12 +441,12 @@ async function testDecisionLogging() {
         'Need to handle token expiration and refresh'
       ]
     });
-    console.log('✅ Log decision response:', logResponse.data);
+    console.log('[x] Log decision response:', logResponse.data);
     
     // Test reading the decision log
     console.log('\nTesting reading the decision log...');
     const readResponse = await axios.get(`${SERVER_URL}/memory-bank/file/decisionLog.md`);
-    console.log('✅ Decision log content:', readResponse.data.content.substring(0, 200) + '...');
+    console.log('[x] Decision log content:', readResponse.data.content.substring(0, 200) + '...');
   } catch (error) {
     console.error('❌ Test failed:', error.message);
     if (error.response) {
@@ -480,7 +480,7 @@ async function testClaudeIntegration() {
     console.log('\nFetching context from Memory Bank...');
     const contextResponse = await axios.get(`${MEMORY_BANK_URL}/memory-bank/file/activeContext.md`);
     const context = contextResponse.data.content;
-    console.log('✅ Context fetched successfully');
+    console.log('[x] Context fetched successfully');
     
     // Send message to Claude with Memory Bank context
     console.log('\nSending message to Claude with Memory Bank context...');
@@ -508,7 +508,7 @@ Please help the user with their request while considering this context.`
       }
     });
     
-    console.log('✅ Claude response:', claudeResponse.data.content[0].text);
+    console.log('[x] Claude response:', claudeResponse.data.content[0].text);
     
     // Update Memory Bank with Claude's response
     console.log('\nUpdating Memory Bank with Claude\'s response...');
@@ -516,7 +516,7 @@ Please help the user with their request while considering this context.`
       action: 'Claude Integration Test',
       description: `Claude provided information about the project status: "${claudeResponse.data.content[0].text.substring(0, 100)}..."`
     });
-    console.log('✅ Memory Bank updated successfully');
+    console.log('[x] Memory Bank updated successfully');
   } catch (error) {
     console.error('❌ Test failed:', error.message);
     if (error.response) {
