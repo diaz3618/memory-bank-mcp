@@ -2,6 +2,27 @@
 
 All notable changes to this project will be documented in this file.
 
+### [1.8.1](https://github.com/diaz3618/memory-bank-mcp/compare/v1.8.0...v1.8.1) (2026-02-17)
+
+
+### Features
+
+* add memory-bank access policy to copilot-instructions + release:ext script ([8df6195](https://github.com/diaz3618/memory-bank-mcp/commit/8df619563e416c6853ee816a615e9a2d71ed15b7))
+* bump extension to v2.1.0 + add HTTP/Postgres/Redis branch to README ([f63eafe](https://github.com/diaz3618/memory-bank-mcp/commit/f63eafe31845073a387abe8ad4bb1176de67bc9c))
+* implement sequential thinking tools + KG-driven targeted context ([ae478d5](https://github.com/diaz3618/memory-bank-mcp/commit/ae478d55523fe453ae6f4e00f22f37e8d16dd9ba))
+* separate extension release workflow + append-safe config writes ([e5d899a](https://github.com/diaz3618/memory-bank-mcp/commit/e5d899a1c9bbc8f1cefb32f46ed74a7bf17dec63))
+
+
+### Bug Fixes
+
+* ensure system-patterns.md is actively used across all surfaces ([3109141](https://github.com/diaz3618/memory-bank-mcp/commit/3109141e1ecc6e6a4d141181cc8b952f917357ac))
+* resolve 6 Dependabot security vulnerabilities ([276a47f](https://github.com/diaz3618/memory-bank-mcp/commit/276a47f6f7cfab1a4903904752f1a321695deac1))
+
+
+### Documentation
+
+* add comprehensive README for VS Code extension ([5d8fa28](https://github.com/diaz3618/memory-bank-mcp/commit/5d8fa2886eb489430f2aa8c0a7ffdcf238cdb471))
+
 ## [1.8.0](https://github.com/diaz3618/memory-bank-mcp/compare/v1.7.0...v1.8.0) (2026-02-14)
 
 
