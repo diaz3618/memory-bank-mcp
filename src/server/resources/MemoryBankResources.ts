@@ -1,4 +1,8 @@
-import { Server } from '@modelcontextprotocol/sdk/server/index.js';
+import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+
+/** Low-level MCP Server type (avoids deprecated Server import) */
+type LowLevelServer = McpServer['server'];
+
 import { ErrorCode, ListResourcesRequestSchema, McpError, ReadResourceRequestSchema } from '@modelcontextprotocol/sdk/types.js';
 import { MemoryBankManager } from '../../core/MemoryBankManager.js';
 import path from 'path';
@@ -9,7 +13,7 @@ import path from 'path';
  * @param memoryBankManager Memory Bank Manager
  */
 export function setupMemoryBankResources(
-  server: Server,
+  server: LowLevelServer,
   memoryBankManager: MemoryBankManager
 ) {
   // Define available resources

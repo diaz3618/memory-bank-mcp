@@ -35,6 +35,7 @@ Execute these scripts **in order** via the SQL Editor or `psql`:
 psql "$SUPABASE_DB_URL" -f supabase/setup/001_schema.sql
 psql "$SUPABASE_DB_URL" -f supabase/setup/002_functions.sql
 psql "$SUPABASE_DB_URL" -f supabase/setup/003_policies.sql
+
 ```
 
 | Order | File | Description |
@@ -57,7 +58,11 @@ SELECT * FROM schema_migrations ORDER BY applied_at;
 SELECT tablename, rowsecurity
 FROM pg_tables
 WHERE schemaname = 'public'
-  AND tablename IN ('documents', 'graph_entities', 'api_keys', 'sessions');
+  AND tablename IN ('users', 'projects', 'memberships', 'documents',
+    'graph_entities', 'graph_observations', 'graph_relations',
+    'api_keys', 'sessions', 'mcp_events');
+
+-- All 10 tables should show rowsecurity = true
 ```
 
 ## Supabase API Keys

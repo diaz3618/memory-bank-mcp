@@ -26,33 +26,57 @@ RETURNS BOOLEAN LANGUAGE sql STABLE SECURITY DEFINER AS $$
   );
 $$;
 
--- FTS search helpers
+-- FTS search helpers (with authorization checks)
 CREATE OR REPLACE FUNCTION app.search_documents(
   p_project_id UUID, p_query TEXT, p_limit INTEGER DEFAULT 20
 )
 RETURNS TABLE (id UUID, path TEXT, content TEXT, rank REAL, updated_at TIMESTAMPTZ)
-LANGUAGE sql STABLE SECURITY DEFINER AS $$
-  SELECT d.id, d.path, d.content,
-    ts_rank(d.fts_vector, websearch_to_tsquery('english', p_query)) AS rank,
-    d.updated_at
-  FROM documents d
-  WHERE d.project_id = p_project_id
-    AND d.fts_vector @@ websearch_to_tsquery('english', p_query)
-  ORDER BY rank DESC LIMIT p_limit;
+LANGUAGE plpgsql STABLE SECURITY DEFINER AS $$
+BEGIN
+  -- Verify the caller has a membership in this project
+  IF NOT EXISTS (
+    SELECT 1 FROM memberships
+    WHERE user_id = (SELECT app.current_user_id())
+      AND project_id = p_project_id
+  ) THEN
+    RAISE EXCEPTION 'unauthorized: no access to project %', p_project_id;
+  END IF;
+
+  RETURN QUERY
+    SELECT d.id, d.path, d.content,
+      ts_rank(d.fts_vector, websearch_to_tsquery('english', p_query)) AS rank,
+      d.updated_at
+    FROM documents d
+    WHERE d.project_id = p_project_id
+      AND d.fts_vector @@ websearch_to_tsquery('english', p_query)
+    ORDER BY rank DESC LIMIT p_limit;
+END;
 $$;
 
 CREATE OR REPLACE FUNCTION app.search_observations(
   p_project_id UUID, p_query TEXT, p_limit INTEGER DEFAULT 50
 )
 RETURNS TABLE (id UUID, entity_id UUID, entity_name TEXT, entity_type TEXT, content TEXT, rank REAL)
-LANGUAGE sql STABLE SECURITY DEFINER AS $$
-  SELECT o.id, o.entity_id, e.name, e.entity_type, o.content,
-    ts_rank(o.fts_vector, websearch_to_tsquery('english', p_query)) AS rank
-  FROM graph_observations o
-  JOIN graph_entities e ON e.id = o.entity_id
-  WHERE o.project_id = p_project_id
-    AND o.fts_vector @@ websearch_to_tsquery('english', p_query)
-  ORDER BY rank DESC LIMIT p_limit;
+LANGUAGE plpgsql STABLE SECURITY DEFINER AS $$
+BEGIN
+  -- Verify the caller has a membership in this project
+  IF NOT EXISTS (
+    SELECT 1 FROM memberships
+    WHERE user_id = (SELECT app.current_user_id())
+      AND project_id = p_project_id
+  ) THEN
+    RAISE EXCEPTION 'unauthorized: no access to project %', p_project_id;
+  END IF;
+
+  RETURN QUERY
+    SELECT o.id, o.entity_id, e.name, e.entity_type, o.content,
+      ts_rank(o.fts_vector, websearch_to_tsquery('english', p_query)) AS rank
+    FROM graph_observations o
+    JOIN graph_entities e ON e.id = o.entity_id
+    WHERE o.project_id = p_project_id
+      AND o.fts_vector @@ websearch_to_tsquery('english', p_query)
+    ORDER BY rank DESC LIMIT p_limit;
+END;
 $$;
 
 -- Cleanup helpers

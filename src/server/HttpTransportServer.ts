@@ -12,8 +12,8 @@
  */
 
 import { randomUUID } from 'crypto';
-import express from 'express';
-import { Server } from '@modelcontextprotocol/sdk/server/index.js';
+import express, { type Request, type Response, type NextFunction } from 'express';
+import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import {
   StreamableHTTPServerTransport,
   type EventStore,
@@ -26,6 +26,7 @@ import type { RedisManager } from '../utils/RedisManager.js';
 import { createApiKeyAuthMiddleware, type AuthenticatedRequest } from './middleware/apiKeyAuth.js';
 import { createRateLimiterMiddleware } from './middleware/rateLimiter.js';
 import { buildOriginConfig, createOriginValidationMiddleware } from './middleware/originValidation.js';
+import { createApiKeyRoutes } from './routes/apiKeyRoutes.js';
 import { LogManager } from '../utils/LogManager.js';
 
 const logger = LogManager.getInstance();
@@ -162,19 +163,19 @@ export class HttpTransportServer {
 
   /**
    * Factory function to create the MCP server. Called once per session.
-   * We take a factory so each session can have its own Server instance
+   * We take a factory so each session can have its own McpServer instance
    * with isolated state (RLS context, etc.).
    */
   private readonly createMcpServer: (
     userId: string,
     projectId: string,
-  ) => Server;
+  ) => McpServer;
 
   constructor(
     config: HttpTransportConfig,
     db: DatabaseManager,
     redis: RedisManager | null,
-    createMcpServer: (userId: string, projectId: string) => Server,
+    createMcpServer: (userId: string, projectId: string) => McpServer,
   ) {
     this.config = config;
     this.db = db;
@@ -194,7 +195,7 @@ export class HttpTransportServer {
     this.app.use(express.json({ limit: '1mb' }));
 
     // Security headers
-    this.app.use((_req, res, next) => {
+    this.app.use((_req: Request, res: Response, next: NextFunction) => {
       res.setHeader('X-Content-Type-Options', 'nosniff');
       res.setHeader('X-Frame-Options', 'DENY');
       res.setHeader('X-XSS-Protection', '0');
@@ -217,7 +218,7 @@ export class HttpTransportServer {
     this.app.use(createOriginValidationMiddleware(originConfig));
 
     // Health check (unauthenticated, but origin-validated)
-    this.app.get('/health', async (_req, res) => {
+    this.app.get('/health', async (_req: Request, res: Response) => {
       const dbHealthy = await this.db.isHealthy();
       const redisHealthy = this.redis ? await this.redis.isHealthy() : true;
       const status = dbHealthy && redisHealthy ? 200 : 503;
@@ -233,7 +234,10 @@ export class HttpTransportServer {
     const authMiddleware = createApiKeyAuthMiddleware(this.db, this.redis);
     const rateLimitMiddleware = createRateLimiterMiddleware(this.redis, this.config.rateLimitOptions);
 
-    this.app.use('/mcp', authMiddleware as any, rateLimitMiddleware as any);
+    this.app.use('/mcp', authMiddleware, rateLimitMiddleware);
+
+    // API key management routes (owner-only CRUD)
+    this.app.use('/api/keys', authMiddleware, rateLimitMiddleware, createApiKeyRoutes(this.db, this.redis));
   }
 
   // ---------------------------------------------------------------------------
@@ -242,9 +246,10 @@ export class HttpTransportServer {
 
   private setupRoutes(): void {
     // POST /mcp — JSON-RPC messages
-    this.app.post('/mcp', async (req: AuthenticatedRequest, res) => {
+    this.app.post('/mcp', async (req: Request, res: Response) => {
       try {
-        const auth = req.auth;
+        const authReq = req as AuthenticatedRequest;
+        const auth = authReq.auth;
         if (!auth) {
           res.status(401).json({ error: 'Not authenticated' });
           return;
@@ -310,7 +315,7 @@ export class HttpTransportServer {
     });
 
     // GET /mcp — SSE stream for server-initiated messages
-    this.app.get('/mcp', async (req: AuthenticatedRequest, res) => {
+    this.app.get('/mcp', async (req: Request, res: Response) => {
       const sessionId = req.headers['mcp-session-id'] as string | undefined;
       if (!sessionId || !this.transports.has(sessionId)) {
         res.status(404).json({ error: 'Session not found' });
@@ -328,7 +333,7 @@ export class HttpTransportServer {
     });
 
     // DELETE /mcp — Close session
-    this.app.delete('/mcp', async (req: AuthenticatedRequest, res) => {
+    this.app.delete('/mcp', async (req: Request, res: Response) => {
       const sessionId = req.headers['mcp-session-id'] as string | undefined;
       if (!sessionId || !this.transports.has(sessionId)) {
         res.status(404).json({ error: 'Session not found' });
@@ -370,7 +375,7 @@ export class HttpTransportServer {
     // Close HTTP server
     if (this.httpServer) {
       await new Promise<void>((resolve, reject) => {
-        this.httpServer!.close((err) => (err ? reject(err) : resolve()));
+        this.httpServer!.close((err?: Error) => (err ? reject(err) : resolve()));
       });
     }
 

@@ -22,6 +22,7 @@ import type {
   RelationInput,
   ObservationId,
   RelationId,
+  ObservationSource,
 } from '../../types/graph.js';
 import { LogManager } from '../../utils/LogManager.js';
 
@@ -194,7 +195,7 @@ export class PostgresGraphStore {
             id: row.id as ObservationId,
             entityId: row.entity_id as EntityId,
             text: row.content,
-            source: row.source as any,
+            source: row.source as ObservationSource | undefined,
             timestamp: row.created_at,
           });
         }
@@ -392,7 +393,7 @@ export class PostgresGraphStore {
         id: row.id as ObservationId,
         entityId: row.entity_id as EntityId,
         text: row.content,
-        source: row.source as any,
+        source: row.source as ObservationSource | undefined,
         timestamp: row.created_at,
       }));
       return { success: true, data: observations };
@@ -496,7 +497,7 @@ export class PostgresGraphStore {
         id: r.id as ObservationId,
         entityId: r.entity_id as EntityId,
         text: r.content,
-        source: r.source as any,
+        source: r.source as ObservationSource | undefined,
         timestamp: r.created_at,
       }));
 

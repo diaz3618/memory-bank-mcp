@@ -250,6 +250,54 @@ Keys use the prefix format `mbmcp_live_<random>` or `mbmcp_test_<random>`.
 - Only the `key_prefix` (first 12 chars) is stored in plaintext for identification
 - The full plaintext key is shown **once** at creation time and never stored
 
+### REST API endpoints
+
+The server exposes key management via authenticated REST routes at `/api/keys`:
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `POST /api/keys` | Create a new API key (owner-only) |
+| `GET /api/keys` | List keys for the authenticated user |
+| `DELETE /api/keys/:id` | Revoke a key (soft-delete, clears Redis cache) |
+
+**Create a key:**
+
+```bash
+curl -X POST http://localhost:3100/api/keys \
+  -H "X-API-Key: mbmcp_live_<existing-key>" \
+  -H "Content-Type: application/json" \
+  -d '{"name": "CI pipeline", "environment": "live", "expiresInDays": 90}'
+```
+
+Response (201):
+```json
+{
+  "id": "uuid",
+  "key": "mbmcp_live_abc123...",
+  "prefix": "mbmcp_live_ab",
+  "name": "CI pipeline",
+  "message": "Store this key securely — it cannot be retrieved again."
+}
+```
+
+**List keys:**
+
+```bash
+curl http://localhost:3100/api/keys \
+  -H "X-API-Key: mbmcp_live_<your-key>"
+
+# Include revoked keys:
+curl "http://localhost:3100/api/keys?includeRevoked=true" \
+  -H "X-API-Key: mbmcp_live_<your-key>"
+```
+
+**Revoke a key:**
+
+```bash
+curl -X DELETE http://localhost:3100/api/keys/<key-id> \
+  -H "X-API-Key: mbmcp_live_<your-key>"
+```
+
 ### Authentication flow
 
 1. Client sends `X-API-Key: mbmcp_live_abc123...`
@@ -261,8 +309,9 @@ Keys use the prefix format `mbmcp_live_<random>` or `mbmcp_test_<random>`.
 
 ### Revocation
 
-Set `revoked_at` on the `api_keys` row. The Redis cache TTL (5 min) means
-revocation takes effect within 5 minutes.
+Revoke via `DELETE /api/keys/:id` or set `revoked_at` directly on the
+`api_keys` row. The Redis cache TTL (5 min) means revocation takes effect
+within 5 minutes. The REST endpoint also immediately invalidates the Redis cache.
 
 ### Rate limits
 
@@ -291,15 +340,19 @@ degrades gracefully (all requests allowed).
 
   ```sql
   BEGIN;
+  SET LOCAL ROLE app_user;
   SET LOCAL app.current_user_id = '<user-uuid>';
   SET LOCAL app.current_project_id = '<project-uuid>';
-  -- query executes here
+  -- query executes here, RLS policies enforced via app_user role
   COMMIT;
   ```
 
+- `SET LOCAL ROLE app_user` ensures the connection drops superuser privileges
+  for the duration of the transaction, enforcing RLS policies
 - `SET LOCAL` scoping ensures isolation per transaction (not connection)
 - RLS policies enforce that users can only access their own projects' data
-- On error, `ROLLBACK` clears the context variables
+- `SECURITY DEFINER` functions (FTS search) include explicit membership checks
+- On error, `ROLLBACK` clears the context variables and resets the role
 
 ### Resilience
 

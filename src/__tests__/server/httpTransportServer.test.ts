@@ -1,6 +1,6 @@
 import { test, expect, describe, beforeEach, mock } from 'bun:test';
 import { HttpTransportServer, type HttpTransportConfig } from '../../server/HttpTransportServer.js';
-import { Server } from '@modelcontextprotocol/sdk/server/index.js';
+import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 
 describe('HttpTransportServer', () => {
   const mockDb = {
@@ -27,7 +27,7 @@ describe('HttpTransportServer', () => {
   };
 
   const createMockServer = () => {
-    return new Server(
+    return new McpServer(
       { name: 'test-server', version: '0.0.0' },
       { capabilities: { tools: {} } },
     );

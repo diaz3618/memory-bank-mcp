@@ -42,7 +42,8 @@ export function createApiKeyAuthMiddleware(
   db: DatabaseManager,
   redis: RedisManager | null,
 ) {
-  return async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
+  return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    const authReq = req as AuthenticatedRequest;
     const apiKey = req.headers['x-api-key'] as string | undefined;
 
     if (!apiKey) {
@@ -63,7 +64,7 @@ export function createApiKeyAuthMiddleware(
       if (redis) {
         const cached = await redis.getApiKey(keyHash);
         if (cached) {
-          req.auth = {
+          authReq.auth = {
             userId: cached.userId,
             projectId: cached.projectId,
             scopes: cached.scopes,
@@ -131,7 +132,7 @@ export function createApiKeyAuthMiddleware(
         logger.warn('ApiKeyAuth', `Failed to update last_used_at: ${err.message}`);
       });
 
-      req.auth = {
+      authReq.auth = {
         userId: authContext.userId,
         projectId: authContext.projectId,
         scopes: authContext.scopes,

@@ -55,7 +55,7 @@ Add to your editor's MCP config (`.vscode/mcp.json`, Cursor, Claude Desktop, etc
 }
 ```
 
-> **Tip**: Generate an API key by inserting one into the `api_keys` table. See the [Deployment Guide](docs/deployment/http-postgres-redis-supabase.md).
+> **Tip**: Manage API keys via `POST /api/keys` (create), `GET /api/keys` (list), `DELETE /api/keys/:id` (revoke). See the [Deployment Guide](docs/deployment/http-postgres-redis-supabase.md#api-key-management).
 
 ### Environment Variables
 

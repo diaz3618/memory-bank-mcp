@@ -2,6 +2,33 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.8.4](https://github.com/diaz3618/memory-bank-mcp/compare/v1.8.0...v1.8.4) (2026-02-17)
+
+### Security
+
+- **RLS enforcement:** Added `SET LOCAL ROLE app_user` in `DatabaseManager.queryWithContext()` and `transactionWithContext()` to enforce RLS policies per transaction
+- **SECURITY DEFINER functions:** `search_documents()` and `search_observations()` now verify project membership before executing (plpgsql with explicit auth checks)
+- **RLS coverage:** Enabled RLS on `users` and `mcp_events` tables with proper policies
+- **API keys DELETE policy:** Added missing `api_keys_delete` policy for app_user and authenticated roles
+- **Supabase compatibility:** Duplicated all RLS policies for the `authenticated` role
+
+### Features
+
+- **API key REST endpoints:** `POST /api/keys`, `GET /api/keys`, `DELETE /api/keys/:id` — create, list, and revoke API keys via authenticated REST routes
+- **API key routes wired:** Routes mounted at `/api/keys` with auth + rate limiting middleware
+
+### Improvements
+
+- **MCP SDK migration:** Migrated from deprecated `Server` to `McpServer` class (`@modelcontextprotocol/sdk` v1.26.0)
+- **Type safety:** Eliminated all `as any` casts in production source code
+- **Migration parity:** `migrations/002_functions.sql` and `migrations/003_policies.sql` now match `supabase/setup/` source files
+
+### Chores
+
+- Moved `004_rls_fixes.sql` to `docs/internal/supabase/` (fixes incorporated into source SQL files)
+- Added `.agents/skills/` with domain-specific expertise files
+- Added `.github/copilot-instructions.md` for Memory Bank workflow
+
 ## [1.8.0](https://github.com/diaz3618/memory-bank-mcp/compare/v1.7.0...v1.8.0) (2026-02-14)
 
 

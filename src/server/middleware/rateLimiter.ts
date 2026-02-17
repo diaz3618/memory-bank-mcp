@@ -5,7 +5,7 @@
  * Falls back to permissive mode if Redis is unavailable.
  */
 
-import type { Response, NextFunction } from 'express';
+import type { Request, Response, NextFunction } from 'express';
 import type { AuthenticatedRequest } from './apiKeyAuth.js';
 import type { RedisManager } from '../../utils/RedisManager.js';
 import { REDIS_TTL } from '../../utils/RedisManager.js';
@@ -39,19 +39,21 @@ export function createRateLimiterMiddleware(
     ipMaxRequests = 120,
   } = options;
 
-  return async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
+  return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     // Skip if no Redis (graceful degradation)
     if (!redis) {
       next();
       return;
     }
 
+    const authReq = req as AuthenticatedRequest;
+
     try {
       // Per-user rate limit
-      if (req.auth?.userId) {
-        const maxReqs = req.auth.rateLimit || defaultMaxRequests;
+      if (authReq.auth?.userId) {
+        const maxReqs = authReq.auth.rateLimit || defaultMaxRequests;
         const result = await redis.checkRateLimit(
-          `user:${req.auth.userId}`,
+          `user:${authReq.auth.userId}`,
           maxReqs,
           windowSeconds,
         );

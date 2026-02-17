@@ -3,7 +3,7 @@
  *   - GHSA-8r9q-7v3j-jr4g (ReDoS in UriTemplate, fixed in 1.25.2)
  *   - GHSA-345p-7cg4-v4c7 (cross-client data leak, fixed in 1.26.0)
  */
-import { Server } from '@modelcontextprotocol/sdk/server/index.js';
+import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { MemoryBankManager } from '../core/MemoryBankManager.js';
 import { ProgressTracker } from '../core/ProgressTracker.js';
@@ -59,7 +59,7 @@ const PKG_VERSION: string = getVersion();
  * Supports both stdio (default) and HTTP Streamable transport modes.
  */
 export class MemoryBankServer {
-  private server: Server;
+  private server: McpServer;
   private memoryBankManager: MemoryBankManager;
   private isRunning: boolean = false;
   private httpTransportServer: HttpTransportServer | null = null;
@@ -110,7 +110,7 @@ export class MemoryBankServer {
       ...modeTools,
     ];
     
-    this.server = new Server(
+    this.server = new McpServer(
       {
         name: '@diazstg/memory-bank-mcp',
         version: PKG_VERSION,
@@ -123,13 +123,13 @@ export class MemoryBankServer {
       }
     );
 
-    // Set up tool and resource handlers
+    // Set up tool and resource handlers (low-level API via .server)
     setupToolHandlers(
-      this.server, 
+      this.server.server, 
       this.memoryBankManager, 
       () => this.memoryBankManager.getProgressTracker()
     );
-    setupResourceHandlers(this.server, this.memoryBankManager);
+    setupResourceHandlers(this.server.server, this.memoryBankManager);
 
     // Initialize the mode manager
     this.memoryBankManager.initializeModeManager(initialMode).catch(error => {
@@ -158,7 +158,7 @@ export class MemoryBankServer {
     }
 
     // Error handling
-    this.server.onerror = (error) => {
+    this.server.server.onerror = (error) => {
       console.error('[MCP Error]', error);
       // Log additional details if available
       if (error instanceof Error && error.stack) {
@@ -202,7 +202,7 @@ export class MemoryBankServer {
     initialMode?: string,
     _userId?: string,
     _projectId?: string,
-  ): Server {
+  ): McpServer {
     const allTools = [
       ...coreTools,
       ...progressTools,
@@ -211,7 +211,7 @@ export class MemoryBankServer {
       ...modeTools,
     ];
 
-    const mcpServer = new Server(
+    const mcpServer = new McpServer(
       {
         name: '@diazstg/memory-bank-mcp',
         version: PKG_VERSION,
@@ -226,13 +226,13 @@ export class MemoryBankServer {
 
     // Re-use the same MemoryBankManager (it handles multi-project via path)
     setupToolHandlers(
-      mcpServer,
+      mcpServer.server,
       this.memoryBankManager,
       () => this.memoryBankManager.getProgressTracker(),
     );
-    setupResourceHandlers(mcpServer, this.memoryBankManager);
+    setupResourceHandlers(mcpServer.server, this.memoryBankManager);
 
-    mcpServer.onerror = (error) => {
+    mcpServer.server.onerror = (error) => {
       console.error('[MCP Session Error]', error);
     };
 

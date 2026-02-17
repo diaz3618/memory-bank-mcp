@@ -83,6 +83,9 @@ export class DatabaseManager {
                 set_config('app.current_project_id', $2, true)`,
         [userId, projectId],
       );
+      // Switch to app_user role so RLS policies are enforced.
+      // The postgres/superuser role has BYPASSRLS, silently skipping all policies.
+      await client.query('SET LOCAL ROLE app_user');
       const result = await client.query<T>(text, params);
       await client.query('COMMIT');
       return result;
@@ -110,6 +113,8 @@ export class DatabaseManager {
                 set_config('app.current_project_id', $2, true)`,
         [userId, projectId],
       );
+      // Switch to app_user role so RLS policies are enforced.
+      await client.query('SET LOCAL ROLE app_user');
       const result = await fn(client as PoolClient);
       await client.query('COMMIT');
       return result;

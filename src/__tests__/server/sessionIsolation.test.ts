@@ -8,7 +8,7 @@
 
 import { test, expect, describe, mock } from 'bun:test';
 import { HttpTransportServer, type HttpTransportConfig } from '../../server/HttpTransportServer.js';
-import { Server } from '@modelcontextprotocol/sdk/server/index.js';
+import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 
 describe('Multi-Client Session Isolation', () => {
   const mockDb = {
@@ -27,7 +27,7 @@ describe('Multi-Client Session Isolation', () => {
     const calls: Array<{ userId: string; projectId: string }> = [];
     const factory = (userId: string, projectId: string) => {
       calls.push({ userId, projectId });
-      return new Server({ name: 'test', version: '0.0.1' }, { capabilities: {} });
+      return new McpServer({ name: 'test', version: '0.0.1' }, { capabilities: {} });
     };
 
     const server = new HttpTransportServer(config, mockDb, null, factory);
@@ -36,10 +36,10 @@ describe('Multi-Client Session Isolation', () => {
     expect(calls).toHaveLength(0);
   });
 
-  test('each session gets a distinct Server instance from factory', () => {
-    const servers: Server[] = [];
+  test('each session gets a distinct McpServer instance from factory', () => {
+    const servers: McpServer[] = [];
     const factory = () => {
-      const s = new Server({ name: 'test', version: '0.0.1' }, { capabilities: {} });
+      const s = new McpServer({ name: 'test', version: '0.0.1' }, { capabilities: {} });
       servers.push(s);
       return s;
     };
@@ -56,7 +56,7 @@ describe('Multi-Client Session Isolation', () => {
   test('transport map starts empty and isolates sessions', () => {
     const server = new HttpTransportServer(
       config, mockDb, null,
-      () => new Server({ name: 'test', version: '0.0.1' }, { capabilities: {} }),
+      () => new McpServer({ name: 'test', version: '0.0.1' }, { capabilities: {} }),
     );
 
     // activeSessions reflects the transport map size
@@ -65,7 +65,7 @@ describe('Multi-Client Session Isolation', () => {
     // Express app is per-server, not shared across instances
     const server2 = new HttpTransportServer(
       config, mockDb, null,
-      () => new Server({ name: 'test', version: '0.0.1' }, { capabilities: {} }),
+      () => new McpServer({ name: 'test', version: '0.0.1' }, { capabilities: {} }),
     );
     expect(server.expressApp).not.toBe(server2.expressApp);
   });
@@ -93,7 +93,7 @@ describe('Multi-Client Session Isolation', () => {
       config, mockDb, mockRedis,
       (userId, projectId) => {
         // Each session factory call gets distinct auth context
-        return new Server({ name: `server-${userId}`, version: '0.0.1' }, { capabilities: {} });
+        return new McpServer({ name: `server-${userId}`, version: '0.0.1' }, { capabilities: {} });
       },
     );
 

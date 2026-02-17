@@ -1,4 +1,8 @@
-import { Server } from '@modelcontextprotocol/sdk/server/index.js';
+import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+
+/** Low-level MCP Server type (avoids deprecated Server import) */
+type LowLevelServer = McpServer['server'];
+
 import { CallToolRequestSchema, ErrorCode, ListToolsRequestSchema, McpError } from '@modelcontextprotocol/sdk/types.js';
 import { MemoryBankManager } from '../../core/MemoryBankManager.js';
 import { ProgressTracker } from '../../core/ProgressTracker.js';
@@ -21,7 +25,7 @@ import { kgContextTools, handleGetTargetedContext, handleGraphAddDocPointer } fr
  * @param getProgressTracker Function to get the ProgressTracker
  */
 export function setupToolHandlers(
-  server: Server,
+  server: LowLevelServer,
   memoryBankManager: MemoryBankManager,
   getProgressTracker: () => ProgressTracker | null
 ) {

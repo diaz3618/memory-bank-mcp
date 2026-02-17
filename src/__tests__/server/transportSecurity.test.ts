@@ -9,7 +9,7 @@
 
 import { test, expect, describe } from 'bun:test';
 import { HttpTransportServer } from '../../server/HttpTransportServer.js';
-import { Server } from '@modelcontextprotocol/sdk/server/index.js';
+import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 
 describe('Transport Security — HttpTransportServer', () => {
   const mockDb = {
@@ -23,7 +23,7 @@ describe('Transport Security — HttpTransportServer', () => {
       { port: 0, host: '127.0.0.1' },
       mockDb,
       null,
-      () => new Server({ name: 'test', version: '0.0.1' }, { capabilities: {} }),
+      () => new McpServer({ name: 'test', version: '0.0.1' }, { capabilities: {} }),
     );
   }
 
