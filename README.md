@@ -132,6 +132,10 @@ server.run().catch(console.error);
 | Reference | [MCP protocol](docs/reference/mcp-protocol-specification.md), [rules format](docs/reference/rule-formats.md), [file naming](docs/reference/file-naming-convention.md) |
 | Development | [Architecture](ARCHITECTURE.md), [testing](docs/development/testing-guide.md), [logging](docs/development/logging-system.md) |
 
+## Alternative: HTTP + PostgreSQL + Redis
+
+The [`feature/http-postgres-redis-supabase`](https://github.com/diaz3618/memory-bank-mcp/tree/feature/http-postgres-redis-supabase) branch provides a cloud-native variant that replaces stdio/local-filesystem with HTTP Streamable MCP transport, PostgreSQL (via Supabase) for storage, and Redis for caching. It is deployed exclusively via Docker and is **not** published to npm. See the branch README for setup instructions.
+
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md).

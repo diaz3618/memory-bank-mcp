@@ -2,7 +2,7 @@
   "name": "memory-bank-mcp",
   "displayName": "Memory Bank MCP",
   "description": "Memory Bank management for AI-assisted development via MCP (Model Context Protocol)",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "publisher": "diaz3618",
   "license": "MIT",
   "repository": {
