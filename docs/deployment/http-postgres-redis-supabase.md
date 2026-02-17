@@ -173,21 +173,21 @@ Execute these **in order** via the Supabase SQL Editor or `psql`:
 
 ```bash
 psql "$SUPABASE_DB_URL" -f supabase/setup/001_schema.sql
-psql "$SUPABASE_DB_URL" -f supabase/setup/002_policies.sql
-psql "$SUPABASE_DB_URL" -f supabase/setup/003_functions.sql
+psql "$SUPABASE_DB_URL" -f supabase/setup/002_functions.sql
+psql "$SUPABASE_DB_URL" -f supabase/setup/003_policies.sql
 ```
 
 | Order | File | Description |
 |-------|------|-------------|
 | 1 | `001_schema.sql` | Tables, indexes, custom types |
-| 2 | `002_policies.sql` | RLS policies for all tables |
-| 3 | `003_functions.sql` | Helper functions, triggers, FTS search |
+| 2 | `002_functions.sql` | Helper functions, triggers, FTS search |
+| 3 | `003_policies.sql` | RLS policies for all tables |
 
 ### Verify
 
 ```sql
 SELECT * FROM schema_migrations ORDER BY applied_at;
--- Should return 3 rows: 001_schema, 002_policies, 003_functions
+-- Should return 3 rows: 001_schema, 002_functions, 003_policies
 
 SELECT tablename, rowsecurity
 FROM pg_tables

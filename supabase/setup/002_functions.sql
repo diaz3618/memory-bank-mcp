@@ -1,7 +1,7 @@
--- Supabase Setup: 003 Functions
+-- Supabase Setup: 002 Functions
 -- 
--- Identical to migrations/003_functions.sql.
--- Run order: 001_schema.sql → 002_policies.sql → 003_functions.sql
+-- Identical to migrations/002_functions.sql.
+-- Run order: 001_schema.sql → 002_functions.sql → 003_policies.sql
 
 BEGIN;
 
@@ -87,6 +87,6 @@ CREATE TRIGGER trg_projects_updated_at BEFORE UPDATE ON projects FOR EACH ROW EX
 CREATE TRIGGER trg_documents_updated_at BEFORE UPDATE ON documents FOR EACH ROW EXECUTE FUNCTION app.set_updated_at();
 CREATE TRIGGER trg_entities_updated_at BEFORE UPDATE ON graph_entities FOR EACH ROW EXECUTE FUNCTION app.set_updated_at();
 
-INSERT INTO schema_migrations (version) VALUES ('003_functions');
+INSERT INTO schema_migrations (version) VALUES ('002_functions');
 
 COMMIT;

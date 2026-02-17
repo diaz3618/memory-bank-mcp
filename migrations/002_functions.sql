@@ -1,4 +1,4 @@
--- Migration 003: Helper functions for RLS context
+-- Migration 002: Helper functions for RLS context
 -- Compatible with: PostgreSQL 16+ and Supabase
 -- Run order: 001 → 002 → 003
 --
@@ -188,6 +188,6 @@ CREATE TRIGGER trg_entities_updated_at
 -- Track migration
 -- =============================================================================
 
-INSERT INTO schema_migrations (version) VALUES ('003_functions');
+INSERT INTO schema_migrations (version) VALUES ('002_functions');
 
 COMMIT;

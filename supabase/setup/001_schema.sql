@@ -3,7 +3,7 @@
 -- This is identical to migrations/001_schema.sql but intended to be run
 -- manually against a Supabase project via the SQL Editor or psql.
 -- 
--- Run order: 001_schema.sql → 002_policies.sql → 003_functions.sql
+-- Run order: 001_schema.sql → 002_functions.sql → 003_policies.sql
 -- See README.md in this directory for full instructions.
 
 BEGIN;

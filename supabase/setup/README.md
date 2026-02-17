@@ -33,15 +33,15 @@ Execute these scripts **in order** via the SQL Editor or `psql`:
 
 # Option B: psql
 psql "$SUPABASE_DB_URL" -f supabase/setup/001_schema.sql
-psql "$SUPABASE_DB_URL" -f supabase/setup/002_policies.sql
-psql "$SUPABASE_DB_URL" -f supabase/setup/003_functions.sql
+psql "$SUPABASE_DB_URL" -f supabase/setup/002_functions.sql
+psql "$SUPABASE_DB_URL" -f supabase/setup/003_policies.sql
 ```
 
 | Order | File | Description |
 |-------|------|-------------|
 | 1 | `001_schema.sql` | Tables, indexes, types |
-| 2 | `002_policies.sql` | RLS policies for all tables |
-| 3 | `003_functions.sql` | Helper functions, triggers, FTS search |
+| 2 | `002_functions.sql` | Helper functions, triggers, FTS search |
+| 3 | `003_policies.sql` | RLS policies for all tables |
 
 ## Verification
 
@@ -51,7 +51,7 @@ After running all three scripts, verify the setup:
 -- Check all migrations applied
 SELECT * FROM schema_migrations ORDER BY applied_at;
 
--- Should return 3 rows: 001_schema, 002_policies, 003_functions
+-- Should return 3 rows: 001_schema, 002_functions, 003_policies
 
 -- Check RLS is enabled
 SELECT tablename, rowsecurity

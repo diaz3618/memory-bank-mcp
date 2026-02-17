@@ -1,9 +1,9 @@
--- Supabase Setup: 002 Policies
+-- Supabase Setup: 003 Policies
 -- 
 -- For Supabase: uses 'authenticated' role instead of 'app_user'.
 -- Adjust the TO clause if needed for your Supabase project.
 -- 
--- Run order: 001_schema.sql → 002_policies.sql → 003_functions.sql
+-- Run order: 001_schema.sql → 002_functions.sql → 003_policies.sql
 
 BEGIN;
 
@@ -126,6 +126,6 @@ CREATE POLICY projects_insert ON projects FOR INSERT TO app_user
 CREATE POLICY projects_delete ON projects FOR DELETE TO app_user
   USING (owner_id = (SELECT app.current_user_id()));
 
-INSERT INTO schema_migrations (version) VALUES ('002_policies');
+INSERT INTO schema_migrations (version) VALUES ('003_policies');
 
 COMMIT;

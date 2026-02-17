@@ -23,9 +23,13 @@ services:
   # Traefik — Reverse proxy with Web UI
   # ---------------------------------------------------------------------------
   traefik:
-    image: traefik:v3.3
+    image: traefik:latest
     container_name: mbmcp-traefik
     restart: unless-stopped
+    group_add:
+      - ${DOCKER_GID:-962}   # host docker group — run: getent group docker | cut -d: -f3
+    environment:
+      - DOCKER_API_VERSION=1.44  # Docker 28+ dropped API <1.44
     command:
       - --api.dashboard=true
       - --api.insecure=true          # ⚠ Dev only — use BasicAuth middleware or disable in production
@@ -44,8 +48,10 @@ services:
       - "${TRAEFIK_HTTPS_PORT:-443}:443"
       - "${TRAEFIK_DASHBOARD_PORT:-8080}:8080"
     volumes:
-      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro,z
       - traefik-certs:/letsencrypt
+    security_opt:
+      - label:disable        # Allow Docker socket access on SELinux (Fedora/RHEL)
     networks:
       - mbmcp-net
 
@@ -82,7 +88,7 @@ services:
     networks:
       - mbmcp-net
     healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3100/health"]
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://127.0.0.1:3100/health"]
       interval: 30s
       timeout: 5s
       retries: 3

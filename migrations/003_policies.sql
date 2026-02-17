@@ -1,4 +1,4 @@
--- Migration 002: Row Level Security policies
+-- Migration 003: Row Level Security policies
 -- Compatible with: PostgreSQL 16+ and Supabase
 -- Run order: 001 → 002 → 003
 --
@@ -293,6 +293,6 @@ CREATE POLICY projects_delete ON projects
 -- Track migration
 -- =============================================================================
 
-INSERT INTO schema_migrations (version) VALUES ('002_policies');
+INSERT INTO schema_migrations (version) VALUES ('003_policies');
 
 COMMIT;
