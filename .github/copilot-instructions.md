@@ -40,3 +40,26 @@ behavior guidelines, not tool access. Use `switch_mode` to change modes.
 
 ## Important Notes
 - Keep you internal thought process private. Do NOT share it in the conversation.
+
+## ⚠️ CRITICAL: Never Access memory-bank/ Directly
+
+AI agents/LLMs must **NEVER** directly edit files in the `memory-bank/` folder
+using file editing tools (`replace_string_in_file`, `create_file`, `write_file`)
+or terminal commands (`echo`, `sed`, `cat >`).
+
+**All interactions with Memory Bank files MUST go through the MCP server tools:**
+
+| Operation | Tool(s) |
+|---|---|
+| Read files | `read_memory_bank_file`, `batch_read_files`, `get_context_bundle` |
+| Write files | `write_memory_bank_file`, `batch_write_files` |
+| Update context | `update_active_context`, `update_tasks` |
+| Track progress | `track_progress`, `add_progress_entry` |
+| Log decisions | `log_decision` |
+| Session notes | `add_session_note` |
+| Knowledge graph | `graph_upsert_entity`, `graph_add_observation`, `graph_link_entities`, etc. |
+| Search | `search_memory_bank`, `graph_search` |
+
+**Why?** The MCP server guarantees file integrity via ETag concurrency control,
+atomic writes, content validation, and event logging. Direct edits bypass all of
+these and can corrupt the Memory Bank state.

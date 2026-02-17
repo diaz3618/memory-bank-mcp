@@ -14,6 +14,7 @@
     "dev": "bun --watch src/index.ts",
     "build:start": "bun run build && bun run start",
     "build:ext": "cd vscode-extension && npm run compile && npm run package",
+    "release:ext": "bash -c 'set -e; BRANCH=$(git rev-parse --abbrev-ref HEAD); if [ \"$BRANCH\" != \"main\" ]; then echo \"ERROR: release:ext must be run from main (current: $BRANCH)\"; exit 1; fi; cd vscode-extension; VER=$(node -p \"require(\\\"./package.json\\\").version\"); echo \"Building vscode-extension v$VER...\"; npm run compile; npx @vscode/vsce package --no-dependencies; echo \"Tagging vscode-v$VER...\"; cd ..; git tag \"vscode-v$VER\"; git push origin \"vscode-v$VER\"; echo \"Done — workflow will create GitHub Release with .vsix\"'",
     "test": "bun test",
     "test:coverage": "bun test --coverage",
     "prepublishOnly": "bun run build",
