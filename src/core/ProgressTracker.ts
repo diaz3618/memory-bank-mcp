@@ -165,20 +165,18 @@ export class ProgressTracker {
    * @private
    */
   private formatUserId(userId: string): string {
-    // Check if the userId is a GitHub URL
-    if (userId.includes('github.com/')) {
-      try {
-        // Extract the username from the URL
-        const url = new URL(userId);
+    try {
+      // Only accept valid URLs whose hostname is exactly github.com
+      const url = new URL(userId);
+      if (url.hostname === 'github.com') {
         const pathParts = url.pathname.split('/').filter(Boolean);
         if (pathParts.length > 0) {
           const username = pathParts[pathParts.length - 1];
           return `[@${username}](${userId})`;
         }
-      } catch (error) {
-        // If URL parsing fails, just use the original userId
-        console.error(`Error parsing GitHub URL: ${error}`);
       }
+    } catch {
+      // Not a valid URL — fall through to return as-is
     }
     
     // Return the original userId if it's not a valid GitHub URL
