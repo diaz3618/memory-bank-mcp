@@ -54,7 +54,7 @@ function displayBanner(): void {
 │                                █ ▀ █ █▄▄ █▀▀                                 │
 │                                                                              │
 │                                                                              │
-│                          Memory Bank MCP ${version.padEnd(5)}                                 │
+│                             Memory Bank MCP ${version.padEnd(5)}                            │
 │                   HTTP + Postgres + Redis — Docker variant                   │
 │                                                                              │
 │                                 GitHub Repo:                                 │
@@ -62,7 +62,7 @@ function displayBanner(): void {
 │                                                                              │
 ╰──────────────────────────────────────────────────────────────────────────────╯
 ╭──────────────────────────────────────────────────────────────────────────────╮
-│                          Memory Bank MCP ${version.padEnd(5)}                                 │
+│                             Memory Bank MCP ${version.padEnd(5)}                            │
 │        MCP Server for managing persistent context across AI sessions         │
 ╰──────────────────────────────────────────────────────────────────────────────╯
 `;

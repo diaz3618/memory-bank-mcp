@@ -5,12 +5,13 @@
 > You are on the `feature/http-postgres-redis-supabase` branch.
 > This is an **independent deployment track** — it is NOT the npm/mainline release.
 >
-> - **Do not** `npm publish` from this branch
-> - **Do not** merge this branch into `main`
 > - Deploy via **Docker**: `docker compose up -d`
 > - See [docs/deployment/http-postgres-redis-supabase.md](docs/deployment/http-postgres-redis-supabase.md) for setup
 
+<br></br>
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Docker — Docker Hub](https://github.com/diaz3618/memory-bank-mcp/actions/workflows/docker-hub.yml/badge.svg?branch=feature%2Fhttp-postgres-redis-supabase)](https://github.com/diaz3618/memory-bank-mcp/actions/workflows/docker-hub.yml)
+[![Docker — GHCR](https://github.com/diaz3618/memory-bank-mcp/actions/workflows/docker-ghcr.yml/badge.svg?branch=feature%2Fhttp-postgres-redis-supabase)](https://github.com/diaz3618/memory-bank-mcp/actions/workflows/docker-ghcr.yml)
 
 An MCP server that gives AI assistants persistent memory across sessions. This variant uses HTTP Streamable transport with Postgres/Supabase storage and Redis caching — deployed via Docker.
 
@@ -18,7 +19,7 @@ An MCP server that gives AI assistants persistent memory across sessions. This v
 
 ```bash
 # Pull from Docker Hub
-docker pull diaz3618/memory-bank-mcp:1.8.0-http-pg-redis
+docker pull diaz3618/memory-bank-mcp:latest-http
 
 # Deploy the full stack (server + Postgres + Redis + Traefik)
 cp .env.example .env   # Edit with your secrets
@@ -27,9 +28,11 @@ docker compose --profile local-db up -d
 
 ### Docker Images
 
+<small>**Note: Both are private for now until it's tested**</small>
+
 | Registry | Image |
 |----------|-------|
-| Docker Hub | `diaz3618/memory-bank-mcp:1.8.0-http-pg-redis` |
+| Docker Hub | `diaz3618/memory-bank-mcp:latest-http` |
 | GHCR | `ghcr.io/diaz3618/memory-bank-mcp:latest-http` |
 
 See [Deployment Guide](docs/deployment/http-postgres-redis-supabase.md) for Supabase and advanced configuration.
