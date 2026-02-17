@@ -117,9 +117,7 @@ export class MemoryBankServer {
       },
       {
         capabilities: {
-          tools: {
-            tools: allTools,
-          },
+          tools: {},
           resources: {},
         },
       }
@@ -220,7 +218,7 @@ export class MemoryBankServer {
       },
       {
         capabilities: {
-          tools: { tools: allTools },
+          tools: {},
           resources: {},
         },
       },

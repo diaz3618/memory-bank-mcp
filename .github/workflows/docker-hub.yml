@@ -1,10 +1,16 @@
 # =============================================================================
 # Docker Hub — Build + Push Docker Image (Private)
 # =============================================================================
+# Branch: feature/http-postgres-redis-supabase
+#
 # Triggers:
-#   - Push to main (tags + latest)
-#   - Push tag v*
+#   - Push to feature/http-postgres-redis-supabase
+#   - Push tag v*-http-pg-redis
 #   - Manual dispatch
+#
+# Tag convention (branch-separation-policy):
+#   - <version>-http-pg-redis  (e.g., 1.8.0-http-pg-redis)
+#   - latest-http              (rolling latest for HTTP variant)
 #
 # Required secrets:
 #   - DOCKERHUB_USERNAME
@@ -15,8 +21,8 @@ name: Docker — Docker Hub
 
 on:
   push:
-    branches: [main]
-    tags: ['v*']
+    branches: [feature/http-postgres-redis-supabase]
+    tags: ['v*-http-pg-redis']
   workflow_dispatch:
 
 env:
@@ -45,9 +51,11 @@ jobs:
         with:
           images: ${{ env.IMAGE_NAME }}
           tags: |
-            type=ref,event=branch
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
+            # On tag push: v1.8.0-http-pg-redis → 1.8.0-http-pg-redis
+            type=match,pattern=v(.*),group=1,enable=${{ startsWith(github.ref, 'refs/tags/') }}
+            # On branch push: latest-http
+            type=raw,value=latest-http,enable=${{ github.ref == 'refs/heads/feature/http-postgres-redis-supabase' }}
+            # Git SHA for traceability
             type=sha,prefix=
 
       - name: Build and push — HTTP transport
@@ -57,19 +65,6 @@ jobs:
           file: Dockerfile.http
           push: true
           tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-          platforms: linux/amd64,linux/arm64
-
-      - name: Build and push — stdio (original)
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: Dockerfile
-          push: true
-          tags: |
-            ${{ env.IMAGE_NAME }}:stdio-latest
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max

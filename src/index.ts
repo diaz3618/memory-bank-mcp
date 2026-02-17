@@ -54,15 +54,15 @@ function displayBanner(): void {
 │                                █ ▀ █ █▄▄ █▀▀                                 │
 │                                                                              │
 │                                                                              │
-│                            Memory Bank MCP ${version.padEnd(5)}                             │
-│            https://www.npmjs.com/package/@diazstg/memory-bank-mcp            │
+│                          Memory Bank MCP ${version.padEnd(5)}                                 │
+│                   HTTP + Postgres + Redis — Docker variant                   │
 │                                                                              │
 │                                 GitHub Repo:                                 │
 │                 https://github.com/diaz3618/memory-bank-mcp                  │
 │                                                                              │
 ╰──────────────────────────────────────────────────────────────────────────────╯
 ╭──────────────────────────────────────────────────────────────────────────────╮
-│                            Memory Bank MCP ${version.padEnd(5)}                             │
+│                          Memory Bank MCP ${version.padEnd(5)}                                 │
 │        MCP Server for managing persistent context across AI sessions         │
 ╰──────────────────────────────────────────────────────────────────────────────╯
 `;
@@ -82,7 +82,7 @@ function showHelp(): never {
   process.stderr.write(`
 Memory Bank MCP - MCP Server for managing Memory Bank
 
-Usage: memory-bank-mcp [options]
+Usage: memory-bank-mcp [options]  (or via Docker: docker compose up)
 
 Options:
   --mode, -m <mode>    Set execution mode (code, ask, architect, etc.)
@@ -101,14 +101,10 @@ HTTP Transport Options (also configurable via environment variables):
   DB_PROVIDER          Database provider: postgres or supabase (default: postgres)
   
 Examples:
-  memory-bank-mcp
-  memory-bank-mcp --mode code
-  memory-bank-mcp --transport http
-  memory-bank-mcp --path /path/to/project
-  memory-bank-mcp --folder custom-memory-bank
-  memory-bank-mcp --username "John Doe"
-  memory-bank-mcp --username "https://github.com/username"
-  memory-bank-mcp --debug
+  memory-bank-mcp                          # stdio mode (local)
+  memory-bank-mcp --transport http          # HTTP mode (requires DATABASE_URL)
+  memory-bank-mcp --mode code --debug       # stdio with debug logging
+  docker compose up -d                      # full HTTP+Postgres+Redis stack
   
 For more information, visit: https://github.com/diaz3618/memory-bank-mcp
 `);
@@ -152,15 +148,6 @@ function processArgs() {
         process?.exit?.(1);
       }
       options.transport = val;
-    } else if (arg === '--remote' || arg === '-r'
-      || arg === '--ssh-key' || arg === '-k'
-      || arg === '--remote-user'
-      || arg === '--remote-host'
-      || arg === '--remote-path' || arg === '-rp') {
-      // Remote/SSH options are no longer supported — skip silently
-      if (arg !== '--remote' && arg !== '-r') {
-        i++; // skip the argument value
-      }
     } else if (arg === '--help' || arg === '-h') {
       showHelp();
     }

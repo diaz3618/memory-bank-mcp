@@ -1,11 +1,13 @@
 name: Publish to NPM
 
 # Trigger on version tag pushes OR manual dispatch
+# BLOCKED for http-pg-redis tags — this branch is Docker-only
 on:
   push:
     tags:
       - 'v*'
       - '!vscode-v*'
+      - '!v*-http-pg-redis'  # Never publish Docker variant to npm
   workflow_dispatch:
     inputs:
       tag:

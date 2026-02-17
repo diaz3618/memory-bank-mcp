@@ -15,7 +15,7 @@ const logger = LogManager.getInstance();
 
 const { Pool } = pg;
 type PoolType = InstanceType<typeof pg.Pool>;
-type PoolClient = ReturnType<PoolType['connect']> extends Promise<infer T> ? T : never;
+type PoolClient = pg.PoolClient;
 
 export interface DatabaseConfig {
   /** 'postgres' for local, 'supabase' for managed */
@@ -161,7 +161,7 @@ export class DatabaseManager {
       }
 
       logger.info('DatabaseManager', `Applying migration: ${file}`);
-      const sql = readFileSync(join(migrationsDir, file), 'utf-8');
+      const sql = readFileSync(join(migrationsDir, file), 'utf-8') as string;
 
       try {
         await this.query(sql);

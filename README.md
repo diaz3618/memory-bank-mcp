@@ -17,18 +17,22 @@ An MCP server that gives AI assistants persistent memory across sessions. This v
 ## Quick Start
 
 ```bash
-# Run directly (no install needed)
-npx @diazstg/memory-bank-mcp
+# Pull from Docker Hub
+docker pull diaz3618/memory-bank-mcp:1.8.0-http-pg-redis
 
-# Or install globally
-npm install -g @diazstg/memory-bank-mcp
+# Deploy the full stack (server + Postgres + Redis + Traefik)
+cp .env.example .env   # Edit with your secrets
+docker compose --profile local-db up -d
 ```
 
-### Via Smithery (Claude Desktop)
+### Docker Images
 
-```bash
-npx -y @smithery/cli install @diazstg/memory-bank-mcp --client claude
-```
+| Registry | Image |
+|----------|-------|
+| Docker Hub | `diaz3618/memory-bank-mcp:1.8.0-http-pg-redis` |
+| GHCR | `ghcr.io/diaz3618/memory-bank-mcp:latest-http` |
+
+See [Deployment Guide](docs/deployment/http-postgres-redis-supabase.md) for Supabase and advanced configuration.
 
 ## Configuration
 
@@ -38,43 +42,29 @@ Add to your editor's MCP config (`.vscode/mcp.json`, Cursor, Claude Desktop, etc
 {
   "servers": {
     "memory-bank-mcp": {
-      "command": "npx",
-      "args": ["-y",
-          "@diazstg/memory-bank-mcp",
-          "--username",
-          "your-github-username"
-      ],
-      "type": "stdio"
+      "type": "http",
+      "url": "http://localhost:3100/mcp",
+      "headers": {
+        "Authorization": "Bearer <your-api-key>"
+      }
     }
   }
 }
 ```
 
-> **Tip**: Including `--username` is highly recommended for proper progress tracking.
+> **Tip**: Generate an API key by inserting one into the `api_keys` table. See the [Deployment Guide](docs/deployment/http-postgres-redis-supabase.md).
 
-### Common Options
+### Environment Variables
 
-```bash
-npx @diazstg/memory-bank-mcp --username "github-user"   # Username for progress tracking (recommended)
-npx @diazstg/memory-bank-mcp --mode code                # Set operational mode
-npx @diazstg/memory-bank-mcp --path /my/project         # Custom project path
-npx @diazstg/memory-bank-mcp --folder my-memory         # Custom folder name (default: memory-bank)
-npx @diazstg/memory-bank-mcp --help                     # All options
-```
-
-### Remote Server (SSH)
-
-Store your Memory Bank on a remote server:
+Key environment variables (see `.env.example` for the full list):
 
 ```bash
-npx @diazstg/memory-bank-mcp --remote \
-  --remote-user username \
-  --remote-host example.com \
-  --remote-path /home/username/memory-bank \
-  --ssh-key ~/.ssh/id_ed25519
+MCP_TRANSPORT=http              # Transport mode (http)
+MCP_PORT=3100                   # Server port
+DB_PROVIDER=postgres            # postgres or supabase
+DATABASE_URL=postgres://...     # Connection string
+REDIS_URL=redis://redis:6379    # Redis connection
 ```
-
-See [Remote Server Guide](docs/guides/remote-server.md) and [SSH Keys Guide](docs/guides/ssh-keys-guide.md).
 
 ## How It Works
 
@@ -121,14 +111,16 @@ The AI assistant reads these files at the start of each session and updates them
 
 Modes can be set via CLI (`--mode code`), tool call (`switch_mode`), or `.mcprules-[mode]` files. See [Usage Modes](docs/guides/usage-modes.md).
 
-## As a Library
+## Architecture
 
-```typescript
-import { MemoryBankServer } from "@diazstg/memory-bank-mcp";
+This variant deploys as a Docker Compose stack:
 
-const server = new MemoryBankServer();
-server.run().catch(console.error);
-```
+| Service | Image | Purpose |
+|---------|-------|---------|
+| `mbmcp-server` | `diaz3618/memory-bank-mcp:1.8.0-http-pg-redis` | MCP server (HTTP Streamable) |
+| `postgres` | `postgres:17-alpine` | Primary storage with RLS |
+| `redis` | `redis:7-alpine` | Session/API key cache |
+| `traefik` | `traefik:v3.3` | Reverse proxy + TLS |
 
 ## Documentation
 

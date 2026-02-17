@@ -13,6 +13,8 @@
  */
 
 import Redis from 'ioredis';
+
+type RedisClient = InstanceType<typeof Redis.default>;
 import { LogManager } from './LogManager.js';
 
 const logger = LogManager.getInstance();
@@ -50,12 +52,12 @@ export const REDIS_TTL = {
 } as const;
 
 export class RedisManager {
-  private client: Redis;
+  private client: RedisClient;
   private readonly prefix: string;
 
   constructor(config: RedisConfig) {
     this.prefix = config.keyPrefix ?? 'mbmcp:prod';
-    this.client = new Redis(config.url, {
+    this.client = new Redis.default(config.url, {
       maxRetriesPerRequest: config.maxRetries ?? 10,
       retryStrategy: (times: number) => {
         if (times > (config.maxRetries ?? 10)) return null;
@@ -64,7 +66,7 @@ export class RedisManager {
       lazyConnect: true,
     });
 
-    this.client.on('error', (err) => {
+    this.client.on('error', (err: Error) => {
       logger.error('RedisManager', `Redis error: ${err.message}`);
     });
 
@@ -206,7 +208,7 @@ export class RedisManager {
   }
 
   /** Get the underlying ioredis client (for advanced use) */
-  getClient(): Redis {
+  getClient(): RedisClient {
     return this.client;
   }
 }

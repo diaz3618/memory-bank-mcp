@@ -162,7 +162,7 @@ export function excerptAroundMatches(
 let storeRegistryInstance: StoreRegistry | null = null;
 function getStoreRegistry(): StoreRegistry {
   if (!storeRegistryInstance) {
-    storeRegistryInstance = StoreRegistry.getInstance();
+    storeRegistryInstance = new StoreRegistry();
   }
   return storeRegistryInstance;
 }
@@ -791,9 +791,9 @@ export async function handleGraphAddDocPointer(
     if (note) obsText += ` — ${note}`;
 
     const obsResult = await graphStore.addObservation({
-      entityId: entity.id,
+      entityRef: entity.name,
       text: obsText,
-      source: 'graph_add_doc_pointer' as import('../../types/graph.js').ObservationSource,
+      source: { kind: 'tool', ref: 'graph_add_doc_pointer' } satisfies import('../../types/graph.js').ObservationSource,
     });
     if (obsResult.success) {
       results.push(`Added DOC observation to entity "${entity.name}"`);

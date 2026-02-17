@@ -174,7 +174,7 @@ export class PostgresGraphStore {
           [this.projectId, input.entityRef],
         );
         if (!entityResult.rows[0]) {
-          return { success: false, error: `Entity not found: ${input.entityRef}`, code: 'NOT_FOUND' };
+          return { success: false, error: `Entity not found: ${input.entityRef}`, code: 'ENTITY_NOT_FOUND' };
         }
         const entityId = entityResult.rows[0].id;
 
@@ -218,7 +218,7 @@ export class PostgresGraphStore {
         [this.projectId, entityRef],
       );
       if (!entityResult.rows[0]) {
-        return { success: false, error: `Entity not found: ${entityRef}`, code: 'NOT_FOUND' };
+        return { success: false, error: `Entity not found: ${entityRef}`, code: 'ENTITY_NOT_FOUND' };
       }
       const entityId = entityResult.rows[0].id;
 
@@ -263,10 +263,10 @@ export class PostgresGraphStore {
           [this.projectId, input.to],
         );
         if (!fromResult.rows[0]) {
-          return { success: false, error: `Entity not found: ${input.from}`, code: 'NOT_FOUND' };
+          return { success: false, error: `Entity not found: ${input.from}`, code: 'ENTITY_NOT_FOUND' };
         }
         if (!toResult.rows[0]) {
-          return { success: false, error: `Entity not found: ${input.to}`, code: 'NOT_FOUND' };
+          return { success: false, error: `Entity not found: ${input.to}`, code: 'ENTITY_NOT_FOUND' };
         }
 
         const result = await this.db.queryWithContext<{
@@ -430,8 +430,8 @@ export class PostgresGraphStore {
           entityCount: parseInt(entities.rows[0]?.count ?? '0', 10),
           observationCount: parseInt(observations.rows[0]?.count ?? '0', 10),
           relationCount: parseInt(relations.rows[0]?.count ?? '0', 10),
-          eventCount: 0, // No JSONL events in Postgres mode
-          snapshotAge: 0,
+          entityTypes: [],
+          relationTypes: [],
         },
       };
     } catch (error) {

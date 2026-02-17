@@ -23,6 +23,8 @@ export interface AuthenticatedRequest extends Request {
     projectId: string;
     scopes: string[];
     rateLimit: number;
+    token: string;
+    clientId: string;
   };
 }
 
@@ -66,6 +68,8 @@ export function createApiKeyAuthMiddleware(
             projectId: cached.projectId,
             scopes: cached.scopes,
             rateLimit: cached.rateLimit,
+            token: apiKey,
+            clientId: cached.userId,
           };
           next();
           return;
@@ -132,6 +136,8 @@ export function createApiKeyAuthMiddleware(
         projectId: authContext.projectId,
         scopes: authContext.scopes,
         rateLimit: authContext.rateLimit,
+        token: apiKey,
+        clientId: authContext.userId,
       };
 
       next();
