@@ -126,7 +126,11 @@ describe('createApiKeyAuthMiddleware', () => {
     await middleware(req, res, next);
 
     expect(next).toHaveBeenCalled();
-    expect(req.auth).toEqual(cachedKey);
+    expect(req.auth).toEqual({
+      ...cachedKey,
+      token: 'mbmcp_live_testkey123456789012345678901',
+      clientId: cachedKey.userId,
+    });
     // Should not have queried the database
     expect(mockDb.query).not.toHaveBeenCalled();
   });

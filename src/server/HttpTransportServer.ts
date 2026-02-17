@@ -25,6 +25,7 @@ import type { DatabaseManager } from '../utils/DatabaseManager.js';
 import type { RedisManager } from '../utils/RedisManager.js';
 import { createApiKeyAuthMiddleware, type AuthenticatedRequest } from './middleware/apiKeyAuth.js';
 import { createRateLimiterMiddleware } from './middleware/rateLimiter.js';
+import { buildOriginConfig, createOriginValidationMiddleware } from './middleware/originValidation.js';
 import { LogManager } from '../utils/LogManager.js';
 
 const logger = LogManager.getInstance();
@@ -211,7 +212,11 @@ export class HttpTransportServer {
   // ---------------------------------------------------------------------------
 
   private setupMiddleware(): void {
-    // Health check (unauthenticated)
+    // Origin + Host header validation (DNS rebinding / cross-origin protection)
+    const originConfig = buildOriginConfig(this.config.host, this.config.port);
+    this.app.use(createOriginValidationMiddleware(originConfig));
+
+    // Health check (unauthenticated, but origin-validated)
     this.app.get('/health', async (_req, res) => {
       const dbHealthy = await this.db.isHealthy();
       const redisHealthy = this.redis ? await this.redis.isHealthy() : true;

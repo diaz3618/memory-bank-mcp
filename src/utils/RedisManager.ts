@@ -51,6 +51,33 @@ export const REDIS_TTL = {
   RATE_LIMIT: 60,        // 1 minute sliding window
 } as const;
 
+// =============================================================================
+// Payload validators — schema validation at read boundaries
+// =============================================================================
+
+function isValidCachedApiKey(data: unknown): data is CachedApiKey {
+  if (typeof data !== 'object' || data === null) return false;
+  const d = data as Record<string, unknown>;
+  return (
+    typeof d.userId === 'string' &&
+    typeof d.projectId === 'string' &&
+    Array.isArray(d.scopes) &&
+    d.scopes.every((s: unknown) => typeof s === 'string') &&
+    typeof d.rateLimit === 'number'
+  );
+}
+
+function isValidCachedSession(data: unknown): data is CachedSession {
+  if (typeof data !== 'object' || data === null) return false;
+  const d = data as Record<string, unknown>;
+  return (
+    typeof d.userId === 'string' &&
+    typeof d.projectId === 'string' &&
+    typeof d.createdAt === 'string' &&
+    typeof d.lastSeen === 'string'
+  );
+}
+
 export class RedisManager {
   private client: RedisClient;
   private readonly prefix: string;
@@ -93,7 +120,13 @@ export class RedisManager {
     const data = await this.client.get(this.key('session', sessionId));
     if (!data) return null;
     try {
-      return JSON.parse(data) as CachedSession;
+      const parsed: unknown = JSON.parse(data);
+      if (!isValidCachedSession(parsed)) {
+        logger.warn('RedisManager', `Invalid session payload for ${sessionId}, discarding`);
+        await this.deleteSession(sessionId);
+        return null;
+      }
+      return parsed;
     } catch {
       return null;
     }
@@ -128,7 +161,13 @@ export class RedisManager {
     const data = await this.client.get(this.key('apikey', keyHash));
     if (!data) return null;
     try {
-      return JSON.parse(data) as CachedApiKey;
+      const parsed: unknown = JSON.parse(data);
+      if (!isValidCachedApiKey(parsed)) {
+        logger.warn('RedisManager', `Invalid API key payload for hash ${keyHash.slice(0, 8)}…, discarding`);
+        await this.invalidateApiKey(keyHash);
+        return null;
+      }
+      return parsed;
     } catch {
       return null;
     }

@@ -97,7 +97,7 @@ HTTP Transport Options (also configurable via environment variables):
   DATABASE_URL         PostgreSQL connection string (required for http mode)
   REDIS_URL            Redis connection string (optional, for caching/rate limiting)
   MCP_PORT             HTTP listen port (default: 3100)
-  MCP_HOST             HTTP bind address (default: 0.0.0.0)
+  MCP_HOST             HTTP bind address (default: 127.0.0.1 local, 0.0.0.0 in Docker)
   DB_PROVIDER          Database provider: postgres or supabase (default: postgres)
   
 Examples:
@@ -245,7 +245,8 @@ async function main() {
 
       httpConfig = {
         port: parseInt(process.env.MCP_PORT || '3100', 10),
-        host: process.env.MCP_HOST || '0.0.0.0',
+        // Default to localhost for security; Docker compose sets MCP_HOST=0.0.0.0
+        host: process.env.MCP_HOST || '127.0.0.1',
         enableJsonResponse: process.env.MCP_JSON_RESPONSE === 'true',
       };
 

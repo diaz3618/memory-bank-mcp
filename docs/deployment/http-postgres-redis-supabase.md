@@ -21,7 +21,7 @@
 
 ## Architecture
 
-```
+```markdown
                 ┌───────────────────────────────────────────┐
                 │             Client (IDE / CLI)            │
                 │       X-API-Key: mbmcp_live_abc123...     │
@@ -200,7 +200,7 @@ WHERE schemaname = 'public'
 
 Use the **session pooler** for persistent connections (port 5432 or 6543):
 
-```
+```bash
 postgres://postgres.{ref}:{password}@aws-0-{region}.pooler.supabase.com:5432/postgres
 ```
 
@@ -288,6 +288,7 @@ degrades gracefully (all requests allowed).
 ### Data isolation (RLS)
 
 - Every query runs inside a transaction with `SET LOCAL`:
+
   ```sql
   BEGIN;
   SET LOCAL app.current_user_id = '<user-uuid>';
@@ -295,6 +296,7 @@ degrades gracefully (all requests allowed).
   -- query executes here
   COMMIT;
   ```
+
 - `SET LOCAL` scoping ensures isolation per transaction (not connection)
 - RLS policies enforce that users can only access their own projects' data
 - On error, `ROLLBACK` clears the context variables
