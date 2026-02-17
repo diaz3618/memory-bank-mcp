@@ -10,6 +10,7 @@ import * as jsonc from 'jsonc-parser';
 import { ext } from '../extensionVariables';
 import type { TreeProviders } from '../tree/registerTrees';
 import { GraphWebviewPanel } from '../views/GraphWebviewPanel';
+import type { ApiKeyInfo } from '../services/ApiKeyService.js';
 
 export function registerCommands(
   context: vscode.ExtensionContext,
@@ -471,6 +472,210 @@ export function registerCommands(
 
   register('memoryBank.graph.openWebview', async () => {
     GraphWebviewPanel.create(context.extensionUri);
+  });
+
+  // ---------- API Key Management ----------
+
+  register('memoryBank.apiKeys.create', async () => {
+    const { ApiKeyService } = await import('../services/ApiKeyService.js');
+    const apiKeyService = new ApiKeyService();
+
+    const label = await vscode.window.showInputBox({
+      prompt: 'Key label (optional)',
+      placeHolder: 'e.g. CI/CD Pipeline, Dev Workstation',
+    });
+    // User can press Escape to cancel — label itself is optional
+    if (label === undefined) { return; }
+
+    const environment = await vscode.window.showQuickPick(
+      [
+        { label: 'live', description: 'Production key (prefix: mbmcp_live_)' },
+        { label: 'test', description: 'Test key (prefix: mbmcp_test_)' },
+      ],
+      { placeHolder: 'Select environment' },
+    );
+    if (!environment) { return; }
+
+    const expiryChoice = await vscode.window.showQuickPick(
+      [
+        { label: 'No expiry', detail: '0' },
+        { label: '30 days', detail: '30' },
+        { label: '90 days', detail: '90' },
+        { label: '180 days', detail: '180' },
+        { label: '365 days', detail: '365' },
+        { label: 'Custom', detail: 'custom' },
+      ],
+      { placeHolder: 'Key expiry' },
+    );
+    if (!expiryChoice) { return; }
+
+    let expiresInDays: number | undefined;
+    if (expiryChoice.detail === 'custom') {
+      const days = await vscode.window.showInputBox({
+        prompt: 'Expiry in days',
+        placeHolder: 'e.g. 60',
+        validateInput: (v) => /^\d+$/.test(v) ? null : 'Enter a positive number',
+      });
+      if (!days) { return; }
+      expiresInDays = parseInt(days, 10);
+    } else {
+      const n = parseInt(expiryChoice.detail!, 10);
+      if (n > 0) { expiresInDays = n; }
+    }
+
+    const result = await apiKeyService.createKey({
+      label: label || undefined,
+      environment: environment.label as 'live' | 'test',
+      expiresInDays,
+    });
+
+    // Show the plaintext key — this is the only time it's visible
+    const doc = await vscode.workspace.openTextDocument({
+      content: [
+        '# New API Key Created',
+        '',
+        '> **Save this key now — it will NOT be shown again.**',
+        '',
+        `| Field       | Value |`,
+        `|-------------|-------|`,
+        `| **Key**     | \`${result.key}\` |`,
+        `| **ID**      | ${result.id} |`,
+        `| **Prefix**  | ${result.prefix} |`,
+        `| **Label**   | ${result.label ?? '—'} |`,
+        `| **Expires** | ${result.expiresAt ?? 'Never'} |`,
+        `| **Created** | ${result.createdAt} |`,
+        '',
+        '## Usage',
+        '',
+        'Add the key to your MCP client configuration:',
+        '',
+        '```json',
+        `"authToken": "${result.key}"`,
+        '```',
+        '',
+        'Or set it as an environment variable:',
+        '',
+        '```bash',
+        `export MEMORY_BANK_API_KEY="${result.key}"`,
+        '```',
+      ].join('\n'),
+      language: 'markdown',
+    });
+    await vscode.window.showTextDocument(doc, { preview: true });
+
+    ext.outputChannel.appendLine(`API key created: ${result.prefix}... (${result.label ?? 'no label'})`);
+    vscode.window.showInformationMessage(`API key created: ${result.prefix}...`);
+  });
+
+  register('memoryBank.apiKeys.list', async () => {
+    const { ApiKeyService } = await import('../services/ApiKeyService.js');
+    const apiKeyService = new ApiKeyService();
+
+    const showRevoked = await vscode.window.showQuickPick(
+      [
+        { label: 'Active keys only', detail: 'false' },
+        { label: 'Include revoked keys', detail: 'true' },
+      ],
+      { placeHolder: 'Which keys to show?' },
+    );
+    if (!showRevoked) { return; }
+
+    const { keys, total } = await apiKeyService.listKeys(showRevoked.detail === 'true');
+
+    if (total === 0) {
+      vscode.window.showInformationMessage('No API keys found.');
+      return;
+    }
+
+    const statusIcon = (status: string) =>
+      status === 'active' ? '$(pass-filled)' :
+      status === 'revoked' ? '$(circle-slash)' :
+      '$(warning)'; // expired
+
+    interface KeyQuickPickItem extends vscode.QuickPickItem {
+      keyId: string;
+      keyStatus: string;
+    }
+
+    const items: KeyQuickPickItem[] = keys.map((k: ApiKeyInfo) => ({
+      label: `${statusIcon(k.status)} ${k.prefix}...`,
+      description: k.label ?? '',
+      detail: `Status: ${k.status} | Created: ${k.createdAt}${k.expiresAt ? ` | Expires: ${k.expiresAt}` : ''}`,
+      keyId: k.id,
+      keyStatus: k.status,
+    }));
+
+    const picked = await vscode.window.showQuickPick<KeyQuickPickItem>(items, {
+      placeHolder: `${total} key(s) found — select to see details or revoke`,
+    });
+
+    if (!picked) { return; }
+
+    // Offer actions on the selected key
+    const actions = [{ label: 'Copy ID', detail: 'copy' }];
+    if (picked.keyStatus === 'active') {
+      actions.push({ label: '$(trash) Revoke this key', detail: 'revoke' });
+    }
+
+    const action = await vscode.window.showQuickPick(actions, {
+      placeHolder: `Action for ${picked.label}`,
+    });
+
+    if (action?.detail === 'copy') {
+      await vscode.env.clipboard.writeText(picked.keyId);
+      vscode.window.showInformationMessage('Key ID copied to clipboard.');
+    } else if (action?.detail === 'revoke') {
+      const confirm = await vscode.window.showWarningMessage(
+        `Revoke API key ${picked.label}? This cannot be undone.`,
+        { modal: true },
+        'Revoke',
+      );
+      if (confirm === 'Revoke') {
+        await apiKeyService.revokeKey(picked.keyId);
+        vscode.window.showInformationMessage(`API key revoked: ${picked.label}`);
+      }
+    }
+  });
+
+  register('memoryBank.apiKeys.revoke', async () => {
+    const { ApiKeyService } = await import('../services/ApiKeyService.js');
+    const apiKeyService = new ApiKeyService();
+
+    // List only active keys
+    const { keys } = await apiKeyService.listKeys(false);
+    const activeKeys = keys.filter((k: ApiKeyInfo) => k.status === 'active');
+
+    if (activeKeys.length === 0) {
+      vscode.window.showInformationMessage('No active API keys to revoke.');
+      return;
+    }
+
+    interface RevokeQuickPickItem extends vscode.QuickPickItem {
+      keyId: string;
+    }
+
+    const items: RevokeQuickPickItem[] = activeKeys.map((k: ApiKeyInfo) => ({
+      label: `${k.prefix}...`,
+      description: k.label ?? '',
+      detail: `Created: ${k.createdAt}${k.expiresAt ? ` | Expires: ${k.expiresAt}` : ''}`,
+      keyId: k.id,
+    }));
+
+    const picked = await vscode.window.showQuickPick<RevokeQuickPickItem>(items, {
+      placeHolder: 'Select an API key to revoke',
+    });
+    if (!picked) { return; }
+
+    const confirm = await vscode.window.showWarningMessage(
+      `Revoke API key ${picked.label}? This action cannot be undone.`,
+      { modal: true },
+      'Revoke',
+    );
+    if (confirm !== 'Revoke') { return; }
+
+    await apiKeyService.revokeKey(picked.keyId);
+    vscode.window.showInformationMessage(`API key revoked: ${picked.label}`);
+    ext.outputChannel.appendLine(`API key revoked: ${picked.keyId}`);
   });
 
   // ---------- Digest Preview ----------

@@ -221,6 +221,24 @@
         "title": "Show Context Digest",
         "category": "Memory Bank",
         "icon": "$(preview)"
+      },
+      {
+        "command": "memoryBank.apiKeys.create",
+        "title": "Create API Key",
+        "category": "Memory Bank",
+        "icon": "$(key)"
+      },
+      {
+        "command": "memoryBank.apiKeys.list",
+        "title": "List API Keys",
+        "category": "Memory Bank",
+        "icon": "$(list-unordered)"
+      },
+      {
+        "command": "memoryBank.apiKeys.revoke",
+        "title": "Revoke API Key",
+        "category": "Memory Bank",
+        "icon": "$(trash)"
       }
     ],
     "menus": {
