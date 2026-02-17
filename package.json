@@ -17,7 +17,8 @@
     "test": "bun test && bun test src/__tests__/server/apiKeyAuth.test.ts src/__tests__/server/cacheCorrectness.test.ts src/__tests__/server/httpTransportServer.test.ts src/__tests__/server/kgContextTools.test.ts src/__tests__/server/originValidation.test.ts src/__tests__/server/rateLimiter.test.ts src/__tests__/server/redisResilience.test.ts src/__tests__/server/sessionIsolation.test.ts src/__tests__/server/thinkingTools.test.ts src/__tests__/server/transportSecurity.test.ts src/__tests__/storage/databaseManagerRls.test.ts src/__tests__/storage/ftsQuery.test.ts src/__tests__/storage/postgresFileSystem.test.ts src/__tests__/storage/rlsIsolation.test.ts",
     "test:all": "bun test && bun test $(find src/__tests__ -path '*/server/*.test.ts' -o -path '*/storage/*.test.ts' | sort | tr '\\n' ' ')",
     "test:coverage": "bun test --coverage",
-    "release:docker": "bash scripts/release-docker.sh"
+    "release:docker": "bash scripts/release-docker.sh",
+    "manage-keys": "npx tsx scripts/manage-keys.ts"
   },
   "keywords": [
     "mcp",
