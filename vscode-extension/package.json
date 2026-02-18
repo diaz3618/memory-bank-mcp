@@ -72,6 +72,11 @@
           "visibility": "collapsed"
         },
         {
+          "id": "memoryBank.views.apiKeys",
+          "name": "API Keys",
+          "visibility": "collapsed"
+        },
+        {
           "id": "memoryBank.views.help",
           "name": "Help & Links"
         }
@@ -239,6 +244,24 @@
         "title": "Revoke API Key",
         "category": "Memory Bank",
         "icon": "$(trash)"
+      },
+      {
+        "command": "memoryBank.apiKeys.refresh",
+        "title": "Refresh API Keys",
+        "category": "Memory Bank",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "memoryBank.apiKeys.rotate",
+        "title": "Rotate API Key",
+        "category": "Memory Bank",
+        "icon": "$(sync)"
+      },
+      {
+        "command": "memoryBank.apiKeys.copyMetadata",
+        "title": "Copy API Key Metadata",
+        "category": "Memory Bank",
+        "icon": "$(copy)"
       }
     ],
     "menus": {
@@ -317,6 +340,21 @@
           "command": "memoryBank.addRemoteServer",
           "when": "view == memoryBank.views.remote",
           "group": "navigation"
+        },
+        {
+          "command": "memoryBank.apiKeys.refresh",
+          "when": "view == memoryBank.views.apiKeys",
+          "group": "navigation"
+        },
+        {
+          "command": "memoryBank.apiKeys.create",
+          "when": "view == memoryBank.views.apiKeys",
+          "group": "navigation"
+        },
+        {
+          "command": "memoryBank.apiKeys.rotate",
+          "when": "view == memoryBank.views.apiKeys",
+          "group": "1_actions"
         }
       ],
       "view/item/context": [
@@ -344,6 +382,16 @@
           "command": "memoryBank.graph.linkEntities",
           "when": "view == memoryBank.views.graph && viewItem == graphEntity",
           "group": "1_actions"
+        },
+        {
+          "command": "memoryBank.apiKeys.revoke",
+          "when": "view == memoryBank.views.apiKeys && viewItem == apiKey-active",
+          "group": "inline"
+        },
+        {
+          "command": "memoryBank.apiKeys.copyMetadata",
+          "when": "view == memoryBank.views.apiKeys && viewItem =~ /^apiKey-/",
+          "group": "inline"
         }
       ],
       "commandPalette": [
@@ -365,6 +413,14 @@
         },
         {
           "command": "memoryBank.remote.refresh",
+          "when": "false"
+        },
+        {
+          "command": "memoryBank.apiKeys.refresh",
+          "when": "false"
+        },
+        {
+          "command": "memoryBank.apiKeys.copyMetadata",
           "when": "false"
         }
       ]

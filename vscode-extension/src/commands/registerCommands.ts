@@ -565,6 +565,7 @@ export function registerCommands(
 
     ext.outputChannel.appendLine(`API key created: ${result.prefix}... (${result.label ?? 'no label'})`);
     vscode.window.showInformationMessage(`API key created: ${result.prefix}...`);
+    trees.apiKeys.refresh();
   });
 
   register('memoryBank.apiKeys.list', async () => {
@@ -676,6 +677,127 @@ export function registerCommands(
     await apiKeyService.revokeKey(picked.keyId);
     vscode.window.showInformationMessage(`API key revoked: ${picked.label}`);
     ext.outputChannel.appendLine(`API key revoked: ${picked.keyId}`);
+    trees.apiKeys.refresh();
+  });
+
+  register('memoryBank.apiKeys.refresh', async () => {
+    trees.apiKeys.refresh();
+  });
+
+  register('memoryBank.apiKeys.rotate', async () => {
+    const { ApiKeyService } = await import('../services/ApiKeyService.js');
+    const apiKeyService = new ApiKeyService();
+
+    const { keys } = await apiKeyService.listKeys(false);
+    const activeKeys = keys.filter((k: ApiKeyInfo) => k.status === 'active');
+
+    if (activeKeys.length === 0) {
+      vscode.window.showInformationMessage('No active API keys to rotate.');
+      return;
+    }
+
+    interface RotateQuickPickItem extends vscode.QuickPickItem {
+      keyId: string;
+      keyLabel: string | null;
+      keyEnv: string;
+    }
+
+    const items: RotateQuickPickItem[] = activeKeys.map((k: ApiKeyInfo) => ({
+      label: `${k.prefix}...`,
+      description: k.label ?? '',
+      detail: `Created: ${k.createdAt}`,
+      keyId: k.id,
+      keyLabel: k.label,
+      keyEnv: k.prefix.startsWith('mbmcp_test') ? 'test' : 'live',
+    }));
+
+    const picked = await vscode.window.showQuickPick<RotateQuickPickItem>(items, {
+      placeHolder: 'Select an API key to rotate (revoke + create new)',
+    });
+    if (!picked) { return; }
+
+    const confirm = await vscode.window.showWarningMessage(
+      `Rotate API key ${picked.label}? The old key will be revoked immediately.`,
+      { modal: true },
+      'Rotate',
+    );
+    if (confirm !== 'Rotate') { return; }
+
+    // Revoke old key
+    await apiKeyService.revokeKey(picked.keyId);
+    ext.outputChannel.appendLine(`Rotated: old key revoked ${picked.keyId}`);
+
+    // Create new key with same label and environment
+    const result = await apiKeyService.createKey({
+      label: picked.keyLabel ?? undefined,
+      environment: picked.keyEnv as 'live' | 'test',
+    });
+
+    // Show the new plaintext key (one-time)
+    const doc = await vscode.workspace.openTextDocument({
+      content: [
+        '# API Key Rotated',
+        '',
+        '> **Save this NEW key now — it will NOT be shown again.**',
+        '',
+        `| Field       | Value |`,
+        `|-------------|-------|`,
+        `| **Key**     | \`${result.key}\` |`,
+        `| **ID**      | ${result.id} |`,
+        `| **Prefix**  | ${result.prefix} |`,
+        `| **Label**   | ${result.label ?? '—'} |`,
+        `| **Expires** | ${result.expiresAt ?? 'Never'} |`,
+        `| **Created** | ${result.createdAt} |`,
+        '',
+        `Old key \`${picked.label}\` has been revoked.`,
+      ].join('\n'),
+      language: 'markdown',
+    });
+    await vscode.window.showTextDocument(doc, { preview: true });
+
+    vscode.window.showInformationMessage(`API key rotated: ${result.prefix}...`);
+    trees.apiKeys.refresh();
+  });
+
+  register('memoryBank.apiKeys.copyMetadata', async () => {
+    const { ApiKeyService } = await import('../services/ApiKeyService.js');
+    const apiKeyService = new ApiKeyService();
+
+    const { keys } = await apiKeyService.listKeys(true);
+
+    if (keys.length === 0) {
+      vscode.window.showInformationMessage('No API keys found.');
+      return;
+    }
+
+    interface MetaQuickPickItem extends vscode.QuickPickItem {
+      keyId: string;
+      keyPrefix: string;
+    }
+
+    const items: MetaQuickPickItem[] = keys.map((k: ApiKeyInfo) => ({
+      label: `${k.prefix}...`,
+      description: k.label ?? k.status,
+      detail: `ID: ${k.id} | Status: ${k.status}`,
+      keyId: k.id,
+      keyPrefix: k.prefix,
+    }));
+
+    const picked = await vscode.window.showQuickPick<MetaQuickPickItem>(items, {
+      placeHolder: 'Select a key to copy metadata',
+    });
+    if (!picked) { return; }
+
+    const fieldChoice = await vscode.window.showQuickPick([
+      { label: 'Key ID', detail: picked.keyId },
+      { label: 'Key Prefix', detail: picked.keyPrefix },
+    ], {
+      placeHolder: 'Which value to copy?',
+    });
+    if (!fieldChoice) { return; }
+
+    await vscode.env.clipboard.writeText(fieldChoice.detail!);
+    vscode.window.showInformationMessage(`Copied ${fieldChoice.label} to clipboard.`);
   });
 
   // ---------- Digest Preview ----------
@@ -743,6 +865,7 @@ function refreshAll(trees: TreeProviders): void {
   trees.mode.refresh();
   trees.graph.refresh();
   trees.stores.refresh();
+  trees.apiKeys.refresh();
 }
 
 /**

@@ -12,6 +12,7 @@ import { GraphTreeProvider } from './GraphTreeProvider';
 import { StoresTreeProvider } from './StoresTreeProvider';
 import { RemoteServersTreeProvider } from './RemoteServersTreeProvider';
 import { HelpTreeProvider } from './HelpTreeProvider';
+import { ApiKeyTreeProvider } from './ApiKeyTreeProvider';
 
 export interface TreeProviders {
   status: StatusTreeProvider;
@@ -21,6 +22,7 @@ export interface TreeProviders {
   graph: GraphTreeProvider;
   stores: StoresTreeProvider;
   remote: RemoteServersTreeProvider;
+  apiKeys: ApiKeyTreeProvider;
   help: HelpTreeProvider;
 }
 
@@ -32,6 +34,7 @@ export function registerTrees(context: vscode.ExtensionContext): TreeProviders {
   const graph = new GraphTreeProvider();
   const stores = new StoresTreeProvider();
   const remote = new RemoteServersTreeProvider();
+  const apiKeys = new ApiKeyTreeProvider();
   const help = new HelpTreeProvider();
 
   ext.statusTreeView = vscode.window.createTreeView('memoryBank.views.status', {
@@ -62,6 +65,10 @@ export function registerTrees(context: vscode.ExtensionContext): TreeProviders {
     treeDataProvider: remote,
   });
 
+  ext.apiKeysTreeView = vscode.window.createTreeView('memoryBank.views.apiKeys', {
+    treeDataProvider: apiKeys,
+  });
+
   ext.helpTreeView = vscode.window.createTreeView('memoryBank.views.help', {
     treeDataProvider: help,
   });
@@ -75,8 +82,9 @@ export function registerTrees(context: vscode.ExtensionContext): TreeProviders {
     ext.graphTreeView,
     ext.storesTreeView,
     ext.remoteTreeView,
+    ext.apiKeysTreeView,
     ext.helpTreeView,
   );
 
-  return { status, files, actions, mode, graph, stores, remote, help };
+  return { status, files, actions, mode, graph, stores, remote, apiKeys, help };
 }
