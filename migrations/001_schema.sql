@@ -22,11 +22,13 @@ CREATE SCHEMA IF NOT EXISTS app;
 
 CREATE TABLE users (
   id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  email       TEXT NOT NULL UNIQUE,
-  name        TEXT,
+  email       TEXT UNIQUE,
+  name        TEXT NOT NULL,
   created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at  TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+CREATE UNIQUE INDEX idx_users_name ON users(name);
 
 -- =============================================================================
 -- Projects

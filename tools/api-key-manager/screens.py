@@ -316,10 +316,8 @@ class CreateKeyScreen(ModalScreen[dict | None]):
                         yield Label("Username:", classes="field-label")
                         yield Input(placeholder="e.g. johndoe", id="username")
                     with Vertical(classes="field-col"):
-                        yield Label("Email:", classes="field-label")
-                        yield Input(placeholder="user@example.com", id="user-email")
-                yield Label("Project name:", classes="field-label")
-                yield Input(placeholder="e.g. my-project", id="project-name")
+                        yield Label("Project name:", classes="field-label")
+                        yield Input(placeholder="e.g. my-project", id="project-name")
 
             yield Label("Label (optional):", classes="field-label")
             yield Input(placeholder="e.g. CI Pipeline, Production, Dev", id="key-label")
@@ -351,22 +349,14 @@ class CreateKeyScreen(ModalScreen[dict | None]):
 
         if self.is_db_mode:
             username = self.query_one("#username", Input).value.strip()
-            email = self.query_one("#user-email", Input).value.strip()
             project_name = self.query_one("#project-name", Input).value.strip()
-            if not username or not email:
-                self.notify(
-                    "Username and email are required in DB mode",
-                    severity="error",
-                )
+            if not username:
+                self.notify("Username is required in DB mode", severity="error")
                 return
             if not project_name:
-                self.notify(
-                    "Project name is required in DB mode",
-                    severity="error",
-                )
+                self.notify("Project name is required in DB mode", severity="error")
                 return
             result["username"] = username
-            result["email"] = email
             result["project_name"] = project_name
 
         result["label"] = self.query_one("#key-label", Input).value.strip() or None

@@ -560,12 +560,11 @@ class ApiKeyManagerApp(App):
         assert self.backend is not None
         self._show_loading()
         try:
-            # In DB mode, resolve username/email/project_name → UUIDs
+            # In DB mode, resolve username/project_name → UUIDs
             if isinstance(self.backend, DbBackend):
                 username = params.pop("username", "")
-                email = params.pop("email", "")
                 project_name = params.pop("project_name", "")
-                user_id = await self.backend.find_or_create_user(username, email)
+                user_id = await self.backend.find_or_create_user(username)
                 project_id = await self.backend.find_or_create_project(
                     project_name, user_id
                 )

@@ -237,19 +237,19 @@ class DbBackend(Backend):
         s = re.sub(r"-+", "-", s).strip("-")
         return s or "project"
 
-    async def find_or_create_user(self, username: str, email: str) -> str:
-        """Find user by email or create one.  Returns user UUID."""
+    async def find_or_create_user(self, username: str) -> str:
+        """Find user by name or create one.  Returns user UUID."""
         conn = await self._get_conn()
         cur = conn.cursor()
-        cur.execute("SELECT id FROM users WHERE email = %s", (email,))
+        cur.execute("SELECT id FROM users WHERE name = %s", (username,))
         row = cur.fetchone()
         if row:
             cur.close()
             return str(row[0])
         user_id = str(uuid.uuid4())
         cur.execute(
-            "INSERT INTO users (id, email, name) VALUES (%s, %s, %s)",
-            (user_id, email, username),
+            "INSERT INTO users (id, name) VALUES (%s, %s)",
+            (user_id, username),
         )
         cur.close()
         return user_id
