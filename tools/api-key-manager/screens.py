@@ -18,11 +18,10 @@ from typing import Any
 from textual import on
 from textual.app import ComposeResult
 from textual.binding import Binding
-from textual.containers import Center, Horizontal, Vertical, VerticalScroll
+from textual.containers import Horizontal, Vertical, VerticalScroll
 from textual.screen import ModalScreen
 from textual.widgets import (
     Button,
-    DataTable,
     Input,
     Label,
     Select,
@@ -83,7 +82,22 @@ class ConnectionScreen(ModalScreen[Backend | None]):
         margin-top: 1;
         min-width: 20;
     }
+    #conn-status {
+        margin-top: 1;
+        height: auto;
+        padding: 0 1;
+    }
+    .status-success {
+        color: $success;
+    }
+    .status-error {
+        color: $error;
+    }
     """
+
+    def __init__(self) -> None:
+        super().__init__()
+        self._connected_backend: Backend | None = None
 
     def compose(self) -> ComposeResult:
         with Vertical(id="conn-dialog"):
@@ -137,8 +151,10 @@ class ConnectionScreen(ModalScreen[Backend | None]):
                 variant="default",
             )
 
+            yield Static("", id="conn-status")
+
             with Horizontal(id="conn-buttons"):
-                yield Button("Cancel", id="btn-cancel")
+                yield Button("Close", id="btn-cancel")
                 yield Button("Connect", variant="primary", id="btn-connect")
 
     def on_mount(self) -> None:
@@ -177,6 +193,15 @@ class ConnectionScreen(ModalScreen[Backend | None]):
         btn = self.query_one("#btn-toggle-pw", Button)
         btn.label = "Show credentials" if showing else "Hide credentials"
 
+    def _set_status(self, text: str, success: bool) -> None:
+        """Show inline status text below the credentials button."""
+        status = self.query_one("#conn-status", Static)
+        css_class = "status-success" if success else "status-error"
+        status.remove_class("status-success", "status-error")
+        status.add_class(css_class)
+        icon = "✓" if success else "✗"
+        status.update(f"{icon} {text}")
+
     @on(Button.Pressed, "#btn-connect")
     def do_connect(self) -> None:
         mode = self.query_one("#mode-select", Select).value
@@ -184,32 +209,39 @@ class ConnectionScreen(ModalScreen[Backend | None]):
             url = self.query_one("#http-url", Input).value.strip()
             api_key = self.query_one("#http-apikey", Input).value.strip()
             if not url:
-                self.notify("Server URL is required", severity="error")
+                self._set_status("Server URL is required", success=False)
                 return
             if not api_key:
-                self.notify("API key is required for HTTP mode", severity="error")
+                self._set_status("API key is required for HTTP mode", success=False)
                 return
-            self.dismiss(HttpBackend(url, api_key))
+            backend = HttpBackend(url, api_key)
+            self._connected_backend = backend
+            self._set_status(f"Connected via HTTP → {url}", success=True)
         else:
             dsn = self.query_one("#db-dsn", Input).value.strip()
             if not dsn:
-                self.notify("Connection string is required", severity="error")
+                self._set_status("Connection string is required", success=False)
                 return
             try:
                 import psycopg2
 
                 conn = psycopg2.connect(dsn)
                 conn.close()
-                self.dismiss(DbBackend(dsn))
+                backend = DbBackend(dsn)
+                self._connected_backend = backend
+                self._set_status(
+                    f"Connected via DB ({backend.provider})", success=True
+                )
             except Exception as e:
-                self.notify(f"Connection failed: {e}", severity="error")
+                self._connected_backend = None
+                self._set_status(f"Connection failed: {e}", success=False)
 
     @on(Button.Pressed, "#btn-cancel")
-    def do_cancel(self) -> None:
-        self.dismiss(None)
+    def do_close(self) -> None:
+        self.dismiss(self._connected_backend)
 
     def action_cancel(self) -> None:
-        self.dismiss(None)
+        self.dismiss(self._connected_backend)
 
 
 # ---------------------------------------------------------------------------
@@ -229,7 +261,7 @@ class CreateKeyScreen(ModalScreen[dict | None]):
     #create-dialog {
         width: 68;
         height: auto;
-        max-height: 36;
+        max-height: 40;
         border: thick $accent;
         padding: 1 2;
         background: $surface;
@@ -265,10 +297,12 @@ class CreateKeyScreen(ModalScreen[dict | None]):
             yield Label("Create API Key", classes="dialog-title")
 
             if self.is_db_mode:
-                yield Label("User ID:", classes="field-label")
-                yield Input(placeholder="UUID", id="user-id")
-                yield Label("Project ID:", classes="field-label")
-                yield Input(placeholder="UUID", id="project-id")
+                yield Label("Username:", classes="field-label")
+                yield Input(placeholder="e.g. johndoe", id="username")
+                yield Label("Email:", classes="field-label")
+                yield Input(placeholder="user@example.com", id="user-email")
+                yield Label("Project name:", classes="field-label")
+                yield Input(placeholder="e.g. my-project", id="project-name")
 
             yield Label("Label (optional):", classes="field-label")
             yield Input(placeholder="e.g. CI Pipeline, Production, Dev", id="key-label")
@@ -296,16 +330,24 @@ class CreateKeyScreen(ModalScreen[dict | None]):
         result: dict[str, Any] = {}
 
         if self.is_db_mode:
-            user_id = self.query_one("#user-id", Input).value.strip()
-            project_id = self.query_one("#project-id", Input).value.strip()
-            if not user_id or not project_id:
+            username = self.query_one("#username", Input).value.strip()
+            email = self.query_one("#user-email", Input).value.strip()
+            project_name = self.query_one("#project-name", Input).value.strip()
+            if not username or not email:
                 self.notify(
-                    "User ID and Project ID are required in DB mode",
+                    "Username and email are required in DB mode",
                     severity="error",
                 )
                 return
-            result["user_id"] = user_id
-            result["project_id"] = project_id
+            if not project_name:
+                self.notify(
+                    "Project name is required in DB mode",
+                    severity="error",
+                )
+                return
+            result["username"] = username
+            result["email"] = email
+            result["project_name"] = project_name
 
         result["label"] = self.query_one("#key-label", Input).value.strip() or None
         result["environment"] = str(self.query_one("#key-env", Select).value)

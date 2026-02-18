@@ -20,7 +20,6 @@ from __future__ import annotations
 import csv
 import io
 import json
-import os
 from datetime import datetime, timezone
 from typing import Any
 
@@ -65,13 +64,19 @@ from screens import (
 # ---------------------------------------------------------------------------
 
 HEADER_ART = r"""
-  __  __                                 ____              _
- |  \/  | ___ _ __ ___   ___  _ __ _   _| __ )  __ _ _ __ | | __
- | |\/| |/ _ \ '_ ` _ \ / _ \| '__| | | |  _ \ / _` | '_ \| |/ /
- | |  | |  __/ | | | | | (_) | |  | |_| | |_) | (_| | | | |   <
- |_|  |_|\___|_| |_| |_|\___/|_|   \__, |____/ \__,_|_| |_|_|\_\
-               API Key Manager      |___/
+█▀▄▀█ █▀▀ █▀▄▀█ █▀█ █▀█ █▄█   █▄▄ ▄▀█ █▄ █ █▄▀
+█ ▀ █ ██▄ █ ▀ █ █▄█ █▀▄  █    █▄█ █▀█ █ ▀█ █ █
+API Key Manager              
 """
+
+## HEADER_ART = r"""
+##   __  __                                 ____              _
+##  |  \/  | ___ _ __ ___   ___  _ __ _   _| __ )  __ _ _ __ | | __
+##  | |\/| |/ _ \ '_ ` _ \ / _ \| '__| | | |  _ \ / _` | '_ \| |/ /
+##  | |  | |  __/ | | | | | (_) | |  | |_| | |_) | (_| | | | |   <
+##  |_|  |_|\___|_| |_| |_|\___/|_|   \__, |____/ \__,_|_| |_|_|\_\
+##                API Key Manager     |___/
+## """
 
 
 # ---------------------------------------------------------------------------
@@ -555,8 +560,19 @@ class ApiKeyManagerApp(App):
         assert self.backend is not None
         self._show_loading()
         try:
-            user_id = params.pop("user_id", "")
-            project_id = params.pop("project_id", "")
+            # In DB mode, resolve username/email/project_name → UUIDs
+            if isinstance(self.backend, DbBackend):
+                username = params.pop("username", "")
+                email = params.pop("email", "")
+                project_name = params.pop("project_name", "")
+                user_id = await self.backend.find_or_create_user(username, email)
+                project_id = await self.backend.find_or_create_project(
+                    project_name, user_id
+                )
+            else:
+                user_id = params.pop("user_id", "")
+                project_id = params.pop("project_id", "")
+
             result = await self.backend.create_key(
                 user_id=user_id,
                 project_id=project_id,

@@ -1,15 +1,6 @@
 # Memory Bank — API Key Manager
 
-A full-featured terminal UI for managing Memory Bank MCP API keys, built with [Textual](https://textual.textualize.io/).
-
-```
-  __  __                                 ____              _
- |  \/  | ___ _ __ ___   ___  _ __ _   _| __ )  __ _ _ __ | | __
- | |\/| |/ _ \ '_ ` _ \ / _ \| '__| | | |  _ \ / _` | '_ \| |/ /
- | |  | |  __/ | | | | | (_) | |  | |_| | |_) | (_| | | | |   <
- |_|  |_|\___|_| |_| |_|\___/|_|   \__, |____/ \__,_|_| |_|_|\_\
-               API Key Manager      |___/
-```
+A TUI for managing Memory Bank MCP API keys, built with [Textual](https://textual.textualize.io/).
 
 ## Quick Start
 

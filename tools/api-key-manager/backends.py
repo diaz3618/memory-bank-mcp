@@ -8,6 +8,8 @@ Two backends:
 from __future__ import annotations
 
 import os
+import re
+import uuid
 from datetime import datetime, timezone
 from typing import Any
 
@@ -223,6 +225,67 @@ class DbBackend(Backend):
             )
         cur.close()
         return rows
+
+    # ── User / project helpers ───────────────────────────────
+
+    @staticmethod
+    def _slugify(name: str) -> str:
+        """Convert a project name to a URL-safe slug."""
+        s = name.lower().strip()
+        s = re.sub(r"[^\w\s-]", "", s)
+        s = re.sub(r"[\s_]+", "-", s)
+        s = re.sub(r"-+", "-", s).strip("-")
+        return s or "project"
+
+    async def find_or_create_user(self, username: str, email: str) -> str:
+        """Find user by email or create one.  Returns user UUID."""
+        conn = await self._get_conn()
+        cur = conn.cursor()
+        cur.execute("SELECT id FROM users WHERE email = %s", (email,))
+        row = cur.fetchone()
+        if row:
+            cur.close()
+            return str(row[0])
+        user_id = str(uuid.uuid4())
+        cur.execute(
+            "INSERT INTO users (id, email, name) VALUES (%s, %s, %s)",
+            (user_id, email, username),
+        )
+        cur.close()
+        return user_id
+
+    async def find_or_create_project(
+        self, project_name: str, owner_id: str
+    ) -> str:
+        """Find project by name+owner or create one.  Returns project UUID."""
+        conn = await self._get_conn()
+        cur = conn.cursor()
+        cur.execute(
+            "SELECT id FROM projects WHERE name = %s AND owner_id = %s",
+            (project_name, owner_id),
+        )
+        row = cur.fetchone()
+        if row:
+            cur.close()
+            return str(row[0])
+        project_id = str(uuid.uuid4())
+        slug = self._slugify(project_name)
+        # Ensure slug uniqueness by appending a short suffix if needed
+        cur.execute("SELECT 1 FROM projects WHERE slug = %s", (slug,))
+        if cur.fetchone():
+            slug = f"{slug}-{project_id[:8]}"
+        cur.execute(
+            "INSERT INTO projects (id, owner_id, name, slug) VALUES (%s, %s, %s, %s)",
+            (project_id, owner_id, project_name, slug),
+        )
+        # Also create an owner membership
+        cur.execute(
+            "INSERT INTO memberships (user_id, project_id, role) VALUES (%s, %s, 'owner')"
+            " ON CONFLICT DO NOTHING",
+            (owner_id, project_id),
+        )
+        cur.close()
+        return project_id
 
     async def create_key(
         self,
