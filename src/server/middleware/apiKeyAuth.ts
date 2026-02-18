@@ -36,7 +36,7 @@ function hashApiKey(key: string): string {
 /**
  * Create API key authentication middleware.
  *
- * Checks X-API-Key header → SHA-256 hash → Redis cache → Postgres lookup.
+ * Checks X-API-Key header or Authorization: Bearer header → SHA-256 hash → Redis cache → Postgres lookup.
  */
 export function createApiKeyAuthMiddleware(
   db: DatabaseManager,
@@ -44,10 +44,18 @@ export function createApiKeyAuthMiddleware(
 ) {
   return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     const authReq = req as AuthenticatedRequest;
-    const apiKey = req.headers['x-api-key'] as string | undefined;
+
+    // Accept X-API-Key header or Authorization: Bearer <key>
+    let apiKey = req.headers['x-api-key'] as string | undefined;
+    if (!apiKey) {
+      const authHeader = req.headers.authorization;
+      if (authHeader?.startsWith('Bearer ')) {
+        apiKey = authHeader.slice(7);
+      }
+    }
 
     if (!apiKey) {
-      res.status(401).json({ error: 'Missing X-API-Key header' });
+      res.status(401).json({ error: 'Missing X-API-Key or Authorization header' });
       return;
     }
 

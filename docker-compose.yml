@@ -76,13 +76,14 @@ services:
       - DB_PROVIDER=${DB_PROVIDER:-postgres}
       - REDIS_URL=${REDIS_URL:-redis://redis:6379}
       - NODE_ENV=${NODE_ENV:-production}
+      - ALLOWED_HOSTS=${ALLOWED_HOSTS:-localhost,localhost:3100,127.0.0.1,127.0.0.1:3100}
     labels:
       - traefik.enable=true
-      - traefik.http.routers.mbmcp.rule=PathPrefix(`/mcp`) || PathPrefix(`/health`)
+      - traefik.http.routers.mbmcp.rule=PathPrefix(`/mcp`) || PathPrefix(`/health`) || PathPrefix(`/api`)
       - traefik.http.routers.mbmcp.entrypoints=web
       - traefik.http.services.mbmcp.loadbalancer.server.port=3100
       # HTTPS router (uncomment when TLS is configured)
-      # - traefik.http.routers.mbmcp-secure.rule=PathPrefix(`/mcp`) || PathPrefix(`/health`)
+      # - traefik.http.routers.mbmcp-secure.rule=PathPrefix(`/mcp`) || PathPrefix(`/health`) || PathPrefix(`/api`)
       # - traefik.http.routers.mbmcp-secure.entrypoints=websecure
       # - traefik.http.routers.mbmcp-secure.tls.certresolver=letsencrypt
     networks:

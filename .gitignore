@@ -58,3 +58,4 @@ prepare-*.sh
 
 # Memory Bank
 memory-bank
+.agents

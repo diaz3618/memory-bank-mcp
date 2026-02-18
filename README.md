@@ -46,7 +46,7 @@ Add to your editor's MCP config (`.vscode/mcp.json`, Cursor, Claude Desktop, etc
   "servers": {
     "memory-bank-mcp": {
       "type": "http",
-      "url": "http://localhost:3100/mcp",
+      "url": "http://localhost/mcp",
       "headers": {
         "Authorization": "Bearer <your-api-key>"
       }
@@ -54,6 +54,8 @@ Add to your editor's MCP config (`.vscode/mcp.json`, Cursor, Claude Desktop, etc
   }
 }
 ```
+
+> **Note**: The server accepts API keys via `Authorization: Bearer <key>` or `X-API-Key: <key>` header. If not using Traefik, connect directly to port 3100: `http://localhost:3100/mcp`.
 
 > **Tip**: Manage API keys via `POST /api/keys` (create), `GET /api/keys` (list), `DELETE /api/keys/:id` (revoke). See the [Deployment Guide](docs/deployment/http-postgres-redis-supabase.md#api-key-management).
 
