@@ -259,9 +259,9 @@ class CreateKeyScreen(ModalScreen[dict | None]):
         align: center middle;
     }
     #create-dialog {
-        width: 68;
+        width: 80;
         height: auto;
-        max-height: 40;
+        max-height: 32;
         border: thick $accent;
         padding: 1 2;
         background: $surface;
@@ -278,8 +278,22 @@ class CreateKeyScreen(ModalScreen[dict | None]):
     .hint {
         color: $text-disabled;
     }
+    .field-row {
+        height: auto;
+        margin-top: 0;
+    }
+    .field-row .field-col {
+        width: 1fr;
+        height: auto;
+    }
+    .field-row .field-col:last-child {
+        margin-left: 1;
+    }
+    .field-col .field-label {
+        margin-top: 0;
+    }
     #create-buttons {
-        margin-top: 2;
+        margin-top: 1;
         height: auto;
         align-horizontal: right;
     }
@@ -297,29 +311,35 @@ class CreateKeyScreen(ModalScreen[dict | None]):
             yield Label("Create API Key", classes="dialog-title")
 
             if self.is_db_mode:
-                yield Label("Username:", classes="field-label")
-                yield Input(placeholder="e.g. johndoe", id="username")
-                yield Label("Email:", classes="field-label")
-                yield Input(placeholder="user@example.com", id="user-email")
+                with Horizontal(classes="field-row"):
+                    with Vertical(classes="field-col"):
+                        yield Label("Username:", classes="field-label")
+                        yield Input(placeholder="e.g. johndoe", id="username")
+                    with Vertical(classes="field-col"):
+                        yield Label("Email:", classes="field-label")
+                        yield Input(placeholder="user@example.com", id="user-email")
                 yield Label("Project name:", classes="field-label")
                 yield Input(placeholder="e.g. my-project", id="project-name")
 
             yield Label("Label (optional):", classes="field-label")
             yield Input(placeholder="e.g. CI Pipeline, Production, Dev", id="key-label")
 
-            yield Label("Environment:", classes="field-label")
-            yield Select(
-                [("live", "live"), ("test", "test")],
-                id="key-env",
-                value="live",
-            )
+            with Horizontal(classes="field-row"):
+                with Vertical(classes="field-col"):
+                    yield Label("Environment:", classes="field-label")
+                    yield Select(
+                        [("live", "live"), ("test", "test")],
+                        id="key-env",
+                        value="live",
+                    )
+                with Vertical(classes="field-col"):
+                    yield Label("Rate limit (req/min):", classes="field-label")
+                    yield Input(placeholder="60", id="key-rate-limit", value="60")
 
-            yield Label("Expires in days (0 = never):", classes="field-label")
-            yield Input(placeholder="0", id="key-expires", value="0")
-            yield Label("Leave as 0 for non-expiring keys", classes="hint")
-
-            yield Label("Rate limit (req/min):", classes="field-label")
-            yield Input(placeholder="60", id="key-rate-limit", value="60")
+            with Horizontal(classes="field-row"):
+                with Vertical(classes="field-col"):
+                    yield Label("Expires in days (0 = never):", classes="field-label")
+                    yield Input(placeholder="0", id="key-expires", value="0")
 
             with Horizontal(id="create-buttons"):
                 yield Button("Cancel", id="btn-cancel-create")
