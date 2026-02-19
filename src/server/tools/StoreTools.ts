@@ -151,11 +151,16 @@ export async function handleListStores(
       // Ignore — store might not be fully initialized
     }
 
-    const activeId = path.basename(activePath);
+    // Use registry storeId when the active path matches a registered store,
+    // otherwise fall back to path.basename(). This keeps list_stores IDs
+    // consistent with register_store / select_store.
+    const registryEntry = registryData.stores.find(s => s.projectPath === activePath);
+    const activeId = registryEntry?.storeId ?? path.basename(activePath);
+    const activeKind = registryEntry?.kind ?? 'local';
     stores.push({
       id: activeId,
       path: activePath,
-      kind: 'local',
+      kind: activeKind,
       isActive: true,
       hasGraph,
       fileCount,
