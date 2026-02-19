@@ -135,7 +135,7 @@ instructions:
 
   # UMB Section - Added to ALL modes
   umb:
-    trigger: "\\b(umb|update memory bank)\\b"
+    trigger: '\\b(umb|update memory bank)\\b'
     instructions:
       - "Halt Current Task: Stop current activity"
       - "Call \`process_umb_command\` to activate UMB mode"
@@ -268,7 +268,7 @@ instructions:
 
   # UMB Section - Added to ALL modes
   umb:
-    trigger: "\\b(umb|update memory bank)\\b"
+    trigger: '\\b(umb|update memory bank)\\b'
     instructions:
       - "Halt Current Task: Stop all activity"
       - "Call \`process_umb_command\` to activate UMB mode"
@@ -445,7 +445,7 @@ instructions:
 
   # UMB Section - Added to ALL modes
   umb:
-    trigger: "\\b(umb|update memory bank)\\b"
+    trigger: '\\b(umb|update memory bank)\\b'
     instructions:
       - "Halt Current Task: Stop current activity"
       - "Acknowledge Command: '[MEMORY BANK: UPDATING]'"
@@ -622,7 +622,7 @@ instructions:
 
   # UMB Section - Added to ALL modes
   umb:
-    trigger: "\\b(umb|update memory bank)\\b"
+    trigger: '\\b(umb|update memory bank)\\b'
     instructions:
       - "Halt Current Task: Stop all activity"
       - "Acknowledge Command: '[MEMORY BANK: UPDATING]'"
@@ -786,7 +786,7 @@ instructions:
 
   # UMB Section - Added to ALL modes
   umb:
-    trigger: "\\b(umb|update memory bank)\\b"
+    trigger: '\\b(umb|update memory bank)\\b'
     instructions:
       - "Halt Current Task: Stop all activity"
       - "Acknowledge Command: '[MEMORY BANK: UPDATING]'"

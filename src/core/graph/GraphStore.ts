@@ -558,8 +558,12 @@ export class GraphStore {
   async getSnapshot(): Promise<GraphOperationResult<GraphSnapshot>> {
     try {
       // Fast path: cached and no changes (no lock needed)
-      if (this.cachedSnapshot && !(await this.checkNeedsRebuild())) {
-        return { success: true, data: this.cachedSnapshot };
+      // Capture reference before await to prevent TOCTOU race:
+      // a concurrent appendEvent() can set this.cachedSnapshot = null
+      // between the truthy check and the return statement.
+      const cached = this.cachedSnapshot;
+      if (cached && !(await this.checkNeedsRebuild())) {
+        return { success: true, data: cached };
       }
 
       // Cold start optimization: try loading from disk (read-only, no lock)

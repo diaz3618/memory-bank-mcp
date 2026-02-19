@@ -840,7 +840,7 @@ export class MemoryBankManager {
       const entries = await this.fileSystem.listFiles(parentDir);
       
       // Filter for backup directories
-      const backupPattern = /^memory-bank-backup-(\d{4}-\d{2}-\d{2}T[\d-]+)$/;
+      const backupPattern = /^memory-bank-backup-(\d{4}-\d{2}-\d{2}T[\d-]+Z?)$/;
       const backups: Array<{ id: string; timestamp: string; path: string }> = [];
       
       for (const entry of entries) {
@@ -899,7 +899,7 @@ export class MemoryBankManager {
     }
     
     // Validate backup ID format to prevent path traversal
-    const backupPattern = /^memory-bank-backup-\d{4}-\d{2}-\d{2}T[\d-]+$/;
+    const backupPattern = /^memory-bank-backup-\d{4}-\d{2}-\d{2}T[\d-]+Z?$/;
     if (!backupPattern.test(backupId)) {
       throw new Error(`Invalid backup ID format: ${backupId}`);
     }

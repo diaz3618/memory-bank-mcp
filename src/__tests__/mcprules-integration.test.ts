@@ -365,3 +365,50 @@ describe('McpRules Integration Tests', () => {
     }
   });
 }); 
+
+describe('YAML Template UMB Trigger Regression', () => {
+  const tempDir = path.join(__dirname, 'temp-yaml-trigger-test');
+  
+  afterEach(async () => {
+    await fs.remove(tempDir).catch(() => {});
+  });
+  
+  test('UMB trigger regex should survive YAML round-trip (\\b must not become backspace)', async () => {
+    // This test ensures the YAML template trigger uses single quotes,
+    // preventing YAML double-quote interpretation of \\b as backspace (U+0008).
+    const { codeTemplate } = await import('../utils/McpRulesTemplates.js');
+    
+    await fs.ensureDir(tempDir);
+    // Write the actual YAML template (the same path used by createMissingMcpRules)
+    await fs.writeFile(path.join(tempDir, '.mcprules-code'), codeTemplate);
+    
+    // Load via ExternalRulesLoader (which uses js-yaml to parse)
+    const loader = new ExternalRulesLoader(tempDir);
+    await loader.detectAndLoadRules();
+    
+    const rules = loader.getRulesForMode('code');
+    expect(rules).not.toBeNull();
+    expect(rules!.instructions.umb).toBeDefined();
+    expect(rules!.instructions.umb.trigger).toBeDefined();
+    
+    // The parsed trigger must contain literal \\b (word boundary), NOT backspace char (U+0008)
+    const trigger = rules!.instructions.umb.trigger;
+    expect(trigger).not.toContain('\x08'); // Must NOT contain backspace
+    expect(trigger).toContain('\\b');      // Must contain literal \\b for regex word boundary
+    
+    // Verify the trigger regex actually works
+    const re = new RegExp(trigger, 'i');
+    expect(re.test('UMB')).toBe(true);
+    expect(re.test('update memory bank')).toBe(true);
+    expect(re.test('Update Memory Bank')).toBe(true);
+    expect(re.test('Not a trigger')).toBe(false);
+    
+    // Also verify via ModeManager
+    const mm = new ModeManager(loader);
+    await mm.initialize('code');
+    expect(mm.checkUmbTrigger('UMB')).toBe(true);
+    expect(mm.checkUmbTrigger('update memory bank')).toBe(true);
+    expect(mm.checkUmbTrigger('random text')).toBe(false);
+    mm.dispose();
+  });
+});
