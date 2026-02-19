@@ -163,7 +163,7 @@ export class GraphStore {
       // Build initial snapshot if needed
       const snapshotExists = await this.fs.fileExists(this.snapshotPath);
       if (!snapshotExists) {
-        await this.rebuildSnapshot();
+        await this.rebuildSnapshotInternal();
       }
 
       return { success: true, data: undefined };
@@ -551,18 +551,18 @@ export class GraphStore {
   // ==========================================================================
 
   /**
-   * Gets the current snapshot, rebuilding if necessary
+   * Gets the current snapshot, rebuilding if necessary.
+   * Acquires the write lock when a rebuild is needed to prevent
+   * concurrent snapshot writes from racing.
    */
   async getSnapshot(): Promise<GraphOperationResult<GraphSnapshot>> {
     try {
-      // Fast path: cached and no changes
+      // Fast path: cached and no changes (no lock needed)
       if (this.cachedSnapshot && !(await this.checkNeedsRebuild())) {
         return { success: true, data: this.cachedSnapshot };
       }
 
-      // Cold start optimization: if snapshot file exists AND index shows
-      // it's up-to-date with the JSONL, read snapshot from disk instead
-      // of doing a full JSONL replay.
+      // Cold start optimization: try loading from disk (read-only, no lock)
       if (!this.cachedSnapshot) {
         const loaded = await this.tryLoadCachedSnapshot();
         if (loaded) {
@@ -570,12 +570,19 @@ export class GraphStore {
         }
       }
 
-      // Full rebuild required
-      const result = await this.rebuildSnapshot();
-      if (!result.success) {
-        return result;
-      }
-      return { success: true, data: this.cachedSnapshot! };
+      // Full rebuild required — serialize through write lock to prevent
+      // concurrent snapshot file writes from racing
+      return this.withWriteLock(async () => {
+        // Double-check: another queued operation may have rebuilt while we waited
+        if (this.cachedSnapshot && !(await this.checkNeedsRebuild())) {
+          return { success: true, data: this.cachedSnapshot } as GraphOperationResult<GraphSnapshot>;
+        }
+        const result = await this.rebuildSnapshotInternal();
+        if (!result.success) {
+          return result;
+        }
+        return { success: true, data: this.cachedSnapshot! } as GraphOperationResult<GraphSnapshot>;
+      });
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       return { success: false, error: message, code: 'IO_ERROR' };
@@ -650,9 +657,17 @@ export class GraphStore {
   }
 
   /**
-   * Rebuilds the snapshot from JSONL
+   * Rebuilds the snapshot from JSONL (public, lock-safe).
+   * Acquires the write lock to prevent concurrent file writes.
    */
   async rebuildSnapshot(): Promise<GraphOperationResult<GraphSnapshot>> {
+    return this.withWriteLock(() => this.rebuildSnapshotInternal());
+  }
+
+  /**
+   * Internal rebuild — MUST be called within withWriteLock or during init.
+   */
+  private async rebuildSnapshotInternal(): Promise<GraphOperationResult<GraphSnapshot>> {
     try {
       const jsonlContent = await this.fs.readFile(this.jsonlPath);
       const result = reduceJsonlToSnapshot(jsonlContent, this.storeId);
@@ -713,7 +728,7 @@ export class GraphStore {
     return this.withWriteLock(async () => {
       try {
       // Ensure we have a fresh snapshot
-      const snapshotResult = await this.rebuildSnapshot();
+      const snapshotResult = await this.rebuildSnapshotInternal();
       if (!snapshotResult.success) {
         return snapshotResult;
       }
@@ -769,7 +784,7 @@ export class GraphStore {
       this.lastJsonlEtag = null;
 
       // Rebuild index to match the new file
-      await this.rebuildSnapshot();
+      await this.rebuildSnapshotInternal();
 
       const afterLines = getEventLineCount(compactedContent);
       logger.info('GraphStore', `Compacted JSONL: ${beforeLines} → ${afterLines} lines`);

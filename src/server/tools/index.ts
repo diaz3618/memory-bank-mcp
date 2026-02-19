@@ -135,9 +135,10 @@ export function setupToolHandlers(
             };
           }
 
-          const { filename, content } = request.params.arguments as {
+          const { filename, content, ifMatchEtag } = request.params.arguments as {
             filename: string;
             content: string;
+            ifMatchEtag?: string;
           };
           if (!filename) {
             throw new McpError(ErrorCode.InvalidParams, 'Filename not specified');
@@ -145,7 +146,7 @@ export function setupToolHandlers(
           if (content === undefined) {
             throw new McpError(ErrorCode.InvalidParams, 'Content not specified');
           }
-          return handleWriteMemoryBankFile(memoryBankManager, filename, content);
+          return handleWriteMemoryBankFile(memoryBankManager, filename, content, ifMatchEtag);
         }
 
         case 'list_memory_bank_files': {

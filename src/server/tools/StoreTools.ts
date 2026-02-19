@@ -227,7 +227,36 @@ export async function handleSelectStore(
   let resolvedPath = storePath;
   if (!resolvedPath && storeId) {
     resolvedPath = (await registry.resolveStorePath(storeId)) ?? undefined;
+    
+    // If not in registry, check if storeId matches the currently active store
     if (!resolvedPath) {
+      const currentDir = memoryBankManager.getMemoryBankDir();
+      const currentProjectPath = memoryBankManager.getProjectPath();
+      if (currentDir) {
+        const activePath = currentProjectPath || path.dirname(currentDir);
+        const activeId = path.basename(activePath);
+        if (activeId === storeId) {
+          // Already the active store — just confirm selection
+          return {
+            content: [
+              {
+                type: 'text',
+                text: JSON.stringify(
+                  {
+                    selected: true,
+                    id: storeId,
+                    path: activePath,
+                    memoryBankDir: currentDir,
+                    note: 'Store is already active',
+                  },
+                  null,
+                  2,
+                ),
+              },
+            ],
+          };
+        }
+      }
       return {
         content: [{ type: 'text', text: `Store "${storeId}" not found in registry` }],
         isError: true,

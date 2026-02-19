@@ -751,15 +751,42 @@ export class MemoryBankManager {
       // Create backup directory using FileSystemInterface
       await this.fileSystem.ensureDirectory(backupPath);
       
-      // Copy files using FileSystemInterface
-      const files = await this.listFiles();
+      // Capture fileSystem reference for use in closure (narrowing)
+      const fs = this.fileSystem;
+      
+      // Recursively collect all files (including graph/ subdirectory)
+      const collectFiles = async (dir: string, prefix: string = ''): Promise<string[]> => {
+        const entries = await fs.listFiles(dir);
+        const allFiles: string[] = [];
+        for (const entry of entries) {
+          const fullPath = path.join(dir, entry);
+          const relativePath = prefix ? `${prefix}/${entry}` : entry;
+          if (await fs.isDirectory(fullPath)) {
+            const subFiles = await collectFiles(fullPath, relativePath);
+            allFiles.push(...subFiles);
+          } else {
+            allFiles.push(relativePath);
+          }
+        }
+        return allFiles;
+      };
+
+      const fsPath = this.getFileSystemPath()!;
+      const files = await collectFiles(fsPath);
+      
       for (const file of files) {
-        const content = await this.readFile(file);
+        // Read directly from filesystem (bypasses validateFilename
+        // so graph files like .jsonl and .snapshot.json are included)
+        const sourcePath = path.join(fsPath, file);
+        const content = await this.fileSystem.readFile(sourcePath);
         const backupFilePath = path.join(backupPath, file);
+        // Ensure subdirectory exists in backup
+        const backupFileDir = path.dirname(backupFilePath);
+        await this.fileSystem.ensureDirectory(backupFileDir);
         await this.fileSystem.writeFile(backupFilePath, content);
       }
       
-      logger.debug('MemoryBankManager', `Memory Bank backup created at ${backupPath}`);
+      logger.debug('MemoryBankManager', `Memory Bank backup created at ${backupPath} (${files.length} files)`);
       return backupPath;
     } catch (error) {
       logger.error('MemoryBankManager', `Error creating Memory Bank backup: ${error}`);
@@ -906,25 +933,43 @@ export class MemoryBankManager {
         }
       }
       
-      // List files in backup
-      const backupEntries = await this.fileSystem.listFiles(backupPath);
+      // Recursively collect all files from backup
+      const collectFiles = async (dir: string, prefix: string = ''): Promise<string[]> => {
+        const entries = await this.fileSystem!.listFiles(dir);
+        const allFiles: string[] = [];
+        for (const entry of entries) {
+          const entryName = entry.endsWith('/') ? entry.slice(0, -1) : entry;
+          const fullPath = path.join(dir, entryName);
+          const relativePath = prefix ? `${prefix}/${entryName}` : entryName;
+          if (await this.fileSystem!.isDirectory(fullPath)) {
+            const subFiles = await collectFiles(fullPath, relativePath);
+            allFiles.push(...subFiles);
+          } else {
+            allFiles.push(relativePath);
+          }
+        }
+        return allFiles;
+      };
+
+      const backupFiles = await collectFiles(backupPath);
       const restoredFiles: string[] = [];
+      const fsPath = this.getFileSystemPath()!;
       
-      // Copy each file from backup to memory bank
-      for (const entry of backupEntries) {
-        // Skip directories (only restore files)
-        const entryName = entry.endsWith('/') ? entry.slice(0, -1) : entry;
-        const sourcePath = path.join(backupPath, entryName);
+      // Copy each file from backup to memory bank (directly via filesystem
+      // to bypass validateFilename restrictions on graph files)
+      for (const file of backupFiles) {
+        const sourcePath = path.join(backupPath, file);
+        const destPath = path.join(fsPath, file);
         
         try {
-          const isFile = !(await this.fileSystem.isDirectory(sourcePath));
-          if (isFile) {
-            const content = await this.fileSystem.readFile(sourcePath);
-            await this.writeFile(entryName, content);
-            restoredFiles.push(entryName);
-          }
+          const content = await this.fileSystem.readFile(sourcePath);
+          // Ensure subdirectory exists
+          const destDir = path.dirname(destPath);
+          await this.fileSystem.ensureDirectory(destDir);
+          await this.fileSystem.writeFile(destPath, content);
+          restoredFiles.push(file);
         } catch (fileError) {
-          logger.warn('MemoryBankManager', `Failed to restore file ${entryName}: ${fileError}`);
+          logger.warn('MemoryBankManager', `Failed to restore file ${file}: ${fileError}`);
         }
       }
       
