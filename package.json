@@ -1,6 +1,6 @@
 {
   "name": "@diazstg/memory-bank-mcp",
-  "version": "1.8.5",
+  "version": "1.8.6",
   "description": "MCP Server for managing Memory Bank — HTTP+Postgres+Redis variant (branch-only, not for npm publish)",
   "type": "module",
   "main": "build/index.js",
