@@ -28,6 +28,15 @@ export class StoresTreeProvider implements vscode.TreeDataProvider<StoreNode> {
       return [new StoreInfoItem('Connect to server first', 'plug')];
     }
 
+    // Stores are a local-only concept (multi-project on filesystem)
+    const connMode = ext.mcpClientManager.getConnectionStatus()?.mode ?? 'stdio';
+    if (connMode === 'http') {
+      return [new StoreInfoItem(
+        'Not available in HTTP mode',
+        'info',
+      )];
+    }
+
     if (!element) {
       return this.getRootChildren();
     }

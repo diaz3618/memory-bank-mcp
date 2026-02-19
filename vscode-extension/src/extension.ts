@@ -68,7 +68,11 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   ext.memoryBankService.onDidRefresh(() => {
     trees.status.refresh();
     trees.files.refresh();
+    trees.actions.refresh();
     trees.mode.refresh();
+    trees.graph.refresh();
+    trees.stores.refresh();
+    trees.apiKeys.refresh();
   });
 
   // 7. Connect to MCP server (only if config exists)
@@ -217,8 +221,13 @@ async function reconnectFromConfig(
 function refreshAllTrees(trees: TreeProviders): void {
   trees.status.refresh();
   trees.files.refresh();
+  trees.actions.refresh();
   trees.mode.refresh();
   trees.graph.refresh();
+  trees.stores.refresh();
+  trees.remote.refresh();
+  trees.apiKeys.refresh();
+  trees.help.refresh();
 }
 
 export function deactivate(): void {

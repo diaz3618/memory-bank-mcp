@@ -11,12 +11,51 @@ import type { ApiKeyInfo } from '../services/ApiKeyService.js';
 
 type ApiKeyNode = ApiKeyItem | ApiKeyInfoItem;
 
+/** Format an ISO date string as a relative time (e.g. "3d ago", "2h ago"). */
+function formatRelative(iso: string | null): string {
+  if (!iso) return '';
+  const ms = Date.now() - new Date(iso).getTime();
+  if (ms < 0) {
+    // Future date (e.g. expiry)
+    const absSec = Math.round(-ms / 1000);
+    if (absSec < 60) return 'in <1m';
+    if (absSec < 3600) return `in ${Math.floor(absSec / 60)}m`;
+    if (absSec < 86400) return `in ${Math.floor(absSec / 3600)}h`;
+    return `in ${Math.floor(absSec / 86400)}d`;
+  }
+  const sec = Math.round(ms / 1000);
+  if (sec < 60) return 'just now';
+  if (sec < 3600) return `${Math.floor(sec / 60)}m ago`;
+  if (sec < 86400) return `${Math.floor(sec / 3600)}h ago`;
+  if (sec < 2592000) return `${Math.floor(sec / 86400)}d ago`;
+  return new Date(iso).toLocaleDateString();
+}
+
 export class ApiKeyTreeProvider implements vscode.TreeDataProvider<ApiKeyNode> {
   private _onDidChangeTreeData = new vscode.EventEmitter<ApiKeyNode | undefined>();
   readonly onDidChangeTreeData = this._onDidChangeTreeData.event;
 
   private cachedKeys: ApiKeyInfo[] | null = null;
   private lastError: string | null = null;
+  private _showRevoked = true;
+  private _filterText = '';
+
+  /** Toggle showing revoked/expired keys. */
+  toggleShowRevoked(): void {
+    this._showRevoked = !this._showRevoked;
+    this.cachedKeys = null;
+    this._onDidChangeTreeData.fire(undefined);
+  }
+
+  get showRevoked(): boolean {
+    return this._showRevoked;
+  }
+
+  /** Set filter text for searching keys. */
+  setFilter(text: string): void {
+    this._filterText = text.toLowerCase();
+    this._onDidChangeTreeData.fire(undefined);
+  }
 
   refresh(): void {
     this.cachedKeys = null;
@@ -62,14 +101,26 @@ export class ApiKeyTreeProvider implements vscode.TreeDataProvider<ApiKeyNode> {
     const authToken = config.get<string>('http.authToken', '');
     if (!authToken) {
       items.push(new ApiKeyInfoItem(
-        'Auth token not configured',
+        'No API key configured',
         'lock',
-        'Set memoryBank.http.authToken to authenticate with the server',
+        'An API key is required to authenticate with the server',
       ));
       items.push(new ApiKeyInfoItem(
-        'Open Settings...',
+        '$(key) Enter API Key...',
+        'key',
+        'Paste an API key from your deployment (docker logs, .env, etc.)',
+        { command: 'memoryBank.apiKeys.enterToken', title: 'Enter API Key' },
+      ));
+      items.push(new ApiKeyInfoItem(
+        '$(terminal) Bootstrap from Database...',
+        'database',
+        'Connect directly to Postgres/Supabase to create the first API key',
+        { command: 'memoryBank.apiKeys.bootstrap', title: 'Bootstrap API Key' },
+      ));
+      items.push(new ApiKeyInfoItem(
+        '$(gear) Open Settings...',
         'gear',
-        'Configure auth token',
+        'Configure auth token manually in VS Code settings',
         { command: 'memoryBank.configureServer', title: 'Configure Server' },
       ));
       return items;
@@ -80,18 +131,44 @@ export class ApiKeyTreeProvider implements vscode.TreeDataProvider<ApiKeyNode> {
       if (!this.cachedKeys) {
         const { ApiKeyService } = await import('../services/ApiKeyService.js');
         const service = new ApiKeyService();
-        const result = await service.listKeys(true); // include revoked for full view
+        const result = await service.listKeys(this._showRevoked);
         this.cachedKeys = result.keys;
       }
 
-      if (this.cachedKeys.length === 0) {
+      let displayKeys = this.cachedKeys;
+
+      // Apply text filter
+      if (this._filterText) {
+        displayKeys = displayKeys.filter(k =>
+          (k.prefix.toLowerCase().includes(this._filterText)) ||
+          (k.label?.toLowerCase().includes(this._filterText)) ||
+          (k.status.toLowerCase().includes(this._filterText)) ||
+          (k.id.toLowerCase().includes(this._filterText)),
+        );
+      }
+
+      if (displayKeys.length === 0) {
+        const msg = this._filterText
+          ? `No keys matching "${this._filterText}"`
+          : 'No API keys found';
         items.push(new ApiKeyInfoItem(
-          'No API keys found',
+          msg,
           'info',
           'Create a new API key to get started',
         ));
       } else {
-        for (const key of this.cachedKeys) {
+        // Summary header
+        const active = displayKeys.filter(k => k.status === 'active').length;
+        const revoked = displayKeys.filter(k => k.status !== 'active').length;
+        const summaryParts = [`${active} active`];
+        if (revoked > 0) summaryParts.push(`${revoked} revoked/expired`);
+        items.push(new ApiKeyInfoItem(
+          summaryParts.join(', '),
+          'info',
+          `Total: ${displayKeys.length} key(s)`,
+        ));
+
+        for (const key of displayKeys) {
           items.push(new ApiKeyItem(key));
         }
       }
@@ -135,20 +212,46 @@ export class ApiKeyTreeProvider implements vscode.TreeDataProvider<ApiKeyNode> {
       details.push(new ApiKeyInfoItem(`Scopes: ${key.scopes.join(', ')}`, 'shield'));
     }
 
-    details.push(new ApiKeyInfoItem(`Rate limit: ${key.rateLimit}/min`, 'dashboard'));
+    details.push(new ApiKeyInfoItem(
+      `Rate limit: ${key.rateLimit > 0 ? `${key.rateLimit}/min` : 'Unlimited'}`,
+      'dashboard',
+    ));
 
-    details.push(new ApiKeyInfoItem(`Created: ${key.createdAt}`, 'calendar'));
+    const createdRel = formatRelative(key.createdAt);
+    details.push(new ApiKeyInfoItem(
+      `Created: ${createdRel}`,
+      'calendar',
+      key.createdAt,
+    ));
 
     if (key.lastUsedAt) {
-      details.push(new ApiKeyInfoItem(`Last used: ${key.lastUsedAt}`, 'clock'));
+      const usedRel = formatRelative(key.lastUsedAt);
+      details.push(new ApiKeyInfoItem(
+        `Last used: ${usedRel}`,
+        'clock',
+        key.lastUsedAt,
+      ));
+    } else {
+      details.push(new ApiKeyInfoItem('Last used: never', 'clock'));
     }
 
     if (key.expiresAt) {
-      details.push(new ApiKeyInfoItem(`Expires: ${key.expiresAt}`, 'watch'));
+      const expiresRel = formatRelative(key.expiresAt);
+      const isExpired = new Date(key.expiresAt) < new Date();
+      details.push(new ApiKeyInfoItem(
+        `${isExpired ? 'Expired' : 'Expires'}: ${expiresRel}`,
+        isExpired ? 'warning' : 'watch',
+        key.expiresAt,
+      ));
     }
 
     if (key.revokedAt) {
-      details.push(new ApiKeyInfoItem(`Revoked: ${key.revokedAt}`, 'circle-slash'));
+      const revokedRel = formatRelative(key.revokedAt);
+      details.push(new ApiKeyInfoItem(
+        `Revoked: ${revokedRel}`,
+        'circle-slash',
+        key.revokedAt,
+      ));
     }
 
     return details;
@@ -171,13 +274,24 @@ export class ApiKeyItem extends vscode.TreeItem {
       : keyInfo.status === 'revoked' ? 'testing.iconFailed'
       : 'editorWarning.foreground';
 
-    this.description = keyInfo.label ?? keyInfo.status;
+    // Show label + environment badge in description
+    const env = keyInfo.prefix.startsWith('mbmcp_test') ? '[TEST]' : '[LIVE]';
+    this.description = `${env} ${keyInfo.label ?? keyInfo.status}`;
+
+    const createdRel = formatRelative(keyInfo.createdAt);
+    const expiresInfo = keyInfo.expiresAt
+      ? `Expires: ${formatRelative(keyInfo.expiresAt)}`
+      : 'No expiry';
+
     this.tooltip = [
       `Prefix: ${keyInfo.prefix}`,
       `Status: ${keyInfo.status}`,
       keyInfo.label ? `Label: ${keyInfo.label}` : null,
-      `Created: ${keyInfo.createdAt}`,
-      keyInfo.expiresAt ? `Expires: ${keyInfo.expiresAt}` : null,
+      `Environment: ${env}`,
+      `Created: ${createdRel} (${keyInfo.createdAt})`,
+      expiresInfo,
+      keyInfo.scopes.length > 0 ? `Scopes: ${keyInfo.scopes.join(', ')}` : null,
+      `Rate limit: ${keyInfo.rateLimit > 0 ? `${keyInfo.rateLimit}/min` : 'Unlimited'}`,
     ].filter(Boolean).join('\n');
 
     this.iconPath = new vscode.ThemeIcon(statusIcon, new vscode.ThemeColor(statusColor));

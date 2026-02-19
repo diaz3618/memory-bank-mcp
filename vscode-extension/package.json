@@ -2,7 +2,7 @@
   "name": "memory-bank-mcp",
   "displayName": "Memory Bank MCP",
   "description": "Memory Bank management for AI-assisted development via MCP (Model Context Protocol)",
-  "version": "2.1.0",
+  "version": "2.2.0",
   "publisher": "diaz3618",
   "license": "MIT",
   "repository": {
@@ -138,8 +138,14 @@
         "icon": "$(settings-gear)"
       },
       {
-        "command": "memoryBank.createCopilotAgent",
-        "title": "Create Copilot Agent Instructions",
+        "command": "memoryBank.createCopilotAgent.stdio",
+        "title": "Create Copilot Agent Instructions (stdio)",
+        "category": "Memory Bank",
+        "icon": "$(hubot)"
+      },
+      {
+        "command": "memoryBank.createCopilotAgent.http",
+        "title": "Create Copilot Agent Instructions (HTTP)",
         "category": "Memory Bank",
         "icon": "$(hubot)"
       },
@@ -150,10 +156,34 @@
         "icon": "$(add)"
       },
       {
+        "command": "memoryBank.removeRemoteServer",
+        "title": "Remove Remote Server",
+        "category": "Memory Bank",
+        "icon": "$(trash)"
+      },
+      {
+        "command": "memoryBank.connectToRemoteServer",
+        "title": "Connect to Remote Server",
+        "category": "Memory Bank",
+        "icon": "$(plug)"
+      },
+      {
         "command": "memoryBank.remote.refresh",
         "title": "Refresh Remote Servers",
         "category": "Memory Bank",
         "icon": "$(refresh)"
+      },
+      {
+        "command": "memoryBank.apiKeys.enterToken",
+        "title": "Enter API Key",
+        "category": "Memory Bank",
+        "icon": "$(key)"
+      },
+      {
+        "command": "memoryBank.apiKeys.bootstrap",
+        "title": "Bootstrap API Key from Database",
+        "category": "Memory Bank",
+        "icon": "$(database)"
       },
       {
         "command": "memoryBank.status.refresh",
@@ -262,6 +292,30 @@
         "title": "Copy API Key Metadata",
         "category": "Memory Bank",
         "icon": "$(copy)"
+      },
+      {
+        "command": "memoryBank.apiKeys.export",
+        "title": "Export API Keys",
+        "category": "Memory Bank",
+        "icon": "$(export)"
+      },
+      {
+        "command": "memoryBank.apiKeys.editLabel",
+        "title": "Edit API Key Label",
+        "category": "Memory Bank",
+        "icon": "$(edit)"
+      },
+      {
+        "command": "memoryBank.apiKeys.toggleRevoked",
+        "title": "Toggle Revoked Keys",
+        "category": "Memory Bank",
+        "icon": "$(filter)"
+      },
+      {
+        "command": "memoryBank.apiKeys.search",
+        "title": "Search API Keys",
+        "category": "Memory Bank",
+        "icon": "$(search)"
       }
     ],
     "menus": {
@@ -355,6 +409,26 @@
           "command": "memoryBank.apiKeys.rotate",
           "when": "view == memoryBank.views.apiKeys",
           "group": "1_actions"
+        },
+        {
+          "command": "memoryBank.apiKeys.export",
+          "when": "view == memoryBank.views.apiKeys",
+          "group": "1_actions"
+        },
+        {
+          "command": "memoryBank.apiKeys.toggleRevoked",
+          "when": "view == memoryBank.views.apiKeys",
+          "group": "navigation"
+        },
+        {
+          "command": "memoryBank.apiKeys.search",
+          "when": "view == memoryBank.views.apiKeys",
+          "group": "navigation"
+        },
+        {
+          "command": "memoryBank.apiKeys.list",
+          "when": "view == memoryBank.views.apiKeys",
+          "group": "2_view"
         }
       ],
       "view/item/context": [
@@ -367,6 +441,16 @@
           "command": "memoryBank.switchMode",
           "when": "view == memoryBank.views.mode && viewItem =~ /^mode-/",
           "group": "inline"
+        },
+        {
+          "command": "memoryBank.connectToRemoteServer",
+          "when": "view == memoryBank.views.remote && viewItem == remoteServer",
+          "group": "inline"
+        },
+        {
+          "command": "memoryBank.removeRemoteServer",
+          "when": "view == memoryBank.views.remote && viewItem == remoteServer",
+          "group": "2_destructive"
         },
         {
           "command": "memoryBank.graph.addObservation",
@@ -387,6 +471,16 @@
           "command": "memoryBank.apiKeys.revoke",
           "when": "view == memoryBank.views.apiKeys && viewItem == apiKey-active",
           "group": "inline"
+        },
+        {
+          "command": "memoryBank.apiKeys.rotate",
+          "when": "view == memoryBank.views.apiKeys && viewItem == apiKey-active",
+          "group": "1_actions"
+        },
+        {
+          "command": "memoryBank.apiKeys.editLabel",
+          "when": "view == memoryBank.views.apiKeys && viewItem == apiKey-active",
+          "group": "1_actions"
         },
         {
           "command": "memoryBank.apiKeys.copyMetadata",
@@ -416,11 +510,35 @@
           "when": "false"
         },
         {
+          "command": "memoryBank.removeRemoteServer",
+          "when": "false"
+        },
+        {
+          "command": "memoryBank.connectToRemoteServer",
+          "when": "false"
+        },
+        {
           "command": "memoryBank.apiKeys.refresh",
           "when": "false"
         },
         {
+          "command": "memoryBank.apiKeys.enterToken",
+          "when": "false"
+        },
+        {
+          "command": "memoryBank.apiKeys.bootstrap",
+          "when": "false"
+        },
+        {
           "command": "memoryBank.apiKeys.copyMetadata",
+          "when": "false"
+        },
+        {
+          "command": "memoryBank.apiKeys.toggleRevoked",
+          "when": "false"
+        },
+        {
+          "command": "memoryBank.apiKeys.search",
           "when": "false"
         }
       ]

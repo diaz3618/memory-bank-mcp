@@ -1,5 +1,9 @@
 /**
  * Status Tree - shows connection & memory bank status
+ *
+ * Adapts display based on connection mode:
+ * - stdio: Shows local file-based status (path, file count)
+ * - http:  Shows database-backed status (ready state, record count, mode, language)
  */
 
 import * as vscode from 'vscode';
@@ -22,9 +26,13 @@ export class StatusTreeProvider implements vscode.TreeDataProvider<StatusItem> {
 
     // Connection status
     const connected = ext.mcpClientManager?.isConnected() ?? false;
+    const connMode = ext.mcpClientManager?.getConnectionStatus()?.mode ?? null;
+
     items.push(new StatusItem(
       connected ? 'Connected' : 'Disconnected',
-      connected ? 'MCP server is running' : 'MCP server not connected',
+      connected
+        ? `MCP server is running (${connMode ?? 'unknown'} mode)`
+        : 'MCP server not connected',
       connected ? new vscode.ThemeIcon('check', new vscode.ThemeColor('testing.iconPassed')) 
                 : new vscode.ThemeIcon('error', new vscode.ThemeColor('testing.iconFailed')),
     ));
@@ -45,7 +53,24 @@ export class StatusTreeProvider implements vscode.TreeDataProvider<StatusItem> {
       return items;
     }
 
-    // Memory bank status
+    // Connection mode indicator
+    if (connMode === 'http') {
+      const config = vscode.workspace.getConfiguration('memoryBank');
+      const baseUrl = config.get<string>('http.baseUrl', '');
+      items.push(new StatusItem(
+        'Transport: HTTP',
+        `Connected to ${baseUrl}`,
+        new vscode.ThemeIcon('cloud'),
+      ));
+    } else {
+      items.push(new StatusItem(
+        'Transport: stdio',
+        'Local process via stdio',
+        new vscode.ThemeIcon('terminal'),
+      ));
+    }
+
+    // Memory bank status — works for both modes via MCP tools
     try {
       const status = await ext.memoryBankService.getStatus();
       
@@ -57,7 +82,8 @@ export class StatusTreeProvider implements vscode.TreeDataProvider<StatusItem> {
           : new vscode.ThemeIcon('warning', new vscode.ThemeColor('problemsWarningIcon.foreground')),
       ));
 
-      if (status.path) {
+      // Path — only meaningful for stdio (local files)
+      if (connMode !== 'http' && status.path) {
         items.push(new StatusItem(
           `Path: ${status.path}`,
           status.path,
@@ -65,13 +91,23 @@ export class StatusTreeProvider implements vscode.TreeDataProvider<StatusItem> {
         ));
       }
 
-      items.push(new StatusItem(
-        `Files: ${status.files?.length || 0}`,
-        `${status.files?.length || 0} files in memory bank`,
-        new vscode.ThemeIcon('files'),
-      ));
+      // Files / Records count
+      const fileCount = status.files?.length || 0;
+      if (connMode === 'http') {
+        items.push(new StatusItem(
+          `Records: ${fileCount}`,
+          `${fileCount} records in database`,
+          new vscode.ThemeIcon('database'),
+        ));
+      } else {
+        items.push(new StatusItem(
+          `Files: ${fileCount}`,
+          `${fileCount} files in memory bank`,
+          new vscode.ThemeIcon('files'),
+        ));
+      }
 
-      // Current mode
+      // Current mode — works for both
       try {
         const mode = await ext.memoryBankService.getCurrentMode();
         items.push(new StatusItem(
@@ -83,10 +119,11 @@ export class StatusTreeProvider implements vscode.TreeDataProvider<StatusItem> {
         // Mode not available
       }
 
+      // Language — show if available
       if (status.language) {
         items.push(new StatusItem(
           `Language: ${status.language}`,
-          status.language,
+          `Content language: ${status.language}`,
           new vscode.ThemeIcon('globe'),
         ));
       }

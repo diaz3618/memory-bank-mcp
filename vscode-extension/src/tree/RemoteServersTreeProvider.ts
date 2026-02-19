@@ -10,7 +10,7 @@ import { ext } from '../extensionVariables';
 
 type RemoteNode = RemoteServerItem | RemoteInfoItem;
 
-interface RemoteServerConfig {
+export interface RemoteServerConfig {
   name: string;
   baseUrl: string;
   authToken?: string;
@@ -48,8 +48,13 @@ export class RemoteServersTreeProvider implements vscode.TreeDataProvider<Remote
         'Add a remote MCP server via HTTP connection',
       ));
     } else {
+      // Show which server is currently active
+      const config = vscode.workspace.getConfiguration('memoryBank');
+      const activeUrl = config.get<string>('http.baseUrl', '');
+
       for (const server of servers) {
-        items.push(new RemoteServerItem(server));
+        const isActive = server.baseUrl === activeUrl && ext.mcpClientManager?.isConnected();
+        items.push(new RemoteServerItem(server, isActive));
       }
     }
 
@@ -74,10 +79,19 @@ export class RemoteServersTreeProvider implements vscode.TreeDataProvider<Remote
     if (server.lastConnected) {
       items.push(new RemoteInfoItem(`Last connected: ${server.lastConnected}`, 'clock'));
     }
+
+    // Connect action
+    items.push(new RemoteInfoItem(
+      'Connect',
+      'plug',
+      `Connect to ${server.name}`,
+      { command: 'memoryBank.connectToRemoteServer', title: 'Connect', arguments: [server] },
+    ));
+
     return items;
   }
 
-  private getConfiguredServers(): RemoteServerConfig[] {
+  getConfiguredServers(): RemoteServerConfig[] {
     const servers: RemoteServerConfig[] = [];
 
     // Check if HTTP mode is configured
@@ -102,12 +116,22 @@ export class RemoteServersTreeProvider implements vscode.TreeDataProvider<Remote
   }
 }
 
-class RemoteServerItem extends vscode.TreeItem {
-  constructor(public readonly serverConfig: RemoteServerConfig) {
+export class RemoteServerItem extends vscode.TreeItem {
+  constructor(
+    public readonly serverConfig: RemoteServerConfig,
+    isActive = false,
+  ) {
     super(serverConfig.name, vscode.TreeItemCollapsibleState.Collapsed);
     this.description = serverConfig.baseUrl;
     this.tooltip = `${serverConfig.name}\n${serverConfig.baseUrl}`;
-    this.iconPath = new vscode.ThemeIcon('remote-explorer');
+
+    if (isActive) {
+      this.iconPath = new vscode.ThemeIcon('remote-explorer', new vscode.ThemeColor('testing.iconPassed'));
+      this.description = `${serverConfig.baseUrl} (connected)`;
+    } else {
+      this.iconPath = new vscode.ThemeIcon('remote-explorer');
+    }
+
     this.contextValue = 'remoteServer';
   }
 }

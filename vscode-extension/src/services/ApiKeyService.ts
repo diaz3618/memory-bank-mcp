@@ -59,6 +59,12 @@ export interface ApiKeyRevokeResult {
   id: string;
 }
 
+export interface ApiKeyUpdateOptions {
+  label?: string | null;
+  scopes?: string[];
+  rateLimit?: number;
+}
+
 // ---------- Service ----------
 
 export class ApiKeyService {
@@ -175,5 +181,28 @@ export class ApiKeyService {
     }
 
     return (await response.json()) as ApiKeyRevokeResult;
+  }
+
+  /**
+   * Update an API key's metadata (label, scopes, rate limit).
+   */
+  async updateKey(id: string, updates: ApiKeyUpdateOptions): Promise<ApiKeyInfo> {
+    const url = `${this.getServerBaseUrl()}/api/keys/${encodeURIComponent(id)}`;
+
+    ext.outputChannel.appendLine(`Updating API key: PATCH ${url}`);
+
+    const response = await fetch(url, {
+      method: 'PATCH',
+      headers: this.buildHeaders(),
+      body: JSON.stringify(updates),
+      signal: AbortSignal.timeout(15_000),
+    });
+
+    if (!response.ok) {
+      const body = await response.text().catch(() => '');
+      throw new Error(`Failed to update API key: HTTP ${response.status} — ${body}`);
+    }
+
+    return (await response.json()) as ApiKeyInfo;
   }
 }
