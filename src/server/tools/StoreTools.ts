@@ -15,7 +15,10 @@
 import { MemoryBankManager } from '../../core/MemoryBankManager.js';
 import { StoreRegistry } from '../../core/StoreRegistry.js';
 import { FileUtils } from '../../utils/FileUtils.js';
+import { LogManager } from '../../utils/LogManager.js';
 import path from 'path';
+
+const logger = LogManager.getInstance();
 
 // ============================================================================
 // Tool Definitions
@@ -35,17 +38,27 @@ export const storeToolDefinitions = [
   {
     name: 'select_store',
     description:
-      'Switch the active Memory Bank store by path or storeId. The path should be the project root containing a memory-bank/ folder.',
+      'Manage Memory Bank stores. Actions: select (switch active store), register (add to registry), unregister (remove from registry). Default action is "select" for backward compatibility.',
     inputSchema: {
       type: 'object' as const,
       properties: {
+        action: {
+          type: 'string',
+          enum: ['select', 'register', 'unregister'],
+          description: 'Action to perform: "select" (default), "register", or "unregister"',
+        },
         path: {
           type: 'string',
-          description: 'Absolute path to the project root of the store to select',
+          description: 'Absolute path to the project root (required for select/register)',
         },
         storeId: {
           type: 'string',
-          description: 'Store ID from the registry (alternative to path)',
+          description: 'Store ID (required for register/unregister, optional for select)',
+        },
+        kind: {
+          type: 'string',
+          enum: ['local', 'remote'],
+          description: 'Kind of store (for register action, default: "local")',
         },
       },
       required: [] as string[],
@@ -54,7 +67,7 @@ export const storeToolDefinitions = [
   {
     name: 'register_store',
     description:
-      'Register a Memory Bank store in the persistent registry. The store will appear in list_stores across sessions.',
+      '(DEPRECATED: use select_store with action="register") Register a Memory Bank store in the persistent registry.',
     inputSchema: {
       type: 'object' as const,
       properties: {
@@ -77,7 +90,7 @@ export const storeToolDefinitions = [
   },
   {
     name: 'unregister_store',
-    description: 'Remove a store from the persistent registry by its storeId.',
+    description: '(DEPRECATED: use select_store with action="unregister") Remove a store from the persistent registry by its storeId.',
     inputSchema: {
       type: 'object' as const,
       properties: {
@@ -151,11 +164,16 @@ export async function handleListStores(
       // Ignore — store might not be fully initialized
     }
 
-    const activeId = path.basename(activePath);
+    // Use registry storeId when the active path matches a registered store,
+    // otherwise fall back to path.basename(). This keeps list_stores IDs
+    // consistent with register_store / select_store.
+    const registryEntry = registryData.stores.find(s => s.projectPath === activePath);
+    const activeId = registryEntry?.storeId ?? path.basename(activePath);
+    const activeKind = registryEntry?.kind ?? 'local';
     stores.push({
       id: activeId,
       path: activePath,
-      kind: 'local',
+      kind: activeKind,
       isActive: true,
       hasGraph,
       fileCount,
@@ -213,21 +231,115 @@ export async function handleListStores(
 /**
  * Handler for select_store
  *
- * Accepts either `path` or `storeId`. If storeId is given, resolves it
- * from the registry. Switches the active MemoryBankManager store.
+ * Handles multiple actions:
+ * - select (default): Switch the active Memory Bank store
+ * - register: Add a store to the persistent registry
+ * - unregister: Remove a store from the registry
  */
 export async function handleSelectStore(
   memoryBankManager: MemoryBankManager,
   storePath?: string,
   storeId?: string,
+  action: 'select' | 'register' | 'unregister' = 'select',
+  kind: 'local' | 'remote' = 'local',
 ) {
   const registry = getRegistry();
 
+  // Handle unregister action
+  if (action === 'unregister') {
+    if (!storeId) {
+      return {
+        content: [{ type: 'text', text: 'storeId is required for unregister action' }],
+        isError: true,
+      };
+    }
+    const removed = await registry.unregisterStore(storeId);
+    return {
+      content: [
+        {
+          type: 'text',
+          text: JSON.stringify({
+            success: removed,
+            action: 'unregister',
+            storeId,
+            message: removed ? `Store "${storeId}" removed from registry` : `Store "${storeId}" not found in registry`,
+          }, null, 2),
+        },
+      ],
+    };
+  }
+
+  // Handle register action
+  if (action === 'register') {
+    if (!storeId || !storePath) {
+      return {
+        content: [{ type: 'text', text: 'storeId and path are required for register action' }],
+        isError: true,
+      };
+    }
+    const absolutePath = path.isAbsolute(storePath)
+      ? storePath
+      : path.resolve(process.cwd(), storePath);
+
+    const exists = await FileUtils.fileExists(absolutePath);
+    if (!exists) {
+      return {
+        content: [{ type: 'text', text: `Path does not exist: ${absolutePath}` }],
+        isError: true,
+      };
+    }
+
+    const entry = await registry.registerStore({
+      storeId,
+      projectPath: absolutePath,
+      kind,
+    });
+
+    return {
+      content: [
+        {
+          type: 'text',
+          text: JSON.stringify({ success: true, action: 'register', store: entry }, null, 2),
+        },
+      ],
+    };
+  }
+
+  // Default: select action
   // Resolve path from storeId if needed
   let resolvedPath = storePath;
   if (!resolvedPath && storeId) {
     resolvedPath = (await registry.resolveStorePath(storeId)) ?? undefined;
+    
+    // If not in registry, check if storeId matches the currently active store
     if (!resolvedPath) {
+      const currentDir = memoryBankManager.getMemoryBankDir();
+      const currentProjectPath = memoryBankManager.getProjectPath();
+      if (currentDir) {
+        const activePath = currentProjectPath || path.dirname(currentDir);
+        const activeId = path.basename(activePath);
+        if (activeId === storeId) {
+          // Already the active store — just confirm selection
+          return {
+            content: [
+              {
+                type: 'text',
+                text: JSON.stringify(
+                  {
+                    selected: true,
+                    id: storeId,
+                    path: activePath,
+                    memoryBankDir: currentDir,
+                    note: 'Store is already active',
+                  },
+                  null,
+                  2,
+                ),
+              },
+            ],
+          };
+        }
+      }
       return {
         content: [{ type: 'text', text: `Store "${storeId}" not found in registry` }],
         isError: true,
@@ -300,12 +412,14 @@ export async function handleSelectStore(
 
 /**
  * Handler for register_store
+ * @deprecated Use select_store with action='register' instead
  */
 export async function handleRegisterStore(
   storeId: string,
   storePath: string,
   kind: 'local' | 'remote' = 'local',
 ) {
+  logger.info('StoreTools', 'DEPRECATED: register_store is deprecated. Use select_store with action="register" instead.');
   if (!storeId || !storePath) {
     return {
       content: [{ type: 'text', text: 'storeId and path are required' }],
@@ -344,8 +458,10 @@ export async function handleRegisterStore(
 
 /**
  * Handler for unregister_store
+ * @deprecated Use select_store with action='unregister' instead
  */
 export async function handleUnregisterStore(storeId: string) {
+  logger.info('StoreTools', 'DEPRECATED: unregister_store is deprecated. Use select_store with action="unregister" instead.');
   if (!storeId) {
     return {
       content: [{ type: 'text', text: 'storeId is required' }],

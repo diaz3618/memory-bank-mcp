@@ -1,4 +1,8 @@
-import { Server } from '@modelcontextprotocol/sdk/server/index.js';
+import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+
+/** Low-level MCP Server type (avoids deprecated Server import) */
+type LowLevelServer = McpServer['server'];
+
 import { CallToolRequestSchema, ErrorCode, ListToolsRequestSchema, McpError } from '@modelcontextprotocol/sdk/types.js';
 import { MemoryBankManager } from '../../core/MemoryBankManager.js';
 import { ProgressTracker } from '../../core/ProgressTracker.js';
@@ -9,7 +13,7 @@ import { progressTools, handleTrackProgress } from './ProgressTools.js';
 import { contextTools, handleUpdateActiveContext } from './ContextTools.js';
 import { decisionTools, handleLogDecision } from './DecisionTools.js';
 import { modeTools, handleSwitchMode, handleGetCurrentMode, handleProcessUmbCommand, handleCompleteUmb } from './ModeTools.js';
-import { graphTools, handleGraphUpsertEntity, handleGraphAddObservation, handleGraphLinkEntities, handleGraphUnlinkEntities, handleGraphSearch, handleGraphOpenNodes, handleGraphRebuild, handleGraphDeleteEntity, handleGraphDeleteObservation, handleGraphCompact } from './GraphTools.js';
+import { graphTools, handleGraphUpsertEntity, handleGraphAddObservation, handleGraphLinkEntities, handleGraphUnlinkEntities, handleGraphSearch, handleGraphOpenNodes, handleGraphRebuild, handleGraphDeleteEntity, handleGraphDeleteObservation, handleGraphCompact, handleGraphMaintain } from './GraphTools.js';
 import { storeToolDefinitions, handleListStores, handleSelectStore, handleRegisterStore, handleUnregisterStore } from './StoreTools.js';
 import { thinkingTools, handleSequentialThinking, handleResetSequentialThinking, handleFinalizeThinkingSession } from './ThinkingTools.js';
 import { kgContextTools, handleGetTargetedContext, handleGraphAddDocPointer } from './KGContextTools.js';
@@ -21,7 +25,7 @@ import { kgContextTools, handleGetTargetedContext, handleGraphAddDocPointer } fr
  * @param getProgressTracker Function to get the ProgressTracker
  */
 export function setupToolHandlers(
-  server: Server,
+  server: LowLevelServer,
   memoryBankManager: MemoryBankManager,
   getProgressTracker: () => ProgressTracker | null
 ) {
@@ -131,9 +135,10 @@ export function setupToolHandlers(
             };
           }
 
-          const { filename, content } = request.params.arguments as {
+          const { filename, content, ifMatchEtag } = request.params.arguments as {
             filename: string;
             content: string;
+            ifMatchEtag?: string;
           };
           if (!filename) {
             throw new McpError(ErrorCode.InvalidParams, 'Filename not specified');
@@ -141,7 +146,7 @@ export function setupToolHandlers(
           if (content === undefined) {
             throw new McpError(ErrorCode.InvalidParams, 'Content not specified');
           }
-          return handleWriteMemoryBankFile(memoryBankManager, filename, content);
+          return handleWriteMemoryBankFile(memoryBankManager, filename, content, ifMatchEtag);
         }
 
         case 'list_memory_bank_files': {
@@ -268,11 +273,12 @@ export function setupToolHandlers(
 
         // Mode tools
         case 'switch_mode': {
-          const { mode } = request.params.arguments as { mode: string };
-          if (!mode) {
-            throw new McpError(ErrorCode.InvalidParams, 'Mode not specified');
-          }
-          return await handleSwitchMode(memoryBankManager, mode);
+          const { mode, umb, umbCommand } = request.params.arguments as { 
+            mode?: string; 
+            umb?: boolean;
+            umbCommand?: string;
+          };
+          return await handleSwitchMode(memoryBankManager, mode, umb, umbCommand);
         }
 
         case 'get_current_mode': {
@@ -332,11 +338,12 @@ export function setupToolHandlers(
 
         // Backup and restore tools (P1 improvements)
         case 'create_backup': {
-          const args = request.params.arguments as { backupDir?: string } | undefined;
-          return handleCreateBackup(memoryBankManager, args?.backupDir);
+          const args = request.params.arguments as { backupDir?: string; listOnly?: boolean } | undefined;
+          return handleCreateBackup(memoryBankManager, args?.backupDir, args?.listOnly);
         }
 
         case 'list_backups': {
+          // DEPRECATED: use create_backup with listOnly:true
           return handleListBackups(memoryBankManager);
         }
 
@@ -449,16 +456,17 @@ export function setupToolHandlers(
         }
 
         case 'graph_link_entities': {
-          const { from, relationType, to, storeId } = request.params.arguments as {
+          const { from, relationType, to, action, storeId } = request.params.arguments as {
             from: string;
             relationType: string;
             to: string;
+            action?: 'link' | 'unlink';
             storeId?: string;
           };
           if (!from || !relationType || !to) {
             throw new McpError(ErrorCode.InvalidParams, 'from, relationType, and to are required');
           }
-          return handleGraphLinkEntities(memoryBankManager, from, relationType, to, storeId);
+          return handleGraphLinkEntities(memoryBankManager, from, relationType, to, storeId, action);
         }
 
         case 'graph_unlink_entities': {
@@ -506,11 +514,15 @@ export function setupToolHandlers(
         }
 
         case 'graph_delete_entity': {
-          const { entity, storeId } = request.params.arguments as { entity: string; storeId?: string };
-          if (!entity) {
-            throw new McpError(ErrorCode.InvalidParams, 'entity is required');
+          const { entity, observationId, storeId } = request.params.arguments as {
+            entity?: string;
+            observationId?: string;
+            storeId?: string;
+          };
+          if (!entity && !observationId) {
+            throw new McpError(ErrorCode.InvalidParams, 'Either entity or observationId is required');
           }
-          return handleGraphDeleteEntity(memoryBankManager, entity, storeId);
+          return handleGraphDeleteEntity(memoryBankManager, entity, observationId, storeId);
         }
 
         case 'graph_delete_observation': {
@@ -526,27 +538,41 @@ export function setupToolHandlers(
           return handleGraphCompact(memoryBankManager, storeId);
         }
 
+        case 'graph_maintain': {
+          const { operation, storeId } = request.params.arguments as {
+            operation: 'rebuild' | 'compact' | 'stats';
+            storeId?: string;
+          };
+          if (!operation) {
+            throw new McpError(ErrorCode.InvalidParams, 'operation is required');
+          }
+          return handleGraphMaintain(memoryBankManager, operation, storeId);
+        }
+
         // Thinking tools
         case 'sequential_thinking': {
           const thinkingInput = request.params.arguments as {
-            thought: string;
-            nextThoughtNeeded: boolean;
-            thoughtNumber: number;
-            totalThoughts: number;
+            thought?: string;
+            nextThoughtNeeded?: boolean;
+            thoughtNumber?: number;
+            totalThoughts?: number;
             isRevision?: boolean;
             revisesThought?: number;
             branchFromThought?: number;
             branchId?: string;
             needsMoreThoughts?: boolean;
             sessionId?: string;
+            reset?: boolean;
           };
-          if (!thinkingInput.thought || thinkingInput.thoughtNumber === undefined || thinkingInput.totalThoughts === undefined || thinkingInput.nextThoughtNeeded === undefined) {
-            throw new McpError(ErrorCode.InvalidParams, 'thought, thoughtNumber, totalThoughts, and nextThoughtNeeded are required');
+          // If reset is true, don't require other fields
+          if (!thinkingInput.reset && (!thinkingInput.thought || thinkingInput.thoughtNumber === undefined || thinkingInput.totalThoughts === undefined || thinkingInput.nextThoughtNeeded === undefined)) {
+            throw new McpError(ErrorCode.InvalidParams, 'thought, thoughtNumber, totalThoughts, and nextThoughtNeeded are required (unless reset:true)');
           }
           return handleSequentialThinking(thinkingInput);
         }
 
         case 'reset_sequential_thinking': {
+          // DEPRECATED: use sequential_thinking with reset:true
           const args = request.params.arguments as { sessionId?: string } | undefined;
           return handleResetSequentialThinking(args?.sessionId);
         }
@@ -613,11 +639,24 @@ export function setupToolHandlers(
         }
 
         case 'select_store': {
-          const { path: storePath, storeId } = request.params.arguments as { path?: string; storeId?: string };
-          if (!storePath && !storeId) {
-            throw new McpError(ErrorCode.InvalidParams, 'Either path or storeId is required');
+          const { path: storePath, storeId, action, kind } = request.params.arguments as {
+            path?: string;
+            storeId?: string;
+            action?: 'select' | 'register' | 'unregister';
+            kind?: 'local' | 'remote';
+          };
+          // Validation depends on action
+          const normalizedAction = action || 'select';
+          if (normalizedAction === 'select' && !storePath && !storeId) {
+            throw new McpError(ErrorCode.InvalidParams, 'Either path or storeId is required for select action');
           }
-          return handleSelectStore(memoryBankManager, storePath, storeId);
+          if (normalizedAction === 'register' && (!storePath || !storeId)) {
+            throw new McpError(ErrorCode.InvalidParams, 'Both path and storeId are required for register action');
+          }
+          if (normalizedAction === 'unregister' && !storeId) {
+            throw new McpError(ErrorCode.InvalidParams, 'storeId is required for unregister action');
+          }
+          return handleSelectStore(memoryBankManager, storePath, storeId, normalizedAction, kind);
         }
 
         case 'register_store': {

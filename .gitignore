@@ -56,3 +56,12 @@ prepare-*.sh
 
 # Memory Bank
 memory-bank
+
+# Local-only development directories (not committed)
+backup/
+repos/
+tests/
+tools/
+
+# Local MCP rules (per-machine config)
+.mcprules-*

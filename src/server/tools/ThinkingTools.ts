@@ -108,29 +108,30 @@ export const thinkingTools = [
   {
     name: 'sequential_thinking',
     description:
-      'Record a numbered thinking step for structured reasoning. ' +
+      'Record a numbered thinking step for structured reasoning, or reset session history. ' +
       'Use this to break complex problems into sequential steps with optional branching and revision. ' +
       'The raw thought text is NOT returned — only metadata. ' +
-      'Call finalize_thinking_session when done to persist outcomes to Memory Bank.',
+      'Call finalize_thinking_session when done to persist outcomes to Memory Bank. ' +
+      'Set reset:true to clear thinking history instead of recording a thought.',
     inputSchema: {
       type: 'object',
       properties: {
         thought: {
           type: 'string',
-          description: 'The thinking step content (will NOT be returned in the response)',
+          description: 'The thinking step content (will NOT be returned in the response). Not required if reset:true.',
         },
         nextThoughtNeeded: {
           type: 'boolean',
-          description: 'Whether another thinking step is needed after this one',
+          description: 'Whether another thinking step is needed after this one. Not required if reset:true.',
         },
         thoughtNumber: {
           type: 'integer',
-          description: 'Current thought number (>= 1)',
+          description: 'Current thought number (>= 1). Not required if reset:true.',
           minimum: 1,
         },
         totalThoughts: {
           type: 'integer',
-          description: 'Estimated total number of thoughts (>= 1, auto-adjusts upward)',
+          description: 'Estimated total number of thoughts (>= 1, auto-adjusts upward). Not required if reset:true.',
           minimum: 1,
         },
         isRevision: {
@@ -159,14 +160,18 @@ export const thinkingTools = [
           type: 'string',
           description: 'Session identifier to isolate thinking state across tasks',
         },
+        reset: {
+          type: 'boolean',
+          description: 'If true, resets the session(s) instead of recording a thought. If sessionId is provided, resets only that session.',
+        },
       },
-      required: ['thought', 'nextThoughtNeeded', 'thoughtNumber', 'totalThoughts'],
+      required: [],
     },
   },
   {
     name: 'reset_sequential_thinking',
     description:
-      'Clear the in-memory sequential thinking history. ' +
+      '(DEPRECATED: use sequential_thinking with reset:true) Clear the in-memory sequential thinking history. ' +
       'Provide a sessionId to reset only that session, or omit to reset all sessions.',
     inputSchema: {
       type: 'object',
@@ -258,20 +263,76 @@ export const thinkingTools = [
 /**
  * Handle sequential_thinking tool call.
  * Stores thought in memory, returns metadata only (never the raw thought text).
+ * If reset:true is provided, clears session(s) instead of recording a thought.
  */
 export function handleSequentialThinking(input: {
-  thought: string;
-  nextThoughtNeeded: boolean;
-  thoughtNumber: number;
-  totalThoughts: number;
+  thought?: string;
+  nextThoughtNeeded?: boolean;
+  thoughtNumber?: number;
+  totalThoughts?: number;
   isRevision?: boolean;
   revisesThought?: number;
   branchFromThought?: number;
   branchId?: string;
   needsMoreThoughts?: boolean;
   sessionId?: string;
+  reset?: boolean;
 }): { content: Array<{ type: string; text: string }>; isError?: boolean } {
   try {
+    // Handle reset mode
+    if (input.reset) {
+      if (input.sessionId) {
+        const had = sessions.has(input.sessionId);
+        resetSession(input.sessionId);
+        return {
+          content: [
+            {
+              type: 'text',
+              text: JSON.stringify({
+                reset: true,
+                sessionId: input.sessionId,
+                hadSession: had,
+                status: had ? 'Session cleared' : 'No session found (nothing to clear)',
+              }, null, 2),
+            },
+          ],
+        };
+      } else {
+        const count = sessions.size;
+        resetAllSessions();
+        return {
+          content: [
+            {
+              type: 'text',
+              text: JSON.stringify({
+                reset: true,
+                allSessions: true,
+                clearedCount: count,
+                status: `Cleared ${count} session(s)`,
+              }, null, 2),
+            },
+          ],
+        };
+      }
+    }
+
+    // Validate required fields for normal thinking mode
+    if (!input.thought || input.nextThoughtNeeded === undefined || 
+        !input.thoughtNumber || !input.totalThoughts) {
+      return {
+        content: [
+          {
+            type: 'text',
+            text: JSON.stringify({
+              error: 'Missing required fields: thought, nextThoughtNeeded, thoughtNumber, totalThoughts (unless reset:true)',
+              status: 'failed',
+            }),
+          },
+        ],
+        isError: true,
+      };
+    }
+
     const data: ThoughtData = {
       thought: input.thought,
       thoughtNumber: input.thoughtNumber,
@@ -339,11 +400,14 @@ export function handleSequentialThinking(input: {
 
 /**
  * Handle reset_sequential_thinking tool call.
+ * (DEPRECATED: use sequential_thinking with reset:true)
  * Clears in-memory state for a given sessionId or all sessions.
  */
 export function handleResetSequentialThinking(sessionId?: string): {
   content: Array<{ type: string; text: string }>;
 } {
+  logger.debug('ThinkingTools', 'DEPRECATION: reset_sequential_thinking called - use sequential_thinking with reset:true instead');
+  
   if (sessionId) {
     const had = sessions.has(sessionId) || sessions.has(sessionId);
     resetSession(sessionId);

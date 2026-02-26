@@ -6,6 +6,10 @@
 
 An MCP server that gives AI assistants persistent memory across sessions. It stores project context, decisions, and progress in structured markdown files — locally or on a remote server via SSH.
 
+> **Related repos:**
+> - **HTTP + Postgres + Redis variant** → [diaz3618/memory-bank-mcp-http](https://github.com/diaz3618/memory-bank-mcp-http) — Docker deployment with HTTP transport
+> - **VS Code Extension** → [diaz3618/Memory-Bank-VSCode-Ext](https://github.com/diaz3618/Memory-Bank-VSCode-Ext) — sidebar UI and GitHub Copilot integration
+
 ## Quick Start
 
 ```bash

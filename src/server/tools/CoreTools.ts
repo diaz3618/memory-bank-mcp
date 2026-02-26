@@ -6,7 +6,10 @@ import { ETagUtils } from '../../utils/ETagUtils.js';
 import { GraphStore } from '../../core/graph/GraphStore.js';
 import { renderGraphSummary } from '../../core/graph/GraphRenderer.js';
 import { LocalFileSystem } from '../../utils/storage/LocalFileSystem.js';
+import { LogManager } from '../../utils/LogManager.js';
 import os from 'os';
+
+const logger = LogManager.getInstance();
 
 /**
  * Definition of the main Memory Bank tools
@@ -203,7 +206,7 @@ export const coreTools = [
   },
   {
     name: 'create_backup',
-    description: 'Create a backup of the current Memory Bank state. Backups are stored in the parent directory with timestamped names.',
+    description: 'Create a backup of the current Memory Bank state, or list existing backups. Backups are stored in the parent directory with timestamped names.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -211,13 +214,17 @@ export const coreTools = [
           type: 'string',
           description: 'Optional custom directory to store the backup. If not provided, uses the parent of the memory bank directory.',
         },
+        listOnly: {
+          type: 'boolean',
+          description: 'If true, lists existing backups instead of creating a new one',
+        },
       },
       additionalProperties: false,
     },
   },
   {
     name: 'list_backups',
-    description: 'List all available Memory Bank backups. Returns backup IDs sorted by timestamp (newest first).',
+    description: '(DEPRECATED: use create_backup with listOnly:true) List all available Memory Bank backups. Returns backup IDs sorted by timestamp (newest first).',
     inputSchema: {
       type: 'object',
       properties: {},
@@ -1491,15 +1498,18 @@ export async function handleSearchMemoryBank(
 /**
  * Processes the create_backup tool
  * 
- * Creates a timestamped backup of the current Memory Bank state.
+ * Creates a timestamped backup of the current Memory Bank state,
+ * or lists existing backups if listOnly is true.
  * 
  * @param memoryBankManager Memory Bank Manager instance
  * @param backupDir Optional custom backup directory
- * @returns Operation result with backup path
+ * @param listOnly If true, lists backups instead of creating one
+ * @returns Operation result with backup path or list
  */
 export async function handleCreateBackup(
   memoryBankManager: MemoryBankManager,
-  backupDir?: string
+  backupDir?: string,
+  listOnly?: boolean
 ) {
   try {
     const memoryBankDirCheck = memoryBankManager.getMemoryBankDir();
@@ -1515,6 +1525,26 @@ export async function handleCreateBackup(
       };
     }
 
+    // Handle listOnly mode
+    if (listOnly) {
+      const backups = await memoryBankManager.listBackups();
+      return {
+        content: [
+          {
+            type: 'text',
+            text: JSON.stringify({
+              backups,
+              metadata: {
+                count: backups.length,
+                timestamp: new Date().toISOString(),
+              },
+            }, null, 2),
+          },
+        ],
+      };
+    }
+
+    // Create backup
     const backupPath = await memoryBankManager.createBackup(backupDir);
     
     return {
@@ -1546,6 +1576,7 @@ export async function handleCreateBackup(
 
 /**
  * Processes the list_backups tool
+ * @deprecated Use create_backup with listOnly:true instead
  * 
  * Lists all available Memory Bank backups.
  * 
@@ -1555,6 +1586,7 @@ export async function handleCreateBackup(
 export async function handleListBackups(
   memoryBankManager: MemoryBankManager
 ) {
+  logger.info('CoreTools', 'DEPRECATED: list_backups is deprecated. Use create_backup with listOnly:true instead.');
   try {
     const memoryBankDirCheck = memoryBankManager.getMemoryBankDir();
     if (!memoryBankDirCheck) {
