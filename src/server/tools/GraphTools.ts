@@ -1,16 +1,14 @@
 /**
  * GraphTools - MCP tool handlers for knowledge graph operations
  *
- * Implements the graph tools per knowledge-graph-plans.md A3:
+ * Tools:
  * - graph_upsert_entity
  * - graph_add_observation
  * - graph_link_entities (also handles unlink via action parameter)
- * - graph_unlink_entities (DEPRECATED)
  * - graph_search
  * - graph_open_nodes
- * - graph_rebuild (DEPRECATED)
- * - graph_compact (DEPRECATED)
- * - graph_maintain (new consolidated maintenance tool)
+ * - graph_delete_entity (also handles observation deletion via observationId)
+ * - graph_maintain (rebuild, compact, verify operations)
  */
 
 import { MemoryBankManager } from '../../core/MemoryBankManager.js';
@@ -129,29 +127,6 @@ export const graphTools = [
     },
   },
   {
-    name: 'graph_unlink_entities',
-    description: '(DEPRECATED: use graph_link_entities with action:"unlink") Remove a relationship between two entities.',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        ...storeIdProperty,
-        from: {
-          type: 'string',
-          description: 'Source entity name or ID',
-        },
-        relationType: {
-          type: 'string',
-          description: 'Type of relationship to remove',
-        },
-        to: {
-          type: 'string',
-          description: 'Target entity name or ID',
-        },
-      },
-      required: ['from', 'relationType', 'to'],
-    },
-  },
-  {
     name: 'graph_search',
     description:
       'Search the knowledge graph for entities and observations matching a query. Supports fuzzy matching on names and observation text.',
@@ -203,18 +178,6 @@ export const graphTools = [
     },
   },
   {
-    name: 'graph_rebuild',
-    description:
-      '(DEPRECATED: use graph_maintain with operation:"rebuild") Rebuild the graph snapshot from the event log. Use this to fix inconsistencies or recover from errors.',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        ...storeIdProperty,
-      },
-      required: [],
-    },
-  },
-  {
     name: 'graph_delete_entity',
     description:
       'Delete an entity from the knowledge graph, or delete a specific observation if observationId is provided.',
@@ -232,34 +195,6 @@ export const graphTools = [
         },
       },
       required: ['entity'],
-    },
-  },
-  {
-    name: 'graph_delete_observation',
-    description:
-      '(DEPRECATED: use graph_delete_entity with observationId parameter) Delete a specific observation from the knowledge graph by its ID.',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        ...storeIdProperty,
-        observationId: {
-          type: 'string',
-          description: 'The observation ID (starts with obs_)',
-        },
-      },
-      required: ['observationId'],
-    },
-  },
-  {
-    name: 'graph_compact',
-    description:
-      '(DEPRECATED: use graph_maintain with operation:"compact") Compact the graph event log by replacing the full history with a minimal representation of the current state. Reduces file size without losing data.',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        ...storeIdProperty,
-      },
-      required: [],
     },
   },
   {
@@ -670,111 +605,6 @@ export async function handleGraphLinkEntities(
 }
 
 /**
- * Handler for graph_unlink_entities
- * @deprecated Use graph_link_entities with action='unlink' instead
- */
-export async function handleGraphUnlinkEntities(
-  memoryBankManager: MemoryBankManager,
-  from: string,
-  relationType: string,
-  to: string,
-  storeId?: string,
-) {
-  logger.info('GraphTools', 'DEPRECATED: graph_unlink_entities is deprecated. Use graph_link_entities with action="unlink" instead.');
-  const store = await getGraphStore(memoryBankManager, storeId);
-  if (!store) {
-    return {
-      content: [
-        {
-          type: 'text',
-          text: 'Memory Bank not initialized. Use initialize_memory_bank first.',
-        },
-      ],
-      isError: true,
-    };
-  }
-
-  // Resolve both entities
-  const snapshot = await store.getSnapshot();
-  if (!snapshot.success) {
-    return {
-      content: [
-        {
-          type: 'text',
-          text: `Failed to get snapshot: ${snapshot.error}`,
-        },
-      ],
-      isError: true,
-    };
-  }
-
-  const resolveEntityId = (nameOrId: string): EntityId | null => {
-    if (nameOrId.startsWith('ent_')) {
-      return nameOrId as EntityId;
-    }
-    const found = findEntity(snapshot.data, nameOrId);
-    return found ? found.id : null;
-  };
-
-  const fromId = resolveEntityId(from);
-  const toId = resolveEntityId(to);
-
-  if (!fromId) {
-    return {
-      content: [
-        {
-          type: 'text',
-          text: `Source entity not found: "${from}"`,
-        },
-      ],
-      isError: true,
-    };
-  }
-
-  if (!toId) {
-    return {
-      content: [
-        {
-          type: 'text',
-          text: `Target entity not found: "${to}"`,
-        },
-      ],
-      isError: true,
-    };
-  }
-
-  const result = await store.unlinkEntities(fromId, relationType, toId);
-
-  if (!result.success) {
-    return {
-      content: [
-        {
-          type: 'text',
-          text: `Failed to unlink entities: ${result.error}`,
-        },
-      ],
-      isError: true,
-    };
-  }
-
-  return {
-    content: [
-      {
-        type: 'text',
-        text: JSON.stringify(
-          {
-            success: true,
-            message: `Unlinked ${from} --${relationType}--> ${to}`,
-          },
-          null,
-          2
-        ),
-      },
-    ],
-  };
-}
-
-/**
  * Handler for graph_search
  */
 export async function handleGraphSearch(
@@ -960,64 +790,6 @@ export async function handleGraphOpenNodes(
 }
 
 /**
- * Handler for graph_rebuild
- * @deprecated Use graph_maintain with operation='rebuild' instead
- */
-export async function handleGraphRebuild(memoryBankManager: MemoryBankManager, storeId?: string) {
-  logger.info('GraphTools', 'DEPRECATED: graph_rebuild is deprecated. Use graph_maintain with operation="rebuild" instead.');
-  const store = await getGraphStore(memoryBankManager, storeId);
-  if (!store) {
-    return {
-      content: [
-        {
-          type: 'text',
-          text: 'Memory Bank not initialized. Use initialize_memory_bank first.',
-        },
-      ],
-      isError: true,
-    };
-  }
-
-  const result = await store.rebuildSnapshot();
-
-  if (!result.success) {
-    return {
-      content: [
-        {
-          type: 'text',
-          text: `Failed to rebuild snapshot: ${result.error}`,
-        },
-      ],
-      isError: true,
-    };
-  }
-
-  const snapshot = result.data;
-  const stats = {
-    entityCount: snapshot.entities.length,
-    observationCount: snapshot.observations.length,
-    relationCount: snapshot.relations.length,
-  };
-
-  return {
-    content: [
-      {
-        type: 'text',
-        text: JSON.stringify(
-          {
-            success: true,
-            message: 'Graph snapshot rebuilt successfully',
-            stats,
-          },
-          null,
-          2
-        ),
-      },
-    ],
-  };
-}
-
-/**
  * Handler for graph_delete_entity
  * Can also delete observations when observationId is provided
  */
@@ -1035,7 +807,7 @@ export async function handleGraphDeleteEntity(
     };
   }
 
-  // Handle observation deletion (consolidated from graph_delete_observation)
+  // Handle observation deletion via observationId parameter
   if (observationId) {
     const result = await store.deleteObservation(observationId);
     if (!result.success) {
@@ -1079,86 +851,6 @@ export async function handleGraphDeleteEntity(
       {
         type: 'text',
         text: JSON.stringify({ success: true, message: `Entity "${entity}" deleted.` }, null, 2),
-      },
-    ],
-  };
-}
-
-/**
- * Handler for graph_delete_observation
- * @deprecated Use graph_delete_entity with observationId instead
- */
-export async function handleGraphDeleteObservation(
-  memoryBankManager: MemoryBankManager,
-  observationId: string,
-  storeId?: string,
-) {
-  logger.info('GraphTools', 'DEPRECATED: graph_delete_observation is deprecated. Use graph_delete_entity with observationId instead.');
-  const store = await getGraphStore(memoryBankManager, storeId);
-  if (!store) {
-    return {
-      content: [{ type: 'text', text: 'Memory Bank not initialized. Use initialize_memory_bank first.' }],
-      isError: true,
-    };
-  }
-
-  const result = await store.deleteObservation(observationId);
-  if (!result.success) {
-    return {
-      content: [{ type: 'text', text: `Failed to delete observation: ${result.error}` }],
-      isError: true,
-    };
-  }
-
-  // Rebuild to update snapshot + markdown
-  await store.rebuildSnapshot();
-
-  return {
-    content: [
-      {
-        type: 'text',
-        text: JSON.stringify({ success: true, message: `Observation "${observationId}" deleted.` }, null, 2),
-      },
-    ],
-  };
-}
-
-/**
- * Handler for graph_compact
- * @deprecated Use graph_maintain with operation='compact' instead
- */
-export async function handleGraphCompact(memoryBankManager: MemoryBankManager, storeId?: string) {
-  logger.info('GraphTools', 'DEPRECATED: graph_compact is deprecated. Use graph_maintain with operation="compact" instead.');
-  const store = await getGraphStore(memoryBankManager, storeId);
-  if (!store) {
-    return {
-      content: [{ type: 'text', text: 'Memory Bank not initialized. Use initialize_memory_bank first.' }],
-      isError: true,
-    };
-  }
-
-  const result = await store.compact();
-  if (!result.success) {
-    return {
-      content: [{ type: 'text', text: `Compaction failed: ${result.error}` }],
-      isError: true,
-    };
-  }
-
-  return {
-    content: [
-      {
-        type: 'text',
-        text: JSON.stringify(
-          {
-            success: true,
-            message: 'Graph event log compacted.',
-            before: result.data.before,
-            after: result.data.after,
-          },
-          null,
-          2,
-        ),
       },
     ],
   };

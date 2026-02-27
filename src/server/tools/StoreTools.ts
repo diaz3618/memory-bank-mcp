@@ -1,11 +1,9 @@
 /**
  * StoreTools - MCP tool handlers for multi-store management
  *
- * Implements Phase 2 from knowledge-graph-plans.md A5:
- * - list_stores: list all registered + active stores with status
+ * Tools:
+ * - list_stores: list all registered + active stores (action:"register"/"unregister" to manage)
  * - select_store: switch the active store (by path or storeId)
- * - register_store: add a store to the persistent registry
- * - unregister_store: remove a store from the persistent registry
  *
  * A "store" is a Memory Bank instance at a given path. The default store
  * is the current workspace's memory-bank folder. Additional stores are
@@ -62,44 +60,6 @@ export const storeToolDefinitions = [
         },
       },
       required: [] as string[],
-    },
-  },
-  {
-    name: 'register_store',
-    description:
-      '(DEPRECATED: use select_store with action="register") Register a Memory Bank store in the persistent registry.',
-    inputSchema: {
-      type: 'object' as const,
-      properties: {
-        storeId: {
-          type: 'string',
-          description: 'Unique identifier for this store (e.g., "my-project")',
-        },
-        path: {
-          type: 'string',
-          description: 'Absolute path to the project root containing a memory-bank/ folder',
-        },
-        kind: {
-          type: 'string',
-          enum: ['local', 'remote'],
-          description: 'Kind of store (default: "local")',
-        },
-      },
-      required: ['storeId', 'path'],
-    },
-  },
-  {
-    name: 'unregister_store',
-    description: '(DEPRECATED: use select_store with action="unregister") Remove a store from the persistent registry by its storeId.',
-    inputSchema: {
-      type: 'object' as const,
-      properties: {
-        storeId: {
-          type: 'string',
-          description: 'Store ID to remove from the registry',
-        },
-      },
-      required: ['storeId'],
     },
   },
 ];
@@ -166,7 +126,7 @@ export async function handleListStores(
 
     // Use registry storeId when the active path matches a registered store,
     // otherwise fall back to path.basename(). This keeps list_stores IDs
-    // consistent with register_store / select_store.
+    // consistent with select_store.
     const registryEntry = registryData.stores.find(s => s.projectPath === activePath);
     const activeId = registryEntry?.storeId ?? path.basename(activePath);
     const activeKind = registryEntry?.kind ?? 'local';
@@ -410,76 +370,4 @@ export async function handleSelectStore(
   }
 }
 
-/**
- * Handler for register_store
- * @deprecated Use select_store with action='register' instead
- */
-export async function handleRegisterStore(
-  storeId: string,
-  storePath: string,
-  kind: 'local' | 'remote' = 'local',
-) {
-  logger.info('StoreTools', 'DEPRECATED: register_store is deprecated. Use select_store with action="register" instead.');
-  if (!storeId || !storePath) {
-    return {
-      content: [{ type: 'text', text: 'storeId and path are required' }],
-      isError: true,
-    };
-  }
 
-  const absolutePath = path.isAbsolute(storePath)
-    ? storePath
-    : path.resolve(process.cwd(), storePath);
-
-  const exists = await FileUtils.fileExists(absolutePath);
-  if (!exists) {
-    return {
-      content: [{ type: 'text', text: `Path does not exist: ${absolutePath}` }],
-      isError: true,
-    };
-  }
-
-  const registry = getRegistry();
-  const entry = await registry.registerStore({
-    storeId,
-    projectPath: absolutePath,
-    kind,
-  });
-
-  return {
-    content: [
-      {
-        type: 'text',
-        text: JSON.stringify({ registered: true, store: entry }, null, 2),
-      },
-    ],
-  };
-}
-
-/**
- * Handler for unregister_store
- * @deprecated Use select_store with action='unregister' instead
- */
-export async function handleUnregisterStore(storeId: string) {
-  logger.info('StoreTools', 'DEPRECATED: unregister_store is deprecated. Use select_store with action="unregister" instead.');
-  if (!storeId) {
-    return {
-      content: [{ type: 'text', text: 'storeId is required' }],
-      isError: true,
-    };
-  }
-
-  const registry = getRegistry();
-  const removed = await registry.unregisterStore(storeId);
-
-  return {
-    content: [
-      {
-        type: 'text',
-        text: removed
-          ? `Store "${storeId}" removed from registry`
-          : `Store "${storeId}" not found in registry`,
-      },
-    ],
-  };
-}

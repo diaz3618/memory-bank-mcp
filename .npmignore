@@ -28,15 +28,28 @@ memory-bank-config.json
 .mcp.json
 .mcprules-*
 
+# Secrets & env files
+.env
+.env.*
+
 # Large directories not part of the package
 repos
 vscode-extension
 backup
 docs
 memory-bank
+logs
+tests
+tools
+scripts
+outputs
 
 # Build artifacts & logs
 *.log
 Dockerfile
 smithery.yaml
+
+# Misc
+.codex
+CONTRIBUTING.md
 CONTRIBUTING.md

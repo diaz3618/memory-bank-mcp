@@ -138,7 +138,7 @@ instructions:
     trigger: "(?i)\\b(umb|update memory bank)\\b"
     instructions:
       - "Halt Current Task: Stop current activity"
-      - "Call \`process_umb_command\` to activate UMB mode"
+      - "Call \`switch_mode\` with umb:true to activate UMB mode"
       - "Acknowledge Command: '[MEMORY BANK: UPDATING]'"
       - "Review Chat History"
       - "Update Memory Bank Files (use \`write_memory_bank_file\` with \`ifMatchEtag\` for safe updates)"
@@ -148,7 +148,7 @@ instructions:
           - System patterns
           - Documentation structure
           - Implementation guidance
-      - "Call \`complete_umb\` when finished to restore normal access"
+      - "Call \`switch_mode\` with umb:false when finished to restore normal access"
       - "Note: Override is TEMPORARY"
       - "SECURITY: Never store secrets, tokens, credentials, or private keys in memory-bank files"
     override_file_restrictions: true
@@ -271,7 +271,7 @@ instructions:
     trigger: "(?i)\\b(umb|update memory bank)\\b"
     instructions:
       - "Halt Current Task: Stop all activity"
-      - "Call \`process_umb_command\` to activate UMB mode"
+      - "Call \`switch_mode\` with umb:true to activate UMB mode"
       - "Acknowledge Command: '[MEMORY BANK: UPDATING]'"
       - "Review Chat History"
       - >
@@ -286,7 +286,7 @@ instructions:
                - CANNOT update other files
                - Must be explicit updates
             3. After Update:
-               - Call \`complete_umb\` to restore normal access
+               - Call \`switch_mode\` with umb:false to restore normal access
                - Document changes made
                - Return to read-only
                - Continue prior task
@@ -449,7 +449,7 @@ instructions:
     instructions:
       - "Halt Current Task: Stop current activity"
       - "Acknowledge Command: '[MEMORY BANK: UPDATING]'"
-      - "Call \`process_umb_command\` to activate UMB mode (unlocks write access)"
+      - "Call \`switch_mode\` with umb:true to activate UMB mode (unlocks write access)"
       - "Review Chat History"
       - >
           Code Focus Updates:
@@ -458,7 +458,7 @@ instructions:
           - Technical decisions
           - Test coverage
       - "Update Memory Bank Files (use \`write_memory_bank_file\` with \`ifMatchEtag\` for safe updates)"
-      - "Call \`complete_umb\` when finished to restore normal access"
+      - "Call \`switch_mode\` with umb:false when finished to restore normal access"
       - "SECURITY: Never store secrets, tokens, credentials, or private keys in memory-bank files"
     override_file_restrictions: true
 
@@ -626,7 +626,7 @@ instructions:
     instructions:
       - "Halt Current Task: Stop all activity"
       - "Acknowledge Command: '[MEMORY BANK: UPDATING]'"
-      - "Call \`process_umb_command\` to activate UMB mode (unlocks write access)"
+      - "Call \`switch_mode\` with umb:true to activate UMB mode (unlocks write access)"
       - "Review Chat History"
       - >
           UMB Process Flow:
@@ -641,7 +641,7 @@ instructions:
                - Must document clearly
             3. After Update:
                - Document changes made
-               - Call \`complete_umb\` to restore normal access
+               - Call \`switch_mode\` with umb:false to restore normal access
                - Continue debugging
       - >
           Debug-Specific Updates:
@@ -790,7 +790,7 @@ instructions:
     instructions:
       - "Halt Current Task: Stop all activity"
       - "Acknowledge Command: '[MEMORY BANK: UPDATING]'"
-      - "Call \`process_umb_command\` to activate UMB mode (unlocks write access)"
+      - "Call \`switch_mode\` with umb:true to activate UMB mode (unlocks write access)"
       - "Review Chat History"
       - >
           UMB Process Flow:
@@ -805,7 +805,7 @@ instructions:
                - Must document clearly
             3. After Update:
                - Document changes made
-               - Call \`complete_umb\` to restore normal access
+               - Call \`switch_mode\` with umb:false to restore normal access
                - Continue testing
       - >
           Test-Specific Updates:

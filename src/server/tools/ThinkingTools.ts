@@ -169,21 +169,6 @@ export const thinkingTools = [
     },
   },
   {
-    name: 'reset_sequential_thinking',
-    description:
-      '(DEPRECATED: use sequential_thinking with reset:true) Clear the in-memory sequential thinking history. ' +
-      'Provide a sessionId to reset only that session, or omit to reset all sessions.',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        sessionId: {
-          type: 'string',
-          description: 'Optional session ID to reset. If omitted, resets ALL sessions.',
-        },
-      },
-    },
-  },
-  {
     name: 'finalize_thinking_session',
     description:
       'Persist the outcome of a thinking session into Memory Bank files. ' +
@@ -396,50 +381,6 @@ export function handleSequentialThinking(input: {
       isError: true,
     };
   }
-}
-
-/**
- * Handle reset_sequential_thinking tool call.
- * (DEPRECATED: use sequential_thinking with reset:true)
- * Clears in-memory state for a given sessionId or all sessions.
- */
-export function handleResetSequentialThinking(sessionId?: string): {
-  content: Array<{ type: string; text: string }>;
-} {
-  logger.debug('ThinkingTools', 'DEPRECATION: reset_sequential_thinking called - use sequential_thinking with reset:true instead');
-  
-  if (sessionId) {
-    const had = sessions.has(sessionId) || sessions.has(sessionId);
-    resetSession(sessionId);
-    return {
-      content: [
-        {
-          type: 'text',
-          text: JSON.stringify({
-            reset: true,
-            sessionId,
-            existed: had,
-            message: `Session '${sessionId}' cleared.`,
-          }),
-        },
-      ],
-    };
-  }
-
-  const count = sessions.size;
-  resetAllSessions();
-  return {
-    content: [
-      {
-        type: 'text',
-        text: JSON.stringify({
-          reset: true,
-          sessionsCleared: count,
-          message: 'All sequential thinking sessions cleared.',
-        }),
-      },
-    ],
-  };
 }
 
 /**
