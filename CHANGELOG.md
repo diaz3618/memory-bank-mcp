@@ -2,6 +2,37 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.10.0](https://github.com/diaz3618/memory-bank-mcp/compare/v1.9.0...v1.10.0) (2026-02-27)
+
+
+### ⚠ BREAKING CHANGES
+
+* Removed deprecated backward-compatible tool wrappers.
+Use the consolidated tools instead:
+- get_current_mode → switch_mode (no params)
+- process_umb_command → switch_mode (umb:true)
+- complete_umb → switch_mode (umb:false)
+- list_backups → create_backup (listOnly:true)
+- register_store → list_stores (action:'register')
+- unregister_store → list_stores (action:'unregister')
+- reset_sequential_thinking → sequential_thinking (reset:true)
+- graph_unlink_entities → graph_link_entities (action:'unlink')
+- graph_delete_observation → graph_delete_entity (observationId)
+- graph_rebuild → graph_maintain (operation:'rebuild')
+- graph_compact → graph_maintain (operation:'compact')
+
+Also:
+- Removed dead CachingFileSystem.ts (never imported)
+- Updated McpRulesTemplates UMB instructions to use switch_mode
+- Updated get_instructions text for consolidated tools
+- Fixed restore_backup description referencing list_backups
+- Cleaned stale comments referencing deprecated tools
+- Tool count: 47 → 36
+
+### Code Refactoring
+
+* remove 11 deprecated tool wrappers, clean dead code ([4f103fe](https://github.com/diaz3618/memory-bank-mcp/commit/4f103fe7419a7add9cf5a2c174fd0be2448cd11f))
+
 ## [1.9.0](https://github.com/diaz3618/memory-bank-mcp/compare/v1.8.1...v1.9.0) (2026-02-27)
 
 
