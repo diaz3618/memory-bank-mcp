@@ -2,6 +2,25 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.9.0](https://github.com/diaz3618/memory-bank-mcp/compare/v1.8.1...v1.9.0) (2026-02-27)
+
+
+### Features
+
+* **extension:** add API Keys tree view with refresh, rotate, copy metadata ([c5366c6](https://github.com/diaz3618/memory-bank-mcp/commit/c5366c6cbcb1e4d90a53095d868124779211154b))
+* **extension:** complete tool reference in copilot instructions, HTTP connection fixes ([a41f49b](https://github.com/diaz3618/memory-bank-mcp/commit/a41f49bed657253a936699a104b3282d5970606f))
+* **vscode:** add API key management commands (create, list, revoke) ([6d9c95e](https://github.com/diaz3618/memory-bank-mcp/commit/6d9c95ed3ac3f11706ca13b5a438b3c538e955f2))
+
+
+### Code Refactoring
+
+* tool consolidation (7 merges, 11 deprecated) + separate HTTP/VSCode repos ([a85ba11](https://github.com/diaz3618/memory-bank-mcp/commit/a85ba1112ec16eda9beaf62e2a345f0593cf3efe))
+
+
+### Documentation
+
+* archive 8 obsolete/redundant docs, fix cross-references ([8b9e7ff](https://github.com/diaz3618/memory-bank-mcp/commit/8b9e7ff8d7f70a2e343ae970ea5fc91b87bf9e70))
+
 ### [1.8.1](https://github.com/diaz3618/memory-bank-mcp/compare/v1.8.0...v1.8.1) (2026-02-17)
 
 
