@@ -40,7 +40,7 @@ Or add manually to `~/.claude/claude_desktop_config.json`:
 
 Once configured, Claude Code will have access to all Memory Bank tools. Start a session with:
 
-```
+```markdown
 Initialize the memory bank for this project, then read the active context.
 ```
 
@@ -56,7 +56,7 @@ Claude Code will call `initialize_memory_bank` and `read_memory_bank_file` autom
 
 Claude Code can use the knowledge graph tools to build a persistent understanding of your project:
 
-```
+```markdown
 Search the knowledge graph for entities related to "authentication"
 ```
 

@@ -64,21 +64,25 @@ The implementation abstracts file system operations using the `FileSystemInterfa
 If you encounter issues with remote server mode, check the following:
 
 1. **SSH Key**: Ensure the SSH key is valid and has the correct permissions
+
    ```bash
    chmod 600 ~/.ssh/your_ssh_key
    ```
 
 2. **SSH Connection**: Test the SSH connection manually
+
    ```bash
    ssh -i ~/.ssh/your_ssh_key username@hostname
    ```
 
 3. **Remote Path**: Ensure the remote path exists and you have write permissions
+
    ```bash
    ssh -i ~/.ssh/your_ssh_key username@hostname "mkdir -p /path/on/remote/server"
    ```
 
 4. **Debug Mode**: Use the `--debug` flag to enable detailed logging
+
    ```bash
    npx @diazstg/memory-bank-mcp --remote --debug [other options]
    ```
@@ -95,4 +99,4 @@ If you encounter issues with remote server mode, check the following:
 - Cache frequently accessed files locally
 - Add support for SFTP as an alternative to SCP
 - Implement file synchronization between local and remote storage
-- Add support for other authentication methods 
+- Add support for other authentication methods

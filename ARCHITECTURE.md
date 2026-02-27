@@ -4,7 +4,7 @@ High-level overview of the Memory Bank MCP server codebase.
 
 ## Layer Diagram
 
-```
+```markdown
 ┌──────────────────────────────────────────────────┐
 │                   MCP Protocol                   │
 │            (JSON-RPC over stdio/SSE)             │
@@ -133,6 +133,7 @@ src/
 ## Key Concepts
 
 ### Memory Bank Files
+
 The server manages a set of markdown files in a `memory-bank/` directory:
 
 | File | Purpose |
@@ -144,7 +145,9 @@ The server manages a set of markdown files in a `memory-bank/` directory:
 | `system-patterns.md` | Architecture patterns |
 
 ### Knowledge Graph
+
 An append-only JSONL event log (`graph/graph.jsonl`) that materializes into a snapshot (`graph.snapshot.json`). Operations:
+
 - **upsert_entity** / **delete_entity**
 - **add_observation** / **delete_observation**
 - **link_entities** / **unlink_entities**
@@ -152,7 +155,9 @@ An append-only JSONL event log (`graph/graph.jsonl`) that materializes into a sn
 Write operations are serialized via an async write queue to prevent race conditions.
 
 ### Modes
+
 Five operational modes (`architect`, `ask`, `code`, `debug`, `test`) configured via `.mcprules-{mode}` files. Each mode has:
+
 - Custom instructions
 - File authority rules (read/write/create permissions)
 - Tool usage guidelines
@@ -161,17 +166,20 @@ Five operational modes (`architect`, `ask`, `code`, `debug`, `test`) configured 
 Modes are auto-created from templates if missing during initialization.
 
 ### Storage Abstraction
+
 All file I/O goes through `FileSystemInterface`, enabling:
+
 - **Local** — direct Node.js `fs` calls
 - **Remote** — SSH/SFTP via `ssh2`
 - **Caching** — decorator that caches reads with ETag invalidation
 
 ### Multi-Store
+
 `StoreRegistry` allows managing multiple memory banks from a single server instance. Each store has an ID, path, and optional label.
 
 ## Data Flow
 
-```
+```markdown
 AI Client → MCP Protocol → MemoryBankServer
   → Tool dispatch (tools/index.ts)
     → Tool handler (e.g., CoreTools.handleWriteMemoryBankFile)
@@ -181,7 +189,9 @@ AI Client → MCP Protocol → MemoryBankServer
 ```
 
 ## VS Code Extension
+
 The companion extension lives in `vscode-extension/` and provides:
+
 - Tree views for memory bank files and modes
 - Commands for initialization, mode switching
 - MCP client that communicates with the server via stdio

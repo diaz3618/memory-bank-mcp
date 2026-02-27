@@ -50,7 +50,7 @@ For backward compatibility, the system still recognizes both formats, but all ne
 If you have existing Memory Bank files in camelCase format, you can use the `migrate_file_naming` tool to automatically rename them to kebab-case:
 
 ```
-/mcp memory-bank-mcp migrate_file_naming random_string=migrate
+/mcp memory-bank-mcp migrate_file_naming
 ```
 
 ## Best Practices

@@ -51,15 +51,10 @@ prepare-*.sh
 # Local-only directories
 .venv/
 
-# VS Code extension packaging
-*.vsix
-
 # Memory Bank
 memory-bank
 
 # Local-only development directories (not committed)
-backup/
-repos/
 tests/
 tools/
 

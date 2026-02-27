@@ -16,7 +16,7 @@ This document specifies the Model Context Protocol (MCP) implementation for Memo
 
 Memory Bank MCP is a **stdio-based MCP server**, not an HTTP server. Communication happens through:
 
-```
+```markdown
 ┌──────────────────┐      JSON-RPC over      ┌───────────────────────┐
 │  MCP Client      │      stdin/stdout       │  Memory Bank MCP      │
 │  (AI Assistant)  │◄───────────────────────►│  Server               │
@@ -81,7 +81,8 @@ When started, the server performs MCP initialization handshake:
 3. **Client → Server**: `initialized` notification
 
 The server exposes:
-- **Tools**: 40+ tools for Memory Bank operations
+
+- **Tools**: ~30 active tools + 11 deprecated backward-compatible aliases
 - **Resources**: Memory Bank file access via `memory-bank://` URIs
 - **Capabilities**: Tool execution, resource reading
 
@@ -193,10 +194,9 @@ Memory Bank MCP provides the following tool categories:
 
 | Tool Name | Description |
 |-----------|-------------|
-| `switch_mode` | Change operational mode |
-| `get_current_mode` | Get current mode info |
-| `process_umb_command` | Process "Update Memory Bank" command |
-| `complete_umb` | Complete UMB operation |
+| `switch_mode` | Switch mode, get current mode info (no params), or manage UMB (`umb: true/false`) |
+
+> **Deprecated aliases (still functional)**: `get_current_mode`, `process_umb_command`, `complete_umb`
 
 ### Knowledge Graph Tools
 
@@ -205,30 +205,31 @@ Memory Bank MCP provides the following tool categories:
 | `graph_search` | Search knowledge graph |
 | `graph_upsert_entity` | Create/update entity |
 | `graph_add_observation` | Add observation to entity |
-| `graph_link_entities` | Create relationships |
-| `graph_unlink_entities` | Remove relationships |
+| `graph_link_entities` | Create **or** remove relationship (`action: "link"|"unlink"`) |
 | `graph_open_nodes` | Get entity details |
-| `graph_delete_entity` | Delete entity |
-| `graph_delete_observation` | Delete observation |
-| `graph_rebuild` | Rebuild graph |
-| `graph_compact` | Compact graph storage |
+| `graph_delete_entity` | Delete entity or specific observation (`observationId` param) |
+| `graph_maintain` | Graph maintenance: `operation: "rebuild"|"compact"|"stats"` |
+| `graph_add_doc_pointer` | Add document pointer to entity |
+
+> **Deprecated aliases (still functional)**: `graph_unlink_entities`, `graph_delete_observation`, `graph_rebuild`, `graph_compact`
 
 ### Memory Bank Stores
 
 | Tool Name | Description |
 |-----------|-------------|
 | `list_stores` | List all Memory Bank stores |
-| `select_store` | Switch active store |
-| `register_store` | Register new store |
-| `unregister_store` | Unregister store |
+| `select_store` | Manage stores (`action: "select"|"register"|"unregister"`) |
+
+> **Deprecated aliases (still functional)**: `register_store`, `unregister_store`
 
 ### Backup & Restore
 
 | Tool Name | Description |
 |-----------|-------------|
-| `create_backup` | Create Memory Bank backup |
-| `list_backups` | List available backups |
+| `create_backup` | Create backup or list existing ones (`listOnly: true`) |
 | `restore_backup` | Restore from backup |
+
+> **Deprecated alias (still functional)**: `list_backups`
 
 ### Batch Operations
 
@@ -236,6 +237,29 @@ Memory Bank MCP provides the following tool categories:
 |-----------|-------------|
 | `batch_read_files` | Read multiple files |
 | `batch_write_files` | Write multiple files |
+
+### Sequential Thinking
+
+| Tool Name | Description |
+|-----------|-------------|
+| `sequential_thinking` | Record thinking step or reset history (`reset: true`) |
+| `finalize_thinking_session` | Persist thinking session outcome to Memory Bank |
+
+> **Deprecated alias (still functional)**: `reset_sequential_thinking`
+
+### Context Intelligence
+
+| Tool Name | Description |
+|-----------|-------------|
+| `get_targeted_context` | Minimal context slice for a specific query |
+
+### Utilities
+
+| Tool Name | Description |
+|-----------|-------------|
+| `get_instructions` | Full tool catalog and workflow guide |
+| `debug_mcp_config` | Debug MCP and Memory Bank configuration |
+| `migrate_file_naming` | Migrate legacy camelCase file names to kebab-case |
 
 ## Tool Schemas
 
@@ -284,6 +308,7 @@ Memory Bank files are exposed as MCP resources with the `memory-bank://` URI sch
 | `memory-bank://product-context.md` | Product and project information |
 
 Resources support:
+
 - **List**: Get all available resources
 - **Read**: Get resource content as text or binary
 - **Subscribe**: Receive updates when resources change (if supported by client)
@@ -322,6 +347,7 @@ Errors follow MCP standard error responses:
 ```
 
 Common error codes:
+
 - `-32000`: Server error (e.g., Memory Bank not found, file operation failed)
 - `-32601`: Method not found (invalid tool name)
 - `-32602`: Invalid params (incorrect tool parameters)
@@ -362,7 +388,7 @@ Memory Bank MCP is designed for extensibility:
 Register multiple Memory Bank stores:
 
 ```javascript
-// Via list_stores, select_store, register_store tools
+// Via list_stores, select_store tools (with action: "register"/"unregister")
 ```
 
 ### Knowledge Graph
@@ -392,6 +418,7 @@ Efficient multi-file operations via `batch_read_files` and `batch_write_files`.
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 1.8.1 | 2026-02-26 | Tool consolidation (7 merges, 11 deprecated aliases); VS Code extension moved to separate repo |
 | 1.7.0 | 2026-02-13 | Added research tools, fixed mode switching, renamed --githubProfileUrl to --username |
 | 1.6.0 | 2026-02-10 | Added knowledge graph tools |
 | 1.5.0 | 2026-02-08 | Added store management |

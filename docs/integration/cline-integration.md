@@ -130,13 +130,15 @@ memory-bank-mcp --mode architect
 memory-bank-mcp -m code
 ```
 
-## Additional MCP Tools
+## MCP Tools for Mode Management
 
-The integration with `.clinerules` files adds the following MCP tools:
+The integration with `.clinerules` files adds the following MCP tool:
 
 ### switch_mode
 
-Switches to a specific mode.
+The unified mode management tool. Switches modes, gets current mode info, and manages UMB state.
+
+**Switch to a mode:**
 
 ```json
 {
@@ -147,31 +149,39 @@ Switches to a specific mode.
 }
 ```
 
-### get_current_mode
-
-Gets information about the current mode.
+**Get current mode info (no parameters):**
 
 ```json
 {
-  "name": "get_current_mode",
+  "name": "switch_mode",
+  "arguments": {}
+}
+```
+
+**Activate UMB mode:**
+
+```json
+{
+  "name": "switch_mode",
   "arguments": {
-    "random_string": "dummy"
+    "umb": true,
+    "umbCommand": "Update Memory Bank"
   }
 }
 ```
 
-### process_umb_command
-
-Processes the Update Memory Bank (UMB) command.
+**Deactivate UMB mode:**
 
 ```json
 {
-  "name": "process_umb_command",
+  "name": "switch_mode",
   "arguments": {
-    "command": "Update Memory Bank"
+    "umb": false
   }
 }
 ```
+
+> **Note**: `get_current_mode`, `process_umb_command`, and `complete_umb` are deprecated aliases that still work for backward compatibility. Use `switch_mode` for all new code.
 
 ## Workflow Example
 
@@ -185,13 +195,13 @@ Processes the Update Memory Bank (UMB) command.
 
 3. The server applies the rules of the specified mode
 
-4. When needed, use the UMB command to update the Memory Bank:
+4. When needed, activate UMB mode to update the Memory Bank:
 
    ```json
    {
-     "name": "process_umb_command",
+     "name": "switch_mode",
      "arguments": {
-       "command": "Update Memory Bank"
+       "umb": true
      }
    }
    ```

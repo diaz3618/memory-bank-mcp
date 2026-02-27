@@ -24,11 +24,15 @@ bun test --pattern "FileUtils"
 
 Tests are organized in the `src/__tests__` directory, with test files named according to the module they test:
 
-- `fileUtils.test.ts` - Tests for the FileUtils class
+- `fileUtils.test.ts` - Tests for the FileUtils utilities
 - `memoryBankManager.test.ts` - Tests for the MemoryBankManager class
 - `progressTracker.test.ts` - Tests for the ProgressTracker class
 - `migrationUtils.test.ts` - Tests for the MigrationUtils class
-- `clinerules-integration.test.ts` - Integration tests for the clinerules functionality
+- `externalRulesLoader.test.ts` - Tests for the ExternalRulesLoader (clinerules parsing)
+- `graphStore.test.ts` - Tests for the knowledge graph store
+- `mcprules-integration.test.ts` - Integration tests for the `.mcprules` / `.clinerules` functionality
+- `memory-bank-validation.test.ts` - Validation tests for Memory Bank file operations
+- `server/` - Server-level integration tests
 
 ## Writing Tests
 

@@ -47,11 +47,13 @@ Memory Bank MCP now supports the following formats for rule files:
 ```
 
 **Advantages:**
+
 - Widely supported standard format
 - Native parsing in JavaScript/TypeScript
 - Strict structure
 
 **Disadvantages:**
+
 - Verbose syntax
 - No comment support
 - Prone to syntax errors (commas, quotes)
@@ -77,12 +79,14 @@ mode_triggers:
 ```
 
 **Advantages:**
+
 - Cleaner, more readable syntax
 - Supports comments
 - Less prone to syntax errors
 - Good for complex hierarchical structures
 
 **Disadvantages:**
+
 - Indentation sensitive
 - Requires additional library for parsing
 
@@ -113,12 +117,14 @@ architect = [
 ```
 
 **Advantages:**
+
 - Clear and intuitive syntax
 - Supports comments
 - Less sensitive to formatting errors
 - Good for configurations
 
 **Disadvantages:**
+
 - Less common than JSON and YAML
 - Requires additional library for parsing
 - May be less intuitive for deeply nested structures

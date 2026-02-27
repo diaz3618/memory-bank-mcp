@@ -34,12 +34,12 @@ You can specify a custom folder name for the Memory Bank:
 npx @diazstg/memory-bank-mcp --folder custom-memory-bank
 ```
 
-### GitHub Profile URL
+### Username for Progress Tracking
 
-You can specify your GitHub profile URL for tracking changes:
+You can specify your name or GitHub username for attribution in progress entries:
 
 ```bash
-npx @diazstg/memory-bank-mcp --githubProfileUrl https://github.com/username
+npx @diazstg/memory-bank-mcp --username your-github-username
 ```
 
 ## Global Installation

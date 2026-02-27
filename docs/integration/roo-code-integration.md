@@ -80,7 +80,7 @@ You can configure Roo Code to automatically switch Memory Bank modes:
 
 When beginning work with Roo Code, load context:
 
-```
+```markdown
 @roo Load the current context from Memory Bank using get_context_digest
 ```
 
@@ -98,13 +98,13 @@ Roo Code can automatically use Memory Bank tools:
 
 Update the memory bank before ending:
 
-```
+```markdown
 @roo Update the memory bank with current tasks, issues, and next steps
 ```
 
 ## Workflow Example
 
-```
+```markdown
 You: @roo Start by loading context from memory bank
 
 Roo: [Calls get_context_digest]
@@ -137,7 +137,7 @@ Roo: [Calls log_decision with title="Authentication Strategy",
 
 Roo Code can leverage the Memory Bank knowledge graph:
 
-```
+```markdown
 You: @roo What components depend on the AuthService?
 
 Roo: [Calls graph_search with query="AuthService"]
@@ -189,6 +189,7 @@ You can create custom Roo Code modes that integrate with Memory Bank:
 3. Add mode-specific Memory Bank behaviors
 
 Example custom mode: "Review"
+
 - Switches Memory Bank to `ask` mode
 - Focuses on reading and explaining code
 - Uses `graph_search` extensively
@@ -204,7 +205,8 @@ Example custom mode: "Review"
 ### Mode Mismatches
 
 - If Roo Code and Memory Bank modes are out of sync, manually call:
-  ```
+
+  ```markdown
   @roo Switch memory bank mode to match current mode
   ```
 
@@ -215,10 +217,8 @@ Example custom mode: "Review"
 
 ## See Also
 
-- [AI Assistant Integration Guide](./ai-assistant-integration.md) - General MCP integration patterns
 - [Generic MCP Integration Guide](./generic-mcp-integration.md) - Full MCP configuration reference
 - [Roo Code Documentation](https://roocode.com/docs) - Official Roo Code docs
-- [Roo Code Memory Bank Comparison](../reference/roo-code-memory-bank-comparison.md) - Historical context
 
 ---
 

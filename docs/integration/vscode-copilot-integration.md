@@ -31,7 +31,7 @@ If you have the Memory Bank MCP extension installed:
 
 Once the MCP server is running, Copilot Chat can use Memory Bank tools in Agent mode. Start with:
 
-```
+```markdown
 @workspace Initialize the memory bank and read the current context
 ```
 

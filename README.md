@@ -7,6 +7,7 @@
 An MCP server that gives AI assistants persistent memory across sessions. It stores project context, decisions, and progress in structured markdown files — locally or on a remote server via SSH.
 
 > **Related repos:**
+>
 > - **HTTP + Postgres + Redis variant** → [diaz3618/memory-bank-mcp-http](https://github.com/diaz3618/memory-bank-mcp-http) — Docker deployment with HTTP transport
 > - **VS Code Extension** → [diaz3618/Memory-Bank-VSCode-Ext](https://github.com/diaz3618/Memory-Bank-VSCode-Ext) — sidebar UI and GitHub Copilot integration
 
@@ -38,7 +39,7 @@ Add to your editor's MCP config (`.vscode/mcp.json`, Cursor, Claude Desktop, etc
       "args": ["-y",
           "@diazstg/memory-bank-mcp",
           "--username",
-          "your-github-username"
+          "your-username"
       ],
       "type": "stdio"
     }
@@ -70,7 +71,7 @@ npx @diazstg/memory-bank-mcp --remote \
   --ssh-key ~/.ssh/id_ed25519
 ```
 
-See [Remote Server Guide](docs/guides/remote-server.md) and [SSH Keys Guide](docs/guides/ssh-keys-guide.md).
+See [Remote Server Guide](docs/guides/remote-server.md).
 
 ## How It Works
 
@@ -131,7 +132,7 @@ server.run().catch(console.error);
 | Topic | Link |
 |-------|------|
 | Getting Started | [npx usage](docs/getting-started/npx-usage.md), [build with Bun](docs/getting-started/build-with-bun.md), [custom folder](docs/getting-started/custom-folder-name.md) |
-| Guides | [Remote server](docs/guides/remote-server.md), [SSH keys](docs/guides/ssh-keys-guide.md), [usage modes](docs/guides/usage-modes.md), [status system](docs/guides/memory-bank-status-prefix.md), [migration](docs/guides/migration-guide.md), [debug MCP](docs/guides/debug-mcp-config.md) |
+| Guides | [Remote server](docs/guides/remote-server.md), [usage modes](docs/guides/usage-modes.md), [status system](docs/guides/memory-bank-status-prefix.md), [debug MCP](docs/guides/debug-mcp-config.md) |
 | Integrations | [VS Code/Copilot](docs/integration/vscode-copilot-integration.md), [Claude Code](docs/integration/claude-code-integration.md), [Cursor](docs/integration/cursor-integration.md), [Cline](docs/integration/cline-integration.md), [Roo Code](docs/integration/roo-code-integration.md), [generic MCP](docs/integration/generic-mcp-integration.md) |
 | Reference | [MCP protocol](docs/reference/mcp-protocol-specification.md), [rules format](docs/reference/rule-formats.md), [file naming](docs/reference/file-naming-convention.md) |
 | Development | [Architecture](ARCHITECTURE.md), [testing](docs/development/testing-guide.md), [logging](docs/development/logging-system.md) |

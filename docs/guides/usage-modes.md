@@ -40,27 +40,6 @@ Architect mode is designed for high-level planning, system design, and project o
 - 📋 **Documentation**: Maintain technical documentation
 - 🤝 **Team Collaboration**: Guide implementation standards
 
-#### Usage Example
-
-```bash
-# Start a conversation in architect mode
-curl -X POST http://localhost:3000/chat \
-  -H "Content-Type: application/json" \
-  -d '{
-    "messages": [
-      {
-        "role": "system",
-        "content": "You are in architect mode. Help plan the project structure."
-      },
-      {
-        "role": "user",
-        "content": "How should we structure our authentication system?"
-      }
-    ],
-    "mode": "architect"
-  }'
-```
-
 #### Rules File Example (YAML)
 
 ```yaml
@@ -77,7 +56,7 @@ instructions:
     instructions:
       - "Analyze the project structure in the Memory Bank"
       - "Suggest architectural improvements based on the current context"
-      - "Update the systemPatterns.md file with newly identified patterns"
+      - "Update the system-patterns.md file with newly identified patterns"
     override_file_restrictions: true
 mode_triggers:
   architect:
@@ -98,27 +77,6 @@ Code mode is your primary interface for implementation and development. This mod
 - 📚 **Documentation**: Add code comments and docs
 - ✨ **Quality Control**: Maintain code standards
 - 🔄 **Refactoring**: Improve code structure
-
-#### Usage Example
-
-```bash
-# Start a conversation in code mode
-curl -X POST http://localhost:3000/chat \
-  -H "Content-Type: application/json" \
-  -d '{
-    "messages": [
-      {
-        "role": "system",
-        "content": "You are in code mode. Help implement features."
-      },
-      {
-        "role": "user",
-        "content": "I need to implement a function to validate JWT tokens."
-      }
-    ],
-    "mode": "code"
-  }'
-```
 
 #### Rules File Example (JSON)
 
@@ -165,27 +123,6 @@ Ask mode serves as your knowledge base interface and documentation assistant. Th
 - 🤝 **Collaboration**: Share understanding
 - 📖 **Pattern Education**: Explain system patterns
 
-#### Usage Example
-
-```bash
-# Start a conversation in ask mode
-curl -X POST http://localhost:3000/chat \
-  -H "Content-Type: application/json" \
-  -d '{
-    "messages": [
-      {
-        "role": "system",
-        "content": "You are in ask mode. Provide information and explanations."
-      },
-      {
-        "role": "user",
-        "content": "How does the caching system work in our project?"
-      }
-    ],
-    "mode": "ask"
-  }'
-```
-
 #### Rules File Example (TOML)
 
 ```toml
@@ -204,7 +141,7 @@ general = [
 trigger = "ask"
 instructions = [
   "Consult the Memory Bank for accurate information",
-  "Update the activeContext.md file with new topics discussed",
+  "Update the active-context.md file with new topics discussed",
   "Suggest additional documentation when needed"
 ]
 override_file_restrictions = true
@@ -230,27 +167,6 @@ Debug mode specializes in systematic problem-solving and troubleshooting. This m
 - ✅ **Solution Verification**: Validate fixes
 - 📝 **Problem Documentation**: Record findings
 
-#### Usage Example
-
-```bash
-# Start a conversation in debug mode
-curl -X POST http://localhost:3000/chat \
-  -H "Content-Type: application/json" \
-  -d '{
-    "messages": [
-      {
-        "role": "system",
-        "content": "You are in debug mode. Help identify and resolve issues."
-      },
-      {
-        "role": "user",
-        "content": "I'm getting a memory error when trying to process large files."
-      }
-    ],
-    "mode": "debug"
-  }'
-```
-
 #### Rules File Example (YAML)
 
 ```yaml
@@ -266,8 +182,8 @@ instructions:
     trigger: debug
     instructions:
       - "Consult the Memory Bank to understand the problem context"
-      - "Update the activeContext.md file with identified issues"
-      - "Record solutions in the decisionLog.md file"
+      - "Update the active-context.md file with identified issues"
+      - "Record solutions in the decision-log.md file"
     override_file_restrictions: true
 mode_triggers:
   debug:
@@ -290,27 +206,6 @@ Test mode is designed for test-driven development and quality assurance. This mo
 - 🎯 **Quality Assurance**: Validate code against requirements
 - ✅ **Test Result Management**: Track and report test outcomes
 
-#### Usage Example
-
-```bash
-# Start a conversation in test mode
-curl -X POST http://localhost:3000/chat \
-  -H "Content-Type: application/json" \
-  -d '{
-    "messages": [
-      {
-        "role": "system",
-        "content": "You are in test mode. Help create and run tests."
-      },
-      {
-        "role": "user",
-        "content": "I need to create unit tests for the authentication module."
-      }
-    ],
-    "mode": "test"
-  }'
-```
-
 #### Rules File Example (TOML)
 
 ```toml
@@ -330,7 +225,7 @@ trigger = "test"
 instructions = [
   "Consult the Memory Bank to understand the context of the code to be tested",
   "Update the progress.md file with implemented tests",
-  "Record testing strategies in the systemPatterns.md file"
+  "Record testing strategies in the system-patterns.md file"
 ]
 override_file_restrictions = true
 
@@ -349,39 +244,34 @@ Each mode automatically updates Memory Bank files based on interactions:
 
 ### Architect Mode
 
-- **activeContext.md**: Current design status
-
+- **active-context.md**: Current design status
 - **progress.md**: Architecture progress
-- **decisionLog.md**: Design decisions
-- **systemPatterns.md**: Defined system patterns
+- **decision-log.md**: Design decisions
+- **system-patterns.md**: Defined system patterns
 
 ### Code Mode
 
-- **activeContext.md**: Current tasks
-
+- **active-context.md**: Current tasks
 - **progress.md**: Code progress
-- **decisionLog.md**: Implementation decisions
+- **decision-log.md**: Implementation decisions
 
 ### Ask Mode
 
-- **activeContext.md**: Current topics
-
+- **active-context.md**: Current topics
 - **progress.md**: Documentation progress
-- **decisionLog.md**: Knowledge decisions
+- **decision-log.md**: Knowledge decisions
 
 ### Debug Mode
 
-- **activeContext.md**: Current issues
-
+- **active-context.md**: Current issues
 - **progress.md**: Debug progress
-- **decisionLog.md**: Solution decisions
+- **decision-log.md**: Solution decisions
 
 ### Test Mode
 
-- **activeContext.md**: Test status
-
+- **active-context.md**: Test status
 - **progress.md**: Test progress
-- **decisionLog.md**: Test decisions
+- **decision-log.md**: Test decisions
 
 ## Session Management
 

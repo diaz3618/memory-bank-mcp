@@ -73,7 +73,7 @@ Once configured, you can interact with Memory Bank MCP in Cursor through AI comm
 
 Use the `/mcp` command prefix to interact with Memory Bank MCP:
 
-```
+```markdown
 /mcp memory-bank-mcp <tool_name> <parameters>
 ```
 
@@ -83,33 +83,33 @@ Use the `/mcp` command prefix to interact with Memory Bank MCP:
 
 - **Initialize a Memory Bank**:
 
-  ```
+  ```markdown
   /mcp memory-bank-mcp initialize_memory_bank path=./memory-bank
   ```
 
 - **Set Memory Bank Path**:
 
-  ```
+  ```markdown
   /mcp memory-bank-mcp set_memory_bank_path path=./memory-bank
   ```
 
 - **List Memory Bank Files**:
 
-  ```
-  /mcp memory-bank-mcp list_memory_bank_files random_string=list
+  ```markdown
+  /mcp memory-bank-mcp list_memory_bank_files
   ```
 
 - **Get Memory Bank Status**:
 
-  ```
-  /mcp memory-bank-mcp get_memory_bank_status random_string=status
+  ```markdown
+  /mcp memory-bank-mcp get_memory_bank_status
   ```
 
 #### Progress Tracking
 
 - **Track Progress**:
 
-  ```
+  ```markdown
   /mcp memory-bank-mcp track_progress action="Feature Implementation" description="Implemented feature X"
   ```
 
@@ -117,35 +117,35 @@ Use the `/mcp` command prefix to interact with Memory Bank MCP:
 
 - **Log Decision**:
 
-  ```
+  ```markdown
   /mcp memory-bank-mcp log_decision title="API Design" context="Needed to design the API for feature X" decision="Used REST API with JSON responses"
   ```
 
 #### Mode Management
 
-- **Switch Mode**:
+- **Switch Mode:**
 
-  ```
+  ```markdown
   /mcp memory-bank-mcp switch_mode mode=code
   ```
 
-- **Get Current Mode**:
+- **Get Current Mode (no parameters):**
 
-  ```
-  /mcp memory-bank-mcp get_current_mode random_string=mode
+  ```markdown
+  /mcp memory-bank-mcp switch_mode
   ```
 
 ### Reading and Writing Files
 
 - **Read Memory Bank File**:
 
-  ```
+  ```markdown
   /mcp memory-bank-mcp read_memory_bank_file filename=progress.md
   ```
 
 - **Write to Memory Bank File**:
 
-  ```
+  ```markdown
   /mcp memory-bank-mcp write_memory_bank_file filename=notes.md content="# Project Notes\n\n- Note 1\n- Note 2"
   ```
 
@@ -153,7 +153,7 @@ Use the `/mcp` command prefix to interact with Memory Bank MCP:
 
 - **Update Active Context**:
 
-  ```
+  ```markdown
   /mcp memory-bank-mcp update_active_context tasks=["Task 1", "Task 2"] issues=["Issue 1"] nextSteps=["Step 1", "Step 2"]
   ```
 
@@ -163,25 +163,25 @@ Use the `/mcp` command prefix to interact with Memory Bank MCP:
 
 1. Initialize a Memory Bank:
 
-   ```
+   ```markdown
    /mcp memory-bank-mcp initialize_memory_bank path=./memory-bank
    ```
 
 2. Update the product context with project information:
 
-   ```
+   ```markdown
    /mcp memory-bank-mcp read_memory_bank_file filename=product-context.md
    ```
 
    (Edit the content as needed)
 
-   ```
+   ```markdown
    /mcp memory-bank-mcp write_memory_bank_file filename=product-context.md content="..."
    ```
 
 3. Set up initial tasks:
 
-   ```
+   ```markdown
    /mcp memory-bank-mcp update_active_context tasks=["Set up project structure", "Implement core features"] nextSteps=["Create initial files", "Set up testing framework"]
    ```
 
@@ -189,19 +189,19 @@ Use the `/mcp` command prefix to interact with Memory Bank MCP:
 
 1. Track progress on completed tasks:
 
-   ```
+   ```markdown
    /mcp memory-bank-mcp track_progress action="Project Setup" description="Created initial project structure with necessary configuration files"
    ```
 
 2. Log important decisions:
 
-   ```
+   ```markdown
    /mcp memory-bank-mcp log_decision title="Database Selection" context="Needed to select a database for the project" decision="Selected PostgreSQL for its reliability and feature set"
    ```
 
 3. Update active context as tasks are completed:
 
-   ```
+   ```markdown
    /mcp memory-bank-mcp update_active_context tasks=["Implement core features"] issues=["Performance issue in X module"] nextSteps=["Optimize X module", "Add more tests"]
    ```
 
@@ -213,13 +213,13 @@ If you see "Memory Bank not found" errors:
 
 1. Verify the Memory Bank path:
 
-   ```
+   ```markdown
    /mcp memory-bank-mcp set_memory_bank_path path=/absolute/path/to/memory-bank
    ```
 
 2. Initialize a new Memory Bank if needed:
 
-   ```
+   ```markdown
    /mcp memory-bank-mcp initialize_memory_bank path=./memory-bank
    ```
 
