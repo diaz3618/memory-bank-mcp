@@ -1,0 +1,11 @@
+# Ignore everything
+*
+
+# Allow only what's needed for the build
+!package.json
+!bun.lock
+!bunbuild.toml
+!bunfig.toml
+!tsconfig.json
+!src/
+!src/**
