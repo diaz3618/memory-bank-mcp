@@ -7,14 +7,9 @@ import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { MemoryBankManager } from '../core/MemoryBankManager.js';
 import { ProgressTracker } from '../core/ProgressTracker.js';
-import { setupToolHandlers } from './tools/index.js';
+import { setupToolHandlers, allTools } from './tools/index.js';
 import { setupResourceHandlers } from './resources/index.js';
 import { ModeManagerEvent } from '../utils/ModeManager.js';
-import { coreTools } from './tools/CoreTools.js';
-import { progressTools } from './tools/ProgressTools.js';
-import { contextTools } from './tools/ContextTools.js';
-import { decisionTools } from './tools/DecisionTools.js';
-import { modeTools } from './tools/ModeTools.js';
 import { createRequire } from 'module';
 import { readFileSync } from 'fs';
 import { join, dirname } from 'path';
@@ -91,15 +86,6 @@ export class MemoryBankServer {
       remoteConfig
     );
     
-    // Combine all tools
-    const allTools = [
-      ...coreTools,
-      ...progressTools,
-      ...contextTools,
-      ...decisionTools,
-      ...modeTools,
-    ];
-    
     this.server = new Server(
       {
         name: '@diazstg/memory-bank-mcp',
@@ -161,10 +147,12 @@ export class MemoryBankServer {
     // Handle process termination
     process.on('SIGINT', async () => {
       await this.shutdown();
+      process.exit(0);
     });
     
     process.on('SIGTERM', async () => {
       await this.shutdown();
+      process.exit(0);
     });
   }
 
@@ -219,8 +207,6 @@ export class MemoryBankServer {
       console.error('Memory Bank server shut down successfully');
     } catch (error) {
       console.error('Error during shutdown:', error);
-    } finally {
-      process.exit(0);
     }
   }
 }

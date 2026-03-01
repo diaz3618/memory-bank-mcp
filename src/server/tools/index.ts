@@ -19,6 +19,22 @@ import { thinkingTools, handleSequentialThinking, handleFinalizeThinkingSession 
 import { kgContextTools, handleGetTargetedContext, handleGraphAddDocPointer } from './KGContextTools.js';
 
 /**
+ * Single source of truth for all MCP tool definitions.
+ * Used by both the `initialize` handshake (capabilities) and the `tools/list` handler.
+ */
+export const allTools = [
+  ...coreTools,
+  ...progressTools,
+  ...contextTools,
+  ...decisionTools,
+  ...modeTools,
+  ...graphTools,
+  ...storeToolDefinitions,
+  ...thinkingTools,
+  ...kgContextTools,
+];
+
+/**
  * Sets up all tool handlers for the MCP server
  * @param server MCP Server
  * @param memoryBankManager Memory Bank Manager
@@ -29,19 +45,9 @@ export function setupToolHandlers(
   memoryBankManager: MemoryBankManager,
   getProgressTracker: () => ProgressTracker | null
 ) {
-  // Register tools for listing
+  // Register tools for listing (uses the single source of truth)
   server.setRequestHandler(ListToolsRequestSchema, async () => ({
-    tools: [
-      ...coreTools,
-      ...progressTools,
-      ...contextTools,
-      ...decisionTools,
-      ...modeTools,
-      ...graphTools,
-      ...storeToolDefinitions,
-      ...thinkingTools,
-      ...kgContextTools,
-    ],
+    tools: allTools,
   }));
 
   // Register handler for tool calls

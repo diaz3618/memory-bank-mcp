@@ -131,7 +131,7 @@ describe('ThinkingTools', () => {
       const parsed = JSON.parse(result.content[0].text);
       expect(parsed.reset).toBe(true);
       expect(parsed.sessionId).toBe('to-reset');
-      expect(parsed.existed).toBe(true);
+      expect(parsed.hadSession).toBe(true);
     });
 
     test('should reset all sessions when no sessionId given', () => {
@@ -153,14 +153,14 @@ describe('ThinkingTools', () => {
       const result = resetThinking();
       const parsed = JSON.parse(result.content[0].text);
       expect(parsed.reset).toBe(true);
-      expect(parsed.sessionsCleared).toBeGreaterThanOrEqual(2);
+      expect(parsed.clearedCount).toBeGreaterThanOrEqual(2);
     });
 
     test('should handle resetting non-existent session gracefully', () => {
       const result = resetThinking('nonexistent-session-id');
       const parsed = JSON.parse(result.content[0].text);
       expect(parsed.reset).toBe(true);
-      expect(parsed.existed).toBe(false);
+      expect(parsed.hadSession).toBe(false);
     });
   });
 
