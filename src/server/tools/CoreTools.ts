@@ -443,33 +443,33 @@ These files live in the \`memory-bank/\` directory:
 ### 3. File Operations
 | Tool | Purpose |
 |------|---------|
-| \`read_memory_bank_file\` | Read a single file (returns content + ETag) |
-| \`write_memory_bank_file\` | Write a single file (supports optimistic concurrency via ETag) |
-| \`batch_read_files\` | Read multiple files in one request |
-| \`batch_write_files\` | Write multiple files in one request |
+| \`read_memory_bank_file\` | Read single file. **Params:** \`filename\` (string) |
+| \`write_memory_bank_file\` | Write single file. **Params:** \`filename\`, \`content\` (strings), optional \`ifMatchEtag\` |
+| \`batch_read_files\` | Read multiple files. **Params:** \`files\` (string array, e.g., ["progress.md", "active-context.md"]) |
+| \`batch_write_files\` | Write multiple files. **Params:** \`files\` (array of {filename, content, ifMatchEtag?}) |
 
 ### 4. Progress Tracking
 | Tool | Purpose |
 |------|---------|
-| \`track_progress\` | Record a progress milestone (action + description) |
-| \`add_progress_entry\` | Structured progress entry with type, summary, details, files, tags |
-| \`update_active_context\` | Update tasks, issues, and next steps in active-context.md |
-| \`update_tasks\` | Add, remove, or replace the tasks list |
-| \`add_session_note\` | Add a timestamped note (observation, blocker, question, decision, todo) |
-| \`log_decision\` | Log an architectural/design decision with context and alternatives |
+| \`track_progress\` | Record a progress milestone. **Params:** \`action\` (string), \`description\` (string) |
+| \`add_progress_entry\` | Structured progress entry. **Params:** \`type\` (feature/fix/refactor/docs/test/chore), \`summary\`, \`details\`, \`files\`, \`tags\` |
+| \`update_active_context\` | Update active-context.md. **Params:** \`tasks\`, \`issues\`, \`nextSteps\` (all string arrays) |
+| \`update_tasks\` | Modify tasks list. **Params:** \`add\`, \`remove\`, or \`replace\` (string arrays) |
+| \`add_session_note\` | Add timestamped note. **Params:** \`note\` (string), \`category\` (observation/blocker/question/decision/todo) |
+| \`log_decision\` | Log a decision. **Params:** \`title\`, \`context\`, \`decision\` (all strings) |
 
 ### 5. Knowledge Graph
 | Tool | Purpose |
 |------|---------|
-| \`get_targeted_context\` | **Preferred.** Budgeted context pack via KG + excerpts. Use before batch_read_files or get_context_bundle |
-| \`graph_search\` | Search entities by query string |
-| \`graph_open_nodes\` | Expand specific nodes and their neighborhood |
-| \`graph_upsert_entity\` | Create or update an entity |
-| \`graph_add_observation\` | Add an observation to an entity |
-| \`graph_add_doc_pointer\` | Link an entity to a Memory Bank file + optional heading |
-| \`graph_link_entities\` | Create or remove a typed relationship between entities |
-| \`graph_delete_entity\` | Delete an entity or a specific observation |
-| \`graph_maintain\` | Rebuild, compact, or get stats for the graph |
+| \`get_targeted_context\` | **Preferred.** Budgeted context via KG + excerpts. **Params:** \`query\` (string), optional \`budget\`, \`entities\` |
+| \`graph_search\` | Search entities. **Params:** \`query\` (string), optional \`limit\` |
+| \`graph_open_nodes\` | Expand nodes and neighbors. **Params:** \`nodes\` (string array), optional \`depth\` |
+| \`graph_upsert_entity\` | Create/update entity. **Params:** \`name\`, \`entityType\` (strings), optional \`attrs\` |
+| \`graph_add_observation\` | Add observation. **Params:** \`entity\` (name string), \`text\` (string) |
+| \`graph_add_doc_pointer\` | Link entity to file. **Params:** \`entity\`, \`docPath\`, optional \`heading\` |
+| \`graph_link_entities\` | Create relationship. **Params:** \`from\`, \`to\`, \`relationType\` (all strings) |
+| \`graph_delete_entity\` | Delete entity/observation. **Params:** \`entity\` (name string), optional \`observationId\` |
+| \`graph_maintain\` | Maintenance ops. **Params:** \`operation\` (rebuild/compact/stats) |
 
 ### 6. Modes
 | Tool | Purpose |
@@ -499,8 +499,8 @@ These files live in the \`memory-bank/\` directory:
 ### 10. Sequential Thinking
 | Tool | Purpose |
 |------|---------|
-| \`sequential_thinking\` | Record a thinking step (use reset:true to clear session state) |
-| \`finalize_thinking_session\` | Persist thinking outcomes to Memory Bank (summary, decisions, tasks, progress) |
+| \`sequential_thinking\` | Record thinking step. **Params:** \`thought\`, \`thoughtNumber\`, \`totalThoughts\` (int), \`nextThoughtNeeded\` (bool). Use \`reset:true\` to clear |
+| \`finalize_thinking_session\` | Persist outcomes. **Params:** \`summary\` (string), optional \`decisions\`, \`tasks\`, \`progress\` |
 
 ## Quick-Start Checklist
 1. \`get_instructions\` — read these instructions (done!)

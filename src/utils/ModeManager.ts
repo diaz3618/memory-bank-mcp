@@ -111,12 +111,18 @@ export class ModeManager extends EventEmitter {
    */
   checkUmbTrigger(text: string): boolean {
     const currentRules = this.rulesLoader.getRulesForMode(this.currentMode);
-    if (!currentRules || !currentRules.instructions.umb || !currentRules.instructions.umb.trigger) {
+    if (!currentRules || !currentRules.instructions?.umb || !currentRules.instructions.umb.trigger) {
       return false;
     }
     
-    const triggerRegex = new RegExp(currentRules.instructions.umb.trigger, 'i');
-    return triggerRegex.test(text);
+    try {
+      const triggerRegex = new RegExp(currentRules.instructions.umb.trigger, 'i');
+      return triggerRegex.test(text);
+    } catch {
+      // Fallback for invalid regex patterns (e.g. PCRE-only syntax like (?i))
+      const lower = text.toLowerCase();
+      return lower.includes('update memory bank') || lower.includes('umb');
+    }
   }
   
   /**
@@ -125,7 +131,7 @@ export class ModeManager extends EventEmitter {
    */
   activateUmb(): boolean {
     const currentRules = this.rulesLoader.getRulesForMode(this.currentMode);
-    if (!currentRules || !currentRules.instructions.umb) {
+    if (!currentRules || !currentRules.instructions?.umb) {
       return false;
     }
     

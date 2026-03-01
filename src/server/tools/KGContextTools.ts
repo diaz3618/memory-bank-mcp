@@ -271,7 +271,7 @@ export const kgContextTools = [
         docPath: {
           type: 'string',
           description:
-            'Memory Bank-relative file path (e.g., "decision-log.md", "docs/design.md")',
+            'Memory Bank root file path (e.g., "decision-log.md", "system-patterns.md")',
         },
         heading: {
           type: 'string',
@@ -726,7 +726,7 @@ export async function handleGraphAddDocPointer(
           {
             type: 'text',
             text: `Invalid docPath "${docPath}": ${err instanceof Error ? err.message : String(err)}. ` +
-              'Only Memory Bank files (root + docs/) with .md/.json extensions are allowed.',
+              'Only Memory Bank core files (root level .md/.json) are allowed.',
           },
         ],
         isError: true,

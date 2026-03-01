@@ -1,0 +1,376 @@
+# Local Semgrep rules for memory-bank-mcp
+#
+# This file contains project-specific rules for detecting security issues
+# in TypeScript MCP server code.
+#
+# Run with registry packs:
+#   semgrep scan --config p/typescript --config p/security-audit --config p/secrets --config .semgrep.yml
+#
+# Or local-only:
+#   semgrep scan --config .semgrep.yml
+rules:
+  # =============================================================================
+  # PATH TRAVERSAL PREVENTION
+  # =============================================================================
+  - id: mcp-path-join-user-input
+    patterns:
+      - pattern-either:
+          - pattern: path.join($BASE, $INPUT)
+          - pattern: path.resolve($BASE, $INPUT)
+      - pattern-not-inside: |
+          path.normalize(...)
+    message: |
+      Path join/resolve detected. Ensure $INPUT is validated for '..' sequences
+      to prevent path traversal attacks.
+    languages: [typescript, javascript]
+    severity: INFO
+    paths:
+      include:
+        - src/**/*.ts
+    metadata:
+      category: security
+      technology: [typescript, mcp]
+      cwe: "CWE-22: Improper Limitation of a Pathname to a Restricted Directory"
+      references:
+        - https://owasp.org/www-community/attacks/Path_Traversal
+
+  # =============================================================================
+  # DANGEROUS FUNCTION DETECTION
+  # =============================================================================
+  - id: mcp-eval-detected
+    patterns:
+      - pattern-either:
+          - pattern: eval(...)
+          - pattern: Function(...)
+          - pattern: new Function(...)
+    message: |
+      Dynamic code execution detected. This is high-risk in MCP server code
+      where inputs may come from untrusted LLM outputs or user prompts.
+    languages: [typescript, javascript]
+    severity: ERROR
+    paths:
+      include:
+        - src/**/*.ts
+    metadata:
+      category: security
+      technology: [typescript, mcp]
+      cwe: "CWE-94: Improper Control of Generation of Code"
+      references:
+        - https://cheatsheetseries.owasp.org/cheatsheets/AI_Agent_Security_Cheat_Sheet.html
+
+  - id: mcp-exec-command-injection
+    patterns:
+      - pattern-either:
+          - pattern: exec(...)
+          - pattern: execSync(...)
+          - pattern: |
+              spawn($CMD, { shell: true, ... })
+          - pattern: |
+              spawnSync($CMD, { shell: true, ... })
+    message: |
+      Shell command execution detected. In MCP server code, ensure commands
+      are not constructed from LLM or user-controlled inputs without validation.
+    languages: [typescript, javascript]
+    severity: ERROR
+    paths:
+      include:
+        - src/**/*.ts
+    metadata:
+      category: security
+      technology: [typescript, mcp]
+      cwe: "CWE-78: Improper Neutralization of Special Elements used in an OS Command"
+
+  # =============================================================================
+  # REGEX DENIAL OF SERVICE (ReDoS)
+  # =============================================================================
+  - id: mcp-regex-from-user-input
+    patterns:
+      - pattern: new RegExp($VAR, ...)
+      - pattern-not: new RegExp("...", ...)
+    message: |
+      Dynamic regex construction with variable input. Validate the pattern to
+      prevent ReDoS attacks from malicious inputs. Consider using safe-regex
+      library or pre-validated patterns only.
+    languages: [typescript, javascript]
+    severity: WARNING
+    paths:
+      include:
+        - src/**/*.ts
+    metadata:
+      category: security
+      technology: [typescript, mcp]
+      cwe: "CWE-1333: Inefficient Regular Expression Complexity"
+      references:
+        - https://owasp.org/www-community/attacks/Regular_expression_Denial_of_Service_-_ReDoS
+
+  # =============================================================================
+  # FILE OPERATIONS
+  # =============================================================================
+  - id: mcp-unsafe-file-write
+    patterns:
+      - pattern-either:
+          - pattern: fs.writeFile($PATH, $DATA, ...)
+          - pattern: fs.writeFileSync($PATH, $DATA, ...)
+          - pattern: Bun.write($PATH, $DATA, ...)
+    message: |
+      File write detected. Ensure the path is validated to be within
+      an allowed directory before writing.
+    languages: [typescript, javascript]
+    severity: INFO
+    paths:
+      include:
+        - src/**/*.ts
+    metadata:
+      category: security
+      technology: [typescript, mcp]
+      cwe: "CWE-22: Improper Limitation of a Pathname to a Restricted Directory"
+
+  - id: mcp-unsafe-file-read
+    patterns:
+      - pattern-either:
+          - pattern: fs.readFile($PATH, ...)
+          - pattern: fs.readFileSync($PATH, ...)
+          - pattern: Bun.file($PATH).text()
+    message: |
+      File read detected. Verify the path is validated to be within
+      an allowed directory.
+    languages: [typescript, javascript]
+    severity: INFO
+    paths:
+      include:
+        - src/**/*.ts
+    metadata:
+      category: security
+      technology: [typescript, mcp]
+      cwe: "CWE-22: Improper Limitation of a Pathname to a Restricted Directory"
+
+  # =============================================================================
+  # JSON PARSING
+  # =============================================================================
+  - id: mcp-json-parse-detected
+    pattern: JSON.parse($INPUT)
+    message: |
+      JSON.parse detected. Ensure error handling is in place for malformed input.
+    languages: [typescript, javascript]
+    severity: INFO
+    paths:
+      include:
+        - src/**/*.ts
+    metadata:
+      category: reliability
+      technology: [typescript, mcp]
+      cwe: "CWE-20: Improper Input Validation"
+
+  # =============================================================================
+  # SECRETS AND SENSITIVE DATA
+  # =============================================================================
+  - id: mcp-hardcoded-secrets
+    patterns:
+      - pattern-either:
+          - pattern: |
+              $VAR = "sk-..."
+          - pattern: |
+              $VAR = "ghp_..."
+          - pattern: |
+              $VAR = "ghs_..."
+          - pattern: |
+              $VAR = "xoxb-..."
+          - pattern: |
+              apiKey = "..."
+          - pattern: |
+              password = "..."
+          - pattern: |
+              secret = "..."
+    message: |
+      Potential hardcoded secret detected. Use environment variables or
+      secure secret management instead.
+    languages: [typescript, javascript]
+    severity: ERROR
+    paths:
+      include:
+        - src/**/*.ts
+    metadata:
+      category: security
+      technology: [typescript, mcp]
+      cwe: "CWE-798: Use of Hard-coded Credentials"
+      references:
+        - https://owasp.org/www-community/vulnerabilities/Use_of_hard-coded_password
+
+  - id: mcp-console-log-sensitive
+    patterns:
+      - pattern-either:
+          - pattern: console.log(..., $OBJ.password, ...)
+          - pattern: console.log(..., $OBJ.secret, ...)
+          - pattern: console.log(..., $OBJ.apiKey, ...)
+          - pattern: console.log(..., $OBJ.token, ...)
+    message: |
+      Potentially logging sensitive data. Remove or redact before logging.
+    languages: [typescript, javascript]
+    severity: WARNING
+    paths:
+      include:
+        - src/**/*.ts
+    metadata:
+      category: security
+      technology: [typescript, mcp]
+      cwe: "CWE-532: Insertion of Sensitive Information into Log File"
+
+  # =============================================================================
+  # MCP-SPECIFIC PATTERNS
+  # =============================================================================
+  - id: mcp-tool-handler-destructuring
+    patterns:
+      - pattern-inside: |
+          case "$TOOL":
+            ...
+      - pattern: const { $PARAM } = args
+    message: |
+      MCP tool handler destructures args. Ensure required parameters are
+      validated before use to prevent undefined behavior.
+    languages: [typescript, javascript]
+    severity: INFO
+    paths:
+      include:
+        - src/server/**/*.ts
+    metadata:
+      category: reliability
+      technology: [typescript, mcp]
+      cwe: "CWE-20: Improper Input Validation"
+
+  - id: mcp-async-read-write-pattern
+    patterns:
+      - pattern-inside: |
+          async function $FUNC(...) {
+            ...
+          }
+      - pattern: $DATA = await $READ(...)
+    message: |
+      Async read operation detected. Consider using ETags for optimistic
+      concurrency control in read-modify-write patterns.
+    languages: [typescript, javascript]
+    severity: INFO
+    paths:
+      include:
+        - src/**/*.ts
+    metadata:
+      category: reliability
+      technology: [typescript, mcp]
+      cwe: "CWE-362: Concurrent Execution using Shared Resource with Improper Synchronization"
+
+  # =============================================================================
+  # ERROR HANDLING
+  # =============================================================================
+  - id: mcp-catch-log-rethrow
+    patterns:
+      - pattern: |
+          catch ($ERR) {
+            console.error(...);
+          }
+      - pattern-not: |
+          catch ($ERR) {
+            console.error(...);
+            throw ...;
+          }
+    message: |
+      Error caught and logged but not re-thrown. In MCP handlers, consider
+      whether the error should propagate to inform the caller.
+    languages: [typescript, javascript]
+    severity: INFO
+    paths:
+      include:
+        - src/**/*.ts
+    metadata:
+      category: reliability
+      technology: [typescript, mcp]
+
+  - id: mcp-empty-catch
+    patterns:
+      - pattern-either:
+          - pattern: |
+              catch ($ERR) { }
+          - pattern: |
+              catch { }
+    message: |
+      Empty catch block silently swallows errors. At minimum, log the error.
+    languages: [typescript, javascript]
+    severity: WARNING
+    paths:
+      include:
+        - src/**/*.ts
+    metadata:
+      category: reliability
+      technology: [typescript, mcp]
+      cwe: "CWE-390: Detection of Error Condition Without Action"
+
+  # =============================================================================
+  # YAML PARSING (js-yaml specific)
+  # =============================================================================
+  - id: mcp-yaml-unsafe-load
+    patterns:
+      - pattern-either:
+          - pattern: yaml.load($INPUT)
+          - pattern: jsyaml.load($INPUT)
+          - pattern: YAML.load($INPUT)
+      - pattern-not: |
+          yaml.load($INPUT, { schema: ... })
+      - pattern-not: yaml.safeLoad(...)
+    message: |
+      YAML load without explicit schema may execute arbitrary code on crafted
+      input. Use yaml.load with { schema: yaml.FAILSAFE_SCHEMA } or yaml.safeLoad.
+    languages: [typescript, javascript]
+    severity: WARNING
+    paths:
+      include:
+        - src/**/*.ts
+    metadata:
+      category: security
+      technology: [typescript, mcp]
+      cwe: "CWE-502: Deserialization of Untrusted Data"
+      references:
+        - https://www.npmjs.com/package/js-yaml#safeload
+
+  # =============================================================================
+  # TYPE SAFETY
+  # =============================================================================
+  - id: mcp-as-any-cast
+    pattern: $EXPR as any
+    message: |
+      'as any' cast bypasses TypeScript safety. Use specific types or
+      'unknown' with type guards instead.
+    languages: [typescript]
+    severity: INFO
+    paths:
+      include:
+        - src/**/*.ts
+      exclude:
+        - src/__tests__/**
+    metadata:
+      category: maintainability
+      technology: [typescript, mcp]
+
+  # =============================================================================
+  # ASYNC/AWAIT PITFALLS
+  # =============================================================================
+  - id: mcp-missing-await
+    patterns:
+      - pattern-inside: |
+          async function $FUNC(...) {
+            ...
+          }
+      - pattern: $PROMISE_FUNC(...)
+      - pattern-not: await $PROMISE_FUNC(...)
+      - pattern-not: return $PROMISE_FUNC(...)
+      - metavariable-regex:
+          metavariable: $PROMISE_FUNC
+          regex: (readFile|writeFile|mkdir|rm|stat|readdir|unlink)
+    message: |
+      Async file operation without await. The operation may not complete
+      before subsequent code runs.
+    languages: [typescript, javascript]
+    severity: WARNING
+    paths:
+      include:
+        - src/**/*.ts
+    metadata:
+      category: reliability
+      technology: [typescript, mcp]

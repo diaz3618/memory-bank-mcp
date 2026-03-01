@@ -604,17 +604,93 @@ export function setupToolHandlers(
           return handleSelectStore(memoryBankManager, storePath, storeId, normalizedAction, kind);
         }
 
-        // Unknown tool
-        default:
+        // Unknown or deprecated tool
+        default: {
+          // Check if it's a deprecated tool and provide migration guidance
+          const deprecatedToolRedirects: Record<string, { tool: string; params: string; example: string }> = {
+            'get_current_mode': {
+              tool: 'switch_mode',
+              params: 'none (call with no parameters)',
+              example: '{ }',
+            },
+            'process_umb_command': {
+              tool: 'switch_mode',
+              params: 'umb: true',
+              example: '{ "umb": true }',
+            },
+            'complete_umb': {
+              tool: 'switch_mode',
+              params: 'umb: false',
+              example: '{ "umb": false }',
+            },
+            'list_backups': {
+              tool: 'create_backup',
+              params: 'listOnly: true',
+              example: '{ "listOnly": true }',
+            },
+            'register_store': {
+              tool: 'list_stores',
+              params: 'action: "register", path: "...", storeId: "..."',
+              example: '{ "action": "register", "path": "/path/to/project", "storeId": "my-project" }',
+            },
+            'unregister_store': {
+              tool: 'list_stores',
+              params: 'action: "unregister", storeId: "..."',
+              example: '{ "action": "unregister", "storeId": "my-project" }',
+            },
+            'reset_sequential_thinking': {
+              tool: 'sequential_thinking',
+              params: 'reset: true',
+              example: '{ "reset": true }',
+            },
+            'graph_unlink_entities': {
+              tool: 'graph_link_entities',
+              params: 'action: "unlink", from: "...", to: "...", relationType: "..."',
+              example: '{ "action": "unlink", "from": "EntityA", "to": "EntityB", "relationType": "relates_to" }',
+            },
+            'graph_delete_observation': {
+              tool: 'graph_delete_entity',
+              params: 'entity: "...", observationId: "..."',
+              example: '{ "entity": "EntityName", "observationId": "obs_xxx" }',
+            },
+            'graph_rebuild': {
+              tool: 'graph_maintain',
+              params: 'operation: "rebuild"',
+              example: '{ "operation": "rebuild" }',
+            },
+            'graph_compact': {
+              tool: 'graph_maintain',
+              params: 'operation: "compact"',
+              example: '{ "operation": "compact" }',
+            },
+          };
+
+          const redirect = deprecatedToolRedirects[request.params.name];
+          if (redirect) {
+            return {
+              content: [
+                {
+                  type: 'text',
+                  text: `Tool "${request.params.name}" has been deprecated and removed.\n\n` +
+                    `Use "${redirect.tool}" instead with: ${redirect.params}\n\n` +
+                    `Example: ${redirect.example}\n\n` +
+                    `See get_instructions for the full tool reference.`,
+                },
+              ],
+              isError: true,
+            };
+          }
+
           return {
             content: [
               {
                 type: 'text',
-                text: `Unknown tool: ${request.params.name}`,
+                text: `Unknown tool: ${request.params.name}. Use get_instructions to see available tools.`,
               },
             ],
             isError: true,
           };
+        }
       }
     } catch (error) {
       console.error('Error handling tool call:', error);

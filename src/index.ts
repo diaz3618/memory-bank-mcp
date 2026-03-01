@@ -53,7 +53,7 @@ function displayBanner(): void {
 │                                █ ▀ █ █▄▄ █▀▀                                 │
 │                                                                              │
 │                                                                              │
-│                            Memory Bank MCP ${version.padEnd(5)}                             │
+│                            Memory Bank MCP ${version.padEnd(5)}                            │
 │            https://www.npmjs.com/package/@diazstg/memory-bank-mcp            │
 │                                                                              │
 │                                 GitHub Repo:                                 │
@@ -61,7 +61,7 @@ function displayBanner(): void {
 │                                                                              │
 ╰──────────────────────────────────────────────────────────────────────────────╯
 ╭──────────────────────────────────────────────────────────────────────────────╮
-│                            Memory Bank MCP ${version.padEnd(5)}                             │
+│                            Memory Bank MCP ${version.padEnd(5)}                            │
 │        MCP Server for managing persistent context across AI sessions         │
 ╰──────────────────────────────────────────────────────────────────────────────╯
 `;

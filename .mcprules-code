@@ -120,7 +120,7 @@ instructions:
 
   # UMB Section - Added to ALL modes
   umb:
-    trigger: "(?i)\b(umb|update memory bank)\b"
+    trigger: '\b(umb|update memory bank)\b'
     instructions:
       - "Halt Current Task: Stop current activity"
       - "Acknowledge Command: '[MEMORY BANK: UPDATING]'"

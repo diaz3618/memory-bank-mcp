@@ -70,14 +70,11 @@ function validateFilename(filename: string): { valid: boolean; sanitized: string
   // Check for backslashes (Windows path separators) - convert to forward slashes
   const sanitized = filename.replace(/\\/g, '/');
   
-  // Only allow files in the root or docs/ subdirectory
-  const parts = sanitized.split('/');
-  if (parts.length > 2) {
-    return { valid: false, sanitized: '', error: 'Only root and docs/ subdirectory are allowed' };
-  }
-  
-  if (parts.length === 2 && parts[0] !== 'docs') {
-    return { valid: false, sanitized: '', error: 'Only docs/ subdirectory is allowed' };
+  // Only allow files in the root (no subdirectories)
+  // The 5 core files: active-context.md, decision-log.md, product-context.md, progress.md, system-patterns.md
+  // The graph/ subdirectory is managed internally by GraphStore, not through this validation
+  if (sanitized.includes('/')) {
+    return { valid: false, sanitized: '', error: 'Only root-level files are allowed (no subdirectories)' };
   }
   
   // Check for allowed file extensions
@@ -822,8 +819,15 @@ export class MemoryBankManager {
       await this.fileSystem.ensureDirectory(backupPath);
       
       // Copy files using FileSystemInterface
+      // Only backup .md and .json files (skip stray files like .semgrepignore)
+      const allowedExtensions = ['.md', '.json'];
       const files = await this.listFiles();
-      for (const file of files) {
+      const validFiles = files.filter(file => {
+        const ext = path.extname(file).toLowerCase();
+        return allowedExtensions.includes(ext);
+      });
+      
+      for (const file of validFiles) {
         const content = await this.readFile(file);
         const backupFilePath = this.isRemote 
           ? path.posix.join(backupPath, file)
