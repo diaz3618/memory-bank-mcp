@@ -2,6 +2,23 @@
 
 All notable changes to this project will be documented in this file.
 
+### [1.10.1](https://github.com/diaz3618/memory-bank-mcp/compare/v1.10.0...v1.10.1) (2026-03-01)
+
+
+### Features
+
+* add Docker support with publish workflow ([2cd0354](https://github.com/diaz3618/memory-bank-mcp/commit/2cd0354451a6c812cacb481c33e7b5b2a4c4db68))
+
+
+### Bug Fixes
+
+* align init capabilities with tools/list (36 tools) ([3b4b607](https://github.com/diaz3618/memory-bank-mcp/commit/3b4b607710566689e2a6a4461a826eeac9b4da8d))
+
+
+### Documentation
+
+* add Docker registry cleanup & CI/CD report ([714b7fb](https://github.com/diaz3618/memory-bank-mcp/commit/714b7fbc08f47abcae5f25746e0f7233671b453b))
+
 ## [1.10.0](https://github.com/diaz3618/memory-bank-mcp/compare/v1.9.0...v1.10.0) (2026-02-27)
 
 
