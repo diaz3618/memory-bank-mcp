@@ -40,7 +40,7 @@ docs
 memory-bank
 logs
 tests
-tools
+/tools
 scripts
 outputs
 
