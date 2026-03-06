@@ -60,3 +60,4 @@ tools/
 
 # Local MCP rules (per-machine config)
 .mcprules-*
+*.tgz
