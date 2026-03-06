@@ -8,7 +8,7 @@
         "skipLibCheck": true,
         "noImplicitAny": true,
         "strictNullChecks": true,
-        "outDir": "./dist",
+        "outDir": "./build",
         "rootDir": "./src",
         "declaration": true,
         "declarationMap": true,
@@ -31,7 +31,7 @@
     ],
     "exclude": [
         "node_modules",
-        "dist",
+        "build",
         "test",
         "src/__tests__"
     ]
