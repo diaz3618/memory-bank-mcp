@@ -1,4 +1,4 @@
-import { test, expect, describe, beforeEach, afterEach } from 'bun:test';
+import { test, expect, describe, beforeEach, afterEach } from 'vitest';
 import fs from 'fs-extra';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -122,13 +122,17 @@ Line 12`;
 // ============================================================================
 
 describe('get_targeted_context', () => {
-  const tempDir = path.join(__dirname, 'temp-kg-context-test-dir');
-  const projectPath = path.join(tempDir, 'project');
-  const memoryBankDir = path.join(projectPath, 'memory-bank');
+  // Use unique temp directory per test to avoid race conditions
+  let tempDir: string;
+  let projectPath: string;
+  let memoryBankDir: string;
   const testUserId = 'test-user';
   let memoryBankManager: MemoryBankManager;
 
   beforeEach(async () => {
+    tempDir = path.join(__dirname, `temp-kg-context-test-dir-${Date.now()}-${Math.random().toString(36).slice(2)}`);
+    projectPath = path.join(tempDir, 'project');
+    memoryBankDir = path.join(projectPath, 'memory-bank');
     await fs.ensureDir(memoryBankDir);
     await fs.ensureDir(path.join(memoryBankDir, 'docs'));
     await fs.ensureDir(path.join(memoryBankDir, 'graph'));
@@ -213,7 +217,11 @@ REST-like tool interface.
   });
 
   afterEach(async () => {
-    await fs.remove(tempDir);
+    try {
+      await fs.promises.rm(tempDir, { recursive: true, force: true, maxRetries: 3, retryDelay: 100 });
+    } catch {
+      // Ignore cleanup errors
+    }
   });
 
   test('should return valid JSON with required fields', async () => {
@@ -287,12 +295,15 @@ REST-like tool interface.
 // ============================================================================
 
 describe('get_targeted_context safety', () => {
-  const tempDir = path.join(__dirname, 'temp-kg-safety-test-dir');
-  const projectPath = path.join(tempDir, 'project');
-  const memoryBankDir = path.join(projectPath, 'memory-bank');
+  let tempDir: string;
+  let projectPath: string;
+  let memoryBankDir: string;
   let memoryBankManager: MemoryBankManager;
 
   beforeEach(async () => {
+    tempDir = path.join(__dirname, `temp-kg-safety-test-dir-${Date.now()}-${Math.random().toString(36).slice(2)}`);
+    projectPath = path.join(tempDir, 'project');
+    memoryBankDir = path.join(projectPath, 'memory-bank');
     await fs.ensureDir(memoryBankDir);
 
     await fs.writeFile(
@@ -305,7 +316,11 @@ describe('get_targeted_context safety', () => {
   });
 
   afterEach(async () => {
-    await fs.remove(tempDir);
+    try {
+      await fs.promises.rm(tempDir, { recursive: true, force: true, maxRetries: 3, retryDelay: 100 });
+    } catch {
+      // Ignore cleanup errors
+    }
   });
 
   test('path traversal in pointers should be rejected by MemoryBankManager', async () => {

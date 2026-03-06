@@ -1,6 +1,6 @@
 {
   "name": "@diazstg/memory-bank-mcp",
-  "version": "1.10.2",
+  "version": "1.11.0",
   "description": "MCP Server for managing Memory Bank with remote server support",
   "type": "module",
   "main": "build/index.js",
@@ -9,18 +9,20 @@
   },
   "scripts": {
     "clean": "rm -rf build",
-    "build": "bun run clean && bun build src/index.ts --outdir build --target node",
-    "start": "bun build/index.js",
-    "dev": "bun --watch src/index.ts",
-    "build:start": "bun run build && bun run start",
-    "test": "bun test",
-    "test:coverage": "bun test --coverage",
-    "prepublishOnly": "bun run build",
+    "build": "npm run clean && esbuild src/index.ts --bundle --platform=node --target=node18 --format=esm --outfile=build/index.js --packages=external",
+    "start": "node build/index.js",
+    "dev": "node --watch src/index.ts",
+    "build:start": "npm run build && npm run start",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "prepublishOnly": "npm run build",
     "release": "standard-version",
     "release:minor": "standard-version --release-as minor",
     "release:major": "standard-version --release-as major",
     "release:patch": "standard-version --release-as patch",
-    "release:push": "git push --follow-tags origin main"
+    "release:push": "git push --follow-tags origin main",
+    "knip": "knip"
   },
   "keywords": [
     "mcp",
@@ -45,17 +47,18 @@
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.26.0",
     "@types/js-yaml": "4.0.9",
-    "@types/node": "^20.4.5",
+    "@types/node": "^25.3.3",
     "fs-extra": "^11.1.1",
-    "js-yaml": "4.1.1",
-    "path": "^0.12.7"
+    "js-yaml": "4.1.1"
   },
   "devDependencies": {
-    "@types/bun": "^1.2.4",
     "@types/fs-extra": "^11.0.1",
+    "@vitest/coverage-v8": "^3.2.3",
+    "esbuild": "^0.25.4",
+    "knip": "^5.85.0",
     "standard-version": "^9.5.0",
-    "ts-node": "10.9.2",
-    "typescript": "^5.1.6"
+    "typescript": "^5.9.3",
+    "vitest": "^3.2.3"
   },
   "engines": {
     "node": ">=18.0.0"

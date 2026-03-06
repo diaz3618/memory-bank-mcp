@@ -5,7 +5,7 @@ import { FileSystemInterface } from '../utils/storage/FileSystemInterface.js';
 /**
  * Interface for progress tracking details
  */
-export interface ProgressDetails {
+interface ProgressDetails {
   /** Description of the progress or action */
   description: string;
   /** Optional filename related to the action */
@@ -30,7 +30,7 @@ export interface ProgressDetails {
 /**
  * Interface for decision logging
  */
-export interface Decision {
+interface Decision {
   /** Title of the decision */
   title: string;
   /** Context or background information for the decision */
@@ -52,7 +52,7 @@ export interface Decision {
 /**
  * Interface for active context updates
  */
-export interface ActiveContext {
+interface ActiveContext {
   /** List of ongoing tasks */
   tasks?: string[];
   /** List of known issues */

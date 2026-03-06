@@ -1,4 +1,4 @@
-import { test, expect, describe, beforeEach, afterEach, mock } from 'bun:test';
+import { test, expect, describe, beforeEach, afterEach, vi } from 'vitest';
 import fs from 'fs-extra';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -106,7 +106,7 @@ describe('MigrationUtils Tests', () => {
   test('Should handle errors during file operations', async () => {
     // Mock FileUtils.readFile to throw an error
     const originalReadFile = FileUtils.readFile;
-    FileUtils.readFile = mock(async (filePath: string) => {
+    FileUtils.readFile = vi.fn().mockImplementation(async (filePath: string) => {
       if (filePath.includes('productContext.md')) {
         throw new Error('Mock read error');
       }

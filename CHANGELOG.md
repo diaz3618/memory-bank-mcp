@@ -2,6 +2,33 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.11.0](https://github.com/diaz3618/memory-bank-mcp/compare/v1.10.2...v1.11.0) (2026-03-06)
+
+
+### ⚠ BREAKING CHANGES
+
+* **build:** Removed Bun runtime dependency. Now uses npm + esbuild + vitest.
+
+
+### Code Refactoring
+
+* **build:** migrate from bun to npm/esbuild/vitest ([#migration](https://github.com/diaz3618/memory-bank-mcp/issues/migration))
+  - Build: `bun build` → `esbuild` (336kb bundle, 12ms)
+  - Tests: `bun:test` → `vitest` (126/130 tests pass)
+  - Package manager: `bun` → `npm`
+  - Docker: `oven/bun:alpine` → `node:22-alpine` multi-stage build
+  - CI workflows: Updated to use `actions/setup-node@v4` with Node.js 22
+* **cleanup:** fix all knip unused code issues
+  - Deleted unused files: `src/test-tools.ts`, `src/core/graph/index.ts`, `src/types/utils.ts`, `src/types/constants.ts`, `src/types/guards.ts`
+  - Removed unused exports from templates and utilities
+  - Added `knip.json` configuration
+
+
+### Documentation
+
+* Updated build and test documentation for npm workflow
+
+
 ### [1.10.1](https://github.com/diaz3618/memory-bank-mcp/compare/v1.10.0...v1.10.1) (2026-03-01)
 
 

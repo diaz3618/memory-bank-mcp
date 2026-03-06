@@ -4,7 +4,7 @@
  * Tests the GraphStore, GraphReducer, GraphSearch, and GraphRenderer modules.
  */
 
-import { describe, test, expect, beforeEach, afterEach } from 'bun:test';
+import { describe, test, expect, beforeEach, afterEach } from 'vitest';
 import { existsSync, mkdirSync, rmSync, readFileSync, writeFileSync } from 'fs';
 import path from 'path';
 import { GraphStore } from '../core/graph/GraphStore.js';

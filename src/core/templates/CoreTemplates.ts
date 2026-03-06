@@ -9,7 +9,7 @@
 /**
  * Template for the product-context.md file
  */
-export const productContextTemplate = `# Project Overview
+const productContextTemplate = `# Project Overview
 
 ## Description
 [Project description]
@@ -34,7 +34,7 @@ export const productContextTemplate = `# Project Overview
 /**
  * Template for the active-context.md file
  */
-export const activeContextTemplate = `# Current Context
+const activeContextTemplate = `# Current Context
 
 ## Ongoing Tasks
 - [Task 1]
@@ -58,7 +58,7 @@ export const activeContextTemplate = `# Current Context
 /**
  * Template for the progress.md file
  */
-export const progressTemplate = `# Project Progress
+const progressTemplate = `# Project Progress
 
 ## Completed Milestones
 - [Milestone 1] - [Date]
@@ -76,7 +76,7 @@ export const progressTemplate = `# Project Progress
 /**
  * Template for the decision-log.md file
  */
-export const decisionLogTemplate = `# Decision Log
+const decisionLogTemplate = `# Decision Log
 
 ## Decision 1
 - **Date:** [Date]
@@ -96,7 +96,7 @@ export const decisionLogTemplate = `# Decision Log
 /**
  * Template for the system-patterns.md file
  */
-export const systemPatternsTemplate = `# System Patterns
+const systemPatternsTemplate = `# System Patterns
 
 ## Architecture Patterns
 [Architecture patterns description]

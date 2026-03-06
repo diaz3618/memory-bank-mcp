@@ -341,39 +341,3 @@ export const MARKER_EVENT: MarkerEvent = {
   source: 'memory-bank-mcp',
   version: '1',
 } as const;
-
-/**
- * Common relation types for easy reference
- */
-export const COMMON_RELATION_TYPES = [
-  'uses',
-  'depends-on',
-  'blocked-by',
-  'owns',
-  'created-by',
-  'related-to',
-  'implements',
-  'extends',
-  'part-of',
-  'references',
-] as const;
-
-export type CommonRelationType = (typeof COMMON_RELATION_TYPES)[number];
-
-/**
- * Common entity types
- */
-export const COMMON_ENTITY_TYPES = [
-  'person',
-  'project',
-  'system',
-  'policy',
-  'document',
-  'feature',
-  'bug',
-  'task',
-  'concept',
-  'tool',
-] as const;
-
-export type CommonEntityType = (typeof COMMON_ENTITY_TYPES)[number];

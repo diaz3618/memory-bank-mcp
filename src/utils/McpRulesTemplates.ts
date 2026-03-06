@@ -8,7 +8,7 @@
 /**
  * Template for .mcprules-architect
  */
-export const architectTemplate = `mode: architect
+const architectTemplate = `mode: architect
 instructions:
   general:
     - "Status Prefix: Begin EVERY response with either '[MEMORY BANK: ACTIVE]' or '[MEMORY BANK: INACTIVE]'"
@@ -175,7 +175,7 @@ mode_triggers:
 /**
  * Template for .mcprules-ask
  */
-export const askTemplate = `mode: ask
+const askTemplate = `mode: ask
 instructions:
   general:
     - "Status Prefix: Begin EVERY response with either '[MEMORY BANK: ACTIVE]' or '[MEMORY BANK: INACTIVE]'"
@@ -322,7 +322,7 @@ mode_triggers:
 /**
  * Template for .mcprules-code
  */
-export const codeTemplate = `mode: code
+const codeTemplate = `mode: code
 instructions:
   general:
     - "Status Prefix: Begin EVERY response with either '[MEMORY BANK: ACTIVE]' or '[MEMORY BANK: INACTIVE]'"
@@ -484,7 +484,7 @@ mode_triggers:
 /**
  * Template for .mcprules-debug
  */
-export const debugTemplate = `mode: debug
+const debugTemplate = `mode: debug
 instructions:
   general:
     - "Status Prefix: Begin EVERY response with either '[MEMORY BANK: ACTIVE]' or '[MEMORY BANK: INACTIVE]'"
@@ -670,7 +670,7 @@ mode_triggers:
 /**
  * Template for .mcprules-test
  */
-export const testTemplate = `mode: test
+const testTemplate = `mode: test
 instructions:
   general:
     - "Status Prefix: Begin EVERY response with either '[MEMORY BANK: ACTIVE]' or '[MEMORY BANK: INACTIVE]'"
@@ -842,5 +842,4 @@ export const mcpRulesTemplates: Record<string, string> = {
   'test': testTemplate
 };
 
-// Backward compatibility alias
-export const clineruleTemplates = mcpRulesTemplates; 
+ 

@@ -1,4 +1,4 @@
-import { test, expect, describe } from 'bun:test';
+import { test, expect, describe } from 'vitest';
 import { handleSequentialThinking } from '../../server/tools/ThinkingTools.js';
 
 /** Helper: reset via the consolidated sequential_thinking tool with reset:true */

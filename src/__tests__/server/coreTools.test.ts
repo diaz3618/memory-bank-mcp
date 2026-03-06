@@ -1,4 +1,4 @@
-import { test, expect, describe, beforeEach, afterEach } from 'bun:test';
+import { test, expect, describe, beforeEach, afterEach } from 'vitest';
 import fs from 'fs-extra';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -10,24 +10,25 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 describe('CoreTools Tests', () => {
-  const tempDir = path.join(__dirname, 'temp-coretools-test-dir');
-  const projectPath = path.join(tempDir, 'project');
-  const memoryBankDir = path.join(projectPath, 'memory-bank');
+  let tempDir: string;
+  let projectPath: string;
   const testUserId = 'test-user';
   let memoryBankManager: MemoryBankManager;
   
   beforeEach(async () => {
-    // Create temporary directories
+    tempDir = path.join(__dirname, `temp-coretools-test-dir-${Date.now()}-${Math.random().toString(36).slice(2)}`);
+    projectPath = path.join(tempDir, 'project');
     await fs.ensureDir(tempDir);
     await fs.ensureDir(projectPath);
-    
-    // Create a new MemoryBankManager with the project path
     memoryBankManager = new MemoryBankManager(projectPath, testUserId);
   });
   
   afterEach(async () => {
-    // Clean up
-    await fs.remove(tempDir);
+    try {
+      await fs.promises.rm(tempDir, { recursive: true, force: true, maxRetries: 3, retryDelay: 100 });
+    } catch {
+      // Ignore cleanup errors
+    }
   });
   
   test('handleSetMemoryBankPath should use project path when no custom path is provided', async () => {

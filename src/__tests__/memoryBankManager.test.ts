@@ -1,4 +1,4 @@
-import { test, expect, describe, beforeEach, afterEach } from 'bun:test';
+import { test, expect, describe, beforeEach, afterEach } from 'vitest';
 import fs from 'fs-extra';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -9,13 +9,16 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 describe('MemoryBankManager Tests', () => {
-  const tempDir = path.join(__dirname, 'temp-test-dir');
+  // Use unique temp directory per test to avoid race conditions
+  let tempDir: string;
   const testUserId = 'test-user';
-  const memoryBankDir = path.join(tempDir, 'memory-bank');
+  let memoryBankDir: string;
   let memoryBankManager: MemoryBankManager;
   
   beforeEach(async () => {
-    // Create temporary directory
+    // Create unique temporary directory per test
+    tempDir = path.join(__dirname, `temp-test-dir-${Date.now()}-${Math.random().toString(36).slice(2)}`);
+    memoryBankDir = path.join(tempDir, 'memory-bank');
     await fs.ensureDir(tempDir);
     
     // Create a new MemoryBankManager for each test with tempDir as project path
@@ -27,8 +30,12 @@ describe('MemoryBankManager Tests', () => {
   });
   
   afterEach(async () => {
-    // Clean up
-    await fs.remove(tempDir);
+    // Clean up with retry and force - use native fs.rm which handles ENOTEMPTY better
+    try {
+      await fs.promises.rm(tempDir, { recursive: true, force: true, maxRetries: 3, retryDelay: 100 });
+    } catch {
+      // Ignore cleanup errors
+    }
   });
   
   test('Should set and get project path', () => {
@@ -134,37 +141,40 @@ describe('MemoryBankManager Tests', () => {
   });
   
   test('Should initialize Memory Bank', async () => {
-    // Create a temporary directory for testing
-    const tempDir = path.join(__dirname, 'temp-test-dir');
-    await fs.ensureDir(tempDir);
+    // Create a unique temporary directory for testing
+    const initTestDir = path.join(__dirname, `temp-init-test-${Date.now()}-${Math.random().toString(36).slice(2)}`);
+    await fs.ensureDir(initTestDir);
     
     try {
       // Initialize a new MemoryBankManager with the temporary directory
-      const memoryBankManager = new MemoryBankManager(tempDir);
+      const manager = new MemoryBankManager(initTestDir);
       
       // Initialize the Memory Bank
-      await memoryBankManager.initializeMemoryBank(tempDir);
+      await manager.initializeMemoryBank(initTestDir);
       
       // Get the Memory Bank directory
-      const memoryBankDir = memoryBankManager.getMemoryBankDir();
+      const mbDir = manager.getMemoryBankDir();
       
       // Verify Memory Bank directory was created
-      expect(memoryBankDir).not.toBeNull();
+      expect(mbDir).not.toBeNull();
       
-      if (memoryBankDir) {
-        const dirExists = await fs.pathExists(memoryBankDir);
+      if (mbDir) {
+        const dirExists = await fs.pathExists(mbDir);
         expect(dirExists).toBe(true);
         
         // Verify core files were created
-        const productContextExists = await fs.pathExists(path.join(memoryBankDir, 'product-context.md'));
+        const productContextExists = await fs.pathExists(path.join(mbDir, 'product-context.md'));
         expect(productContextExists).toBe(true);
         
-        const activeContextExists = await fs.pathExists(path.join(memoryBankDir, 'active-context.md'));
+        const activeContextExists = await fs.pathExists(path.join(mbDir, 'active-context.md'));
         expect(activeContextExists).toBe(true);
       }
     } finally {
-      // Clean up
-      await fs.remove(tempDir);
+      try {
+        await fs.promises.rm(initTestDir, { recursive: true, force: true });
+      } catch {
+        // Ignore cleanup errors
+      }
     }
   });
   

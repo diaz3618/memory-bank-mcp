@@ -1,0 +1,12 @@
+{
+  "$schema": "https://unpkg.com/knip@5/schema.json",
+  "tags": [
+    "-lintignore"
+  ],
+  "ignore": [
+    "src/core/graph/**/*.ts",
+    "src/types/**/*.ts",
+    "src/core/StoreRegistry.ts"
+  ],
+  "ignoreExportsUsedInFile": true
+}

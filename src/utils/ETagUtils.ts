@@ -48,18 +48,3 @@ export class ETagUtils {
     };
   }
 }
-
-/**
- * Error thrown when an ETag mismatch occurs during a write operation
- */
-export class ETagMismatchError extends Error {
-  public readonly expectedETag: string;
-  public readonly actualETag: string;
-
-  constructor(expectedETag: string, actualETag: string) {
-    super(`ETag mismatch: expected ${expectedETag}, but file has ${actualETag}. The file was modified by another process.`);
-    this.name = 'ETagMismatchError';
-    this.expectedETag = expectedETag;
-    this.actualETag = actualETag;
-  }
-}

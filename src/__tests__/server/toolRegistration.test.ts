@@ -1,4 +1,4 @@
-import { test, expect, describe } from 'bun:test';
+import { test, expect, describe } from 'vitest';
 import { allTools } from '../../server/tools/index.js';
 import { coreTools } from '../../server/tools/CoreTools.js';
 import { progressTools } from '../../server/tools/ProgressTools.js';
