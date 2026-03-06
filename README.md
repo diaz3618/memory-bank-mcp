@@ -4,6 +4,10 @@
 [![Semgrep CE scan](https://github.com/diaz3618/memory-bank-mcp/actions/workflows/semgrep.yml/badge.svg)](https://github.com/diaz3618/memory-bank-mcp/actions/workflows/semgrep.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
+<a href="https://glama.ai/mcp/servers/@diaz3618/memory-bank-mcp">
+  <img width="380" height="200" src="https://glama.ai/mcp/servers/@diaz3618/memory-bank-mcp/badge" />
+</a>
+
 An MCP server that gives AI assistants persistent memory across sessions. It stores project context, decisions, and progress in structured markdown files — locally or on a remote server via SSH.
 
 > **Related repos:**
