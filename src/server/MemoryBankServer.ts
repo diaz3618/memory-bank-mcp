@@ -7,7 +7,7 @@ import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { MemoryBankManager } from '../core/MemoryBankManager.js';
 import { ProgressTracker } from '../core/ProgressTracker.js';
-import { setupToolHandlers, allTools } from './tools/index.js';
+import { setupToolHandlers } from './tools/index.js';
 import { setupResourceHandlers } from './resources/index.js';
 import { ModeManagerEvent } from '../utils/ModeManager.js';
 import { createRequire } from 'module';
@@ -93,9 +93,7 @@ export class MemoryBankServer {
       },
       {
         capabilities: {
-          tools: {
-            tools: allTools,
-          },
+          tools: {},
           resources: {},
         },
       }
